@@ -1,0 +1,16 @@
+{
+    "name": "redsugoi",
+    "title": "RedSugoi",
+    "description": "Red's idea of translating through Sugoi",
+    "main": "redsugoi.js",
+    "version": "0.3",
+    "icon": "icon.ico",
+    "author": {
+        "name": "Reddo"
+    },
+    "autoload": true,
+    "devDependencies": {
+        "@types/jquery": "^3.5.13",
+        "typescript": "^4.5.5"
+    }
+}
