@@ -4,8 +4,21 @@ declare enum RedPlaceholderType {
     poleposition = "poleposition",
     hexPlaceholder = "hexPlaceholder",
     noEscape = "noEscape",
-    ninesOfRandomness = "closedNines"
+    ninesOfRandomness = "closedNines",
+    tagPlaceholder = "tagPlaceholder",
+    closedTagPlaceholder = "closedTagPlaceholder",
+    fullTagPlaceholder = "fullTagPlaceholder"
 }
+declare enum RedPlaceholderTypeNames {
+    poleposition = "Poleposition",
+    hexPlaceholder = "Hex Placeholder",
+    noEscape = "No escaping",
+    ninesOfRandomness = "Closed Nines",
+    tagPlaceholder = "Tag Placeholder",
+    closedTagPlaceholder = "Tag Placeholder (Closed Tags)",
+    fullTagPlaceholder = "Tag Placeholder (Full XML-style Tag)"
+}
+declare let RedPlaceholderTypeArray: RedPlaceholderType[];
 declare class RedStringEscaper {
     private text;
     private type;
@@ -21,6 +34,9 @@ declare class RedStringEscaper {
     private preString;
     private postString;
     constructor(text: string, type?: RedPlaceholderType, splitEnds?: boolean, noUnks?: boolean);
+    getTag(): string;
+    getClosedTag(): string;
+    getFullTag(): string;
     getPolePosition(): string;
     getHexPlaceholder(): string;
     getClosedNines(): string;

@@ -5,7 +5,29 @@ var RedPlaceholderType;
     RedPlaceholderType["hexPlaceholder"] = "hexPlaceholder";
     RedPlaceholderType["noEscape"] = "noEscape";
     RedPlaceholderType["ninesOfRandomness"] = "closedNines";
+    RedPlaceholderType["tagPlaceholder"] = "tagPlaceholder";
+    RedPlaceholderType["closedTagPlaceholder"] = "closedTagPlaceholder";
+    RedPlaceholderType["fullTagPlaceholder"] = "fullTagPlaceholder";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
+var RedPlaceholderTypeNames;
+(function (RedPlaceholderTypeNames) {
+    RedPlaceholderTypeNames["poleposition"] = "Poleposition";
+    RedPlaceholderTypeNames["hexPlaceholder"] = "Hex Placeholder";
+    RedPlaceholderTypeNames["noEscape"] = "No escaping";
+    RedPlaceholderTypeNames["ninesOfRandomness"] = "Closed Nines";
+    RedPlaceholderTypeNames["tagPlaceholder"] = "Tag Placeholder";
+    RedPlaceholderTypeNames["closedTagPlaceholder"] = "Tag Placeholder (Closed Tags)";
+    RedPlaceholderTypeNames["fullTagPlaceholder"] = "Tag Placeholder (Full XML-style Tag)";
+})(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
+let RedPlaceholderTypeArray = [
+    RedPlaceholderType.poleposition,
+    RedPlaceholderType.hexPlaceholder,
+    RedPlaceholderType.noEscape,
+    RedPlaceholderType.ninesOfRandomness,
+    RedPlaceholderType.tagPlaceholder,
+    RedPlaceholderType.closedTagPlaceholder,
+    RedPlaceholderType.fullTagPlaceholder,
+];
 class RedStringEscaper {
     constructor(text, type, splitEnds, noUnks) {
         this.type = RedPlaceholderType.poleposition;
@@ -25,6 +47,16 @@ class RedStringEscaper {
         this.splitEnds = splitEnds == true;
         this.removeUnks = noUnks == true;
         this.escape();
+    }
+    getTag() {
+        return `<${this.symbolAffix++}${this.currentSymbol++}>`;
+    }
+    getClosedTag() {
+        return `<${this.symbolAffix++}${this.currentSymbol++}/>`;
+    }
+    getFullTag() {
+        let contents = `${this.symbolAffix++}${this.currentSymbol++}`;
+        return `<${contents}></${contents}>`;
     }
     getPolePosition() {
         return `#${this.symbolAffix++}${this.currentSymbol++}`;
@@ -55,6 +87,15 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.ninesOfRandomness:
                     tag = this.getClosedNines();
+                    break;
+                case RedPlaceholderType.tagPlaceholder:
+                    tag = this.getTag();
+                    break;
+                case RedPlaceholderType.fullTagPlaceholder:
+                    tag = this.getFullTag();
+                    break;
+                case RedPlaceholderType.closedTagPlaceholder:
+                    tag = this.getClosedTag();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -91,6 +132,10 @@ class RedStringEscaper {
         return finalString;
     }
     escape() {
+        if (this.type == RedPlaceholderType.noEscape) {
+            this.currentText = this.text;
+            return this.text;
+        }
         let formulas = RedStringEscaper.getActiveFormulas();
         let text = this.currentText || this.text;
         console.log("Formulas : ", formulas);
@@ -172,6 +217,7 @@ class RedStringEscaper {
             if (newReg)
                 formulas.push(newReg);
         }
+        formulas.push(/(^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf])/g);
         RedStringEscaper.cachedFormulaString = JSON.stringify(sys.config.escaperPatterns);
         RedStringEscaper.cachedFormulas = formulas;
         return formulas;
@@ -195,11 +241,7 @@ class RedTranslatorEngineWrapper {
         this.urls = [];
         this.urlUsage = [];
         this.allowTranslation = true;
-        let escapingTitleMap = {};
-        escapingTitleMap[RedPlaceholderType.hexPlaceholder] = "Hex Placeholder";
-        escapingTitleMap[RedPlaceholderType.noEscape] = "No Escaping";
-        escapingTitleMap[RedPlaceholderType.poleposition] = "Pole Position";
-        escapingTitleMap[RedPlaceholderType.ninesOfRandomness] = "Closed Nines";
+        let escapingTitleMap = RedPlaceholderTypeNames;
         this.translatorEngine = new TranslatorEngine({
             id: thisAddon.package.name,
             name: thisAddon.package.title,
@@ -234,15 +276,10 @@ class RedTranslatorEngineWrapper {
                     "escapeAlgorithm": {
                         "type": "string",
                         "title": "Code Escaping Algorithm",
-                        "description": "Escaping algorithm for inline code inside dialogues. Sugoi Translator is unpredictable. Hex Placeholder seems to work, but is interpreted weirdly. Pole Position Placeholder seems to be kept as-is more frequently and doesn't make a mess as often.",
+                        "description": "Escaping algorithm for inline code inside dialogues. Sugoi Translator is unpredictable. Hex Placeholder seems to work, but is interpreted weirdly. Pole Position Placeholder seems to be kept as-is more frequently and doesn't make a mess as often. Closed Nines will enclose a large number by two bounding 9s. It appears to get mangled by Sugoi very often.",
                         "default": RedPlaceholderType.poleposition,
                         "required": false,
-                        "enum": [
-                            RedPlaceholderType.poleposition,
-                            RedPlaceholderType.hexPlaceholder,
-                            RedPlaceholderType.noEscape,
-                            RedPlaceholderType.ninesOfRandomness
-                        ]
+                        "enum": RedPlaceholderTypeArray
                     },
                     "splitEnds": {
                         "type": "boolean",

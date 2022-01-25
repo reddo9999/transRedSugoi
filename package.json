@@ -3,7 +3,7 @@
     "title": "RedSugoi",
     "description": "Red's idea of translating through Sugoi",
     "main": "redsugoi.js",
-    "version": "0.4",
+    "version": "0.5",
     "icon": "icon.ico",
     "author": {
         "name": "Reddo"
