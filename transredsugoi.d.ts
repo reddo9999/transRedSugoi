@@ -57,8 +57,12 @@ declare class RedTranslatorEngineWrapper {
     private urls;
     private urlUsage;
     private allowTranslation;
+    private paused;
+    private waiting;
     getEngine(): TranslatorEngine;
     abort(): void;
+    pause(): void;
+    resume(reset?: boolean): void;
     getUrl(): string;
     freeUrl(url: string): void;
     translate(text: Array<string>, options: any): void;

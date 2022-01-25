@@ -240,6 +240,8 @@ class RedTranslatorEngineWrapper {
         this.urls = [];
         this.urlUsage = [];
         this.allowTranslation = true;
+        this.paused = false;
+        this.waiting = [];
         let escapingTitleMap = RedPlaceholderTypeNames;
         this.translatorEngine = new TranslatorEngine({
             id: thisAddon.package.name,
@@ -336,12 +338,35 @@ class RedTranslatorEngineWrapper {
         this.translatorEngine.abort = () => {
             this.abort();
         };
+        this.translatorEngine.pause = () => {
+            this.pause();
+        };
+        this.translatorEngine.resume = () => {
+            this.resume();
+        };
     }
     getEngine() {
         return this.translatorEngine;
     }
     abort() {
         this.allowTranslation = false;
+        this.waiting = [];
+        this.paused = false;
+    }
+    pause() {
+        this.paused = true;
+    }
+    resume(reset) {
+        this.paused = false;
+        if (reset == true) {
+            this.waiting = [];
+        }
+        else {
+            this.waiting.forEach(callback => {
+                callback();
+            });
+            this.waiting = [];
+        }
     }
     getUrl() {
         let thisEngine = this.translatorEngine;
@@ -358,6 +383,7 @@ class RedTranslatorEngineWrapper {
         this.urlUsage[this.urls.indexOf(url)]--;
     }
     translate(text, options) {
+        this.resume(true);
         console.log("[REDSUGOI] TRANSLATE:\n", text, options);
         this.allowTranslation = true;
         options = options || {};
@@ -374,11 +400,29 @@ class RedTranslatorEngineWrapper {
             'source': text,
             'translation': []
         };
-        ui.showBusyOverlay();
+        let consoleWindow = $("#loadingOverlay .console")[0];
+        let progressCurrent = document.createTextNode("0");
+        let progressTotal = document.createTextNode("/" + text.length.toString());
+        let pre = document.createElement("pre");
+        pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
+        pre.appendChild(progressCurrent);
+        pre.appendChild(progressTotal);
+        let translatedLines = 0;
+        let updateProgress = () => {
+            progressCurrent.nodeValue = (++translatedLines).toString();
+        };
+        if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
+            ui.showBusyOverlay();
+        }
+        else {
+            consoleWindow.appendChild(pre);
+        }
         let complete = () => {
             finished++;
             if (finished == threads) {
-                ui.hideBusyOverlay();
+                if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
+                    ui.hideBusyOverlay();
+                }
                 if (typeof options.onAfterLoading == 'function') {
                     result.translationText = translations.join();
                     result.translation = translations;
@@ -390,6 +434,10 @@ class RedTranslatorEngineWrapper {
         let splitEnds = this.getEngine().getOptions().splitEnds;
         splitEnds = splitEnds == undefined ? true : splitEnds === true;
         let doTranslate = async () => {
+            if (this.paused) {
+                this.waiting.push(doTranslate);
+                return;
+            }
             if (!this.allowTranslation) {
                 complete();
                 return;
@@ -451,6 +499,7 @@ class RedTranslatorEngineWrapper {
                     })
                         .finally(() => {
                         this.freeUrl(myUrl);
+                        updateProgress();
                         doTranslate();
                     });
                 }
