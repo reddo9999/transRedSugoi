@@ -66,6 +66,8 @@ declare class TranslatorEngine {
     unescapeCharacter (sentence) : string;
 
     abort () : void;
+    pause () : void;
+    resume () : void;
 
     targetUrl : string;
     targetUrls : Array<string>;

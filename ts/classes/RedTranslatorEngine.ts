@@ -9,6 +9,8 @@ class RedTranslatorEngineWrapper {
     private urls : Array<string> = [];
     private urlUsage : Array<number> = [];
     private allowTranslation : boolean = true;
+    private paused : boolean = false;
+    private waiting : Array<Function> = [];
 
     public getEngine () {
         return this.translatorEngine;
@@ -16,6 +18,25 @@ class RedTranslatorEngineWrapper {
 
     public abort () {
         this.allowTranslation = false;
+        this.waiting = [];
+        this.paused = false;
+    }
+
+    public pause () {
+        this.paused = true;
+    }
+
+    public resume (reset? : boolean) {
+        this.paused = false;
+        
+        if (reset == true) {
+            this.waiting = [];
+        } else {
+            this.waiting.forEach(callback => {
+                callback();
+            });
+            this.waiting = [];
+        }
     }
 
     /**
@@ -40,6 +61,7 @@ class RedTranslatorEngineWrapper {
     }
 
     public translate (text : Array<string>, options : any) {
+        this.resume(true);
         console.log("[REDSUGOI] TRANSLATE:\n", text, options);
         this.allowTranslation = true;
         options = options||{};
@@ -99,6 +121,10 @@ class RedTranslatorEngineWrapper {
         splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
 
         let doTranslate = async () => {
+            if (this.paused) {
+                this.waiting.push(doTranslate);
+                return;
+            }
             if (!this.allowTranslation) {
                 complete();
                 return;
@@ -293,6 +319,14 @@ class RedTranslatorEngineWrapper {
 
         this.translatorEngine.abort = () => {
             this.abort();
+        }
+
+        this.translatorEngine.pause = () => {
+            this.pause();
+        }
+
+        this.translatorEngine.resume = () => {
+            this.resume();
         }
     }
 }
