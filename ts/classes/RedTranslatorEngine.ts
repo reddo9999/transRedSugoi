@@ -68,7 +68,6 @@ class RedTranslatorEngineWrapper {
         pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
         pre.appendChild(progressCurrent);
         pre.appendChild(progressTotal);
-        consoleWindow.appendChild(pre);
 
         let translatedLines = 0;
         let updateProgress = () => {
@@ -77,6 +76,8 @@ class RedTranslatorEngineWrapper {
 
         if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
             ui.showBusyOverlay();
+        } else {
+            consoleWindow.appendChild(pre);
         }
         
         let complete = () => {
