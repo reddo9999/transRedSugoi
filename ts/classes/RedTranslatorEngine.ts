@@ -75,11 +75,16 @@ class RedTranslatorEngineWrapper {
             progressCurrent.nodeValue = (++translatedLines).toString();
         };
 
-        ui.showBusyOverlay();
+        if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
+            ui.showBusyOverlay();
+        }
+        
         let complete = () => {
             finished++;
             if (finished == threads) {
-                ui.hideBusyOverlay();
+                if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
+                    ui.hideBusyOverlay();
+                }
                 if (typeof options.onAfterLoading == 'function') {
                     result.translationText = translations.join();
                     result.translation = translations;
