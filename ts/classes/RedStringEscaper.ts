@@ -7,6 +7,8 @@ enum RedPlaceholderType {
     noEscape = "noEscape",
     ninesOfRandomness = "closedNines",
     tagPlaceholder = "tagPlaceholder",
+    closedTagPlaceholder = "closedTagPlaceholder",
+    fullTagPlaceholder = "fullTagPlaceholder",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -17,6 +19,8 @@ enum RedPlaceholderTypeNames {
     noEscape = "No escaping",
     ninesOfRandomness = "Closed Nines",
     tagPlaceholder = "Tag Placeholder",
+    closedTagPlaceholder = "Tag Placeholder (Closed Tags)",
+    fullTagPlaceholder = "Tag Placeholder (Full XML-style Tag)",
 }
 
 let RedPlaceholderTypeArray = [
@@ -25,6 +29,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.noEscape,
     RedPlaceholderType.ninesOfRandomness,
     RedPlaceholderType.tagPlaceholder,
+    RedPlaceholderType.closedTagPlaceholder,
+    RedPlaceholderType.fullTagPlaceholder,
 ];
 
 class RedStringEscaper {
@@ -51,6 +57,19 @@ class RedStringEscaper {
         this.removeUnks = noUnks == true;
         this.escape();
 	}
+
+    public getTag () {
+        return `<${this.symbolAffix++}${this.currentSymbol++}>`;
+    }
+
+    public getClosedTag () {
+        return `<${this.symbolAffix++}${this.currentSymbol++}/>`;
+    }
+
+    public getFullTag () {
+        let contents = `${this.symbolAffix++}${this.currentSymbol++}`
+        return `<${contents}></${contents}>`;
+    }
 
     public getPolePosition () {
         return `#${this.symbolAffix++}${this.currentSymbol++}`;
@@ -87,6 +106,15 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.ninesOfRandomness:
                     tag = this.getClosedNines();
+                    break;
+                case RedPlaceholderType.tagPlaceholder:
+                    tag = this.getTag();
+                    break;
+                case RedPlaceholderType.fullTagPlaceholder:
+                    tag = this.getFullTag();
+                    break;
+                case RedPlaceholderType.closedTagPlaceholder:
+                    tag = this.getClosedTag();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
