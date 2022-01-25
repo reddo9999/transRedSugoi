@@ -165,6 +165,11 @@ class RedStringEscaper {
      * So I'll just make something that's hopefully similar enough to live through updates!
      */
     public escape () {
+        // Are we escaping?
+        if (this.type == RedPlaceholderType.noEscape) {
+            this.currentText = this.text;
+            return this.text;
+        }
         let formulas = RedStringEscaper.getActiveFormulas();
         let text = this.currentText || this.text;
         console.log("Formulas : ", formulas);
