@@ -65,7 +65,7 @@ class RedTranslatorEngineWrapper {
         let progressCurrent = document.createTextNode("0");
         let progressTotal = document.createTextNode("/" + text.length.toString());
         let pre = document.createElement("pre");
-        pre.appendChild(document.createTextNode("[RedSugoi] Trasnlating current batch: "));
+        pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
         pre.appendChild(progressCurrent);
         pre.appendChild(progressTotal);
         consoleWindow.appendChild(pre);
