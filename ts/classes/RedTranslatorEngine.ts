@@ -175,11 +175,7 @@ class RedTranslatorEngineWrapper {
     }
 
     constructor (thisAddon : any) {
-        let escapingTitleMap : {[id : string] : string} = {};
-        escapingTitleMap[RedPlaceholderType.hexPlaceholder] = "Hex Placeholder";
-        escapingTitleMap[RedPlaceholderType.noEscape] = "No Escaping";
-        escapingTitleMap[RedPlaceholderType.poleposition] = "Pole Position";
-        escapingTitleMap[RedPlaceholderType.ninesOfRandomness] = "Closed Nines";
+        let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
         this.translatorEngine = new TranslatorEngine({
             id:thisAddon.package.name,
@@ -215,15 +211,10 @@ class RedTranslatorEngineWrapper {
                 "escapeAlgorithm": {
                   "type": "string",
                   "title": "Code Escaping Algorithm",
-                  "description": "Escaping algorithm for inline code inside dialogues. Sugoi Translator is unpredictable. Hex Placeholder seems to work, but is interpreted weirdly. Pole Position Placeholder seems to be kept as-is more frequently and doesn't make a mess as often.",
+                  "description": "Escaping algorithm for inline code inside dialogues. Sugoi Translator is unpredictable. Hex Placeholder seems to work, but is interpreted weirdly. Pole Position Placeholder seems to be kept as-is more frequently and doesn't make a mess as often. Closed Nines will enclose a large number by two bounding 9s. It appears to get mangled by Sugoi very often.",
                   "default": RedPlaceholderType.poleposition,
                   "required":false,
-                  "enum": [
-                        RedPlaceholderType.poleposition,
-                        RedPlaceholderType.hexPlaceholder,
-                        RedPlaceholderType.noEscape,
-                        RedPlaceholderType.ninesOfRandomness
-                    ]
+                  "enum": RedPlaceholderTypeArray
                 },
                 "splitEnds": {
                     "type": "boolean",

@@ -5,8 +5,27 @@ enum RedPlaceholderType {
     poleposition = "poleposition",
     hexPlaceholder = "hexPlaceholder",
     noEscape = "noEscape",
-    ninesOfRandomness = "closedNines"
+    ninesOfRandomness = "closedNines",
+    tagPlaceholder = "tagPlaceholder",
 }
+
+// I wonder if we could initiate this through calling the above...
+// I'd rather not have to change both
+enum RedPlaceholderTypeNames {
+    poleposition = "Poleposition",
+    hexPlaceholder = "Hex Placeholder",
+    noEscape = "No escaping",
+    ninesOfRandomness = "Closed Nines",
+    tagPlaceholder = "Tag Placeholder",
+}
+
+let RedPlaceholderTypeArray = [
+    RedPlaceholderType.poleposition,
+    RedPlaceholderType.hexPlaceholder,
+    RedPlaceholderType.noEscape,
+    RedPlaceholderType.ninesOfRandomness,
+    RedPlaceholderType.tagPlaceholder,
+];
 
 class RedStringEscaper {
     private text : string;
