@@ -201,11 +201,11 @@ class RedTranslatorEngineWrapper {
 
                         // escape!
                         let tags = new RedStringEscaper(line, escapingType, splitEnds, true);
-                        let myIndex = curated.push(tags);
+                        let myIndex = curated.push(tags) - 1;
                         let escapedText = tags.getReplacedText();
                         // After a while, empty lines make the AI behave ... erratically
                         if (escapedText.trim() != "") {
-                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText);
+                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText) - 1;
                         }
                     }
 
