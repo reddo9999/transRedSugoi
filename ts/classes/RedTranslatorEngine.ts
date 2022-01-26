@@ -222,8 +222,6 @@ class RedTranslatorEngineWrapper {
                             let result = await response.json();
                             let finalTranslation : Array<string> = [];
                             for (let i = 0; i < curated.length; i++) {
-                                // For some reason, Sugoi really dislikes empty strings. Ideally we wouldn't send any, but beacause some strings can be comprised entirely of symbols, it can still happen
-                                // I don't want to code an ideal solution, so instead I'll just do this.
                                 let translatedIndex = sugoiArrayTracker[i];
                                 if (result[translatedIndex] != undefined) {
                                     curated[i].setTranslatedText(result[translatedIndex]);
