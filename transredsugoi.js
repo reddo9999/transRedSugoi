@@ -493,43 +493,53 @@ class RedTranslatorEngineWrapper {
                         lines.splice(i, 1, ...split);
                     }
                     let sugoiArray = [];
+                    let sugoiArrayTracker = {};
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i].trim();
-                        if (line == "")
-                            continue;
                         let tags = new RedStringEscaper(line, escapingType, splitEnds, true);
-                        curated.push(tags);
-                        sugoiArray.push(tags.getReplacedText());
-                    }
-                    fetch(myUrl, {
-                        method: 'post',
-                        body: JSON.stringify({ content: sugoiArray, message: "translate sentences" }),
-                        headers: { 'Content-Type': 'application/json' },
-                    })
-                        .then(async (response) => {
-                        let result = await response.json();
-                        let finalTranslation = [];
-                        for (let i = 0; i < curated.length; i++) {
-                            if (curated[i].getReplacedText() != "") {
-                                curated[i].setTranslatedText(result[i]);
-                            }
-                            finalTranslation.push(curated[i].recoverSymbols());
+                        let myIndex = curated.push(tags);
+                        let escapedText = tags.getReplacedText();
+                        if (escapedText.trim() != "") {
+                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText);
                         }
-                        translations[mine] = (finalTranslation).join("\n");
-                    })
-                        .catch((error) => {
-                        console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
-                        let pre = document.createElement("pre");
-                        pre.style.color = "red";
-                        pre.style.fontWeight = "bold";
-                        pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
-                        consoleWindow.appendChild(pre);
-                    })
-                        .finally(() => {
+                    }
+                    if (sugoiArray.length > 0) {
+                        fetch(myUrl, {
+                            method: 'post',
+                            body: JSON.stringify({ content: sugoiArray, message: "translate sentences" }),
+                            headers: { 'Content-Type': 'application/json' },
+                        })
+                            .then(async (response) => {
+                            let result = await response.json();
+                            let finalTranslation = [];
+                            for (let i = 0; i < curated.length; i++) {
+                                let translatedIndex = sugoiArrayTracker[i];
+                                if (result[translatedIndex] != undefined) {
+                                    curated[i].setTranslatedText(result[translatedIndex]);
+                                }
+                                finalTranslation.push(curated[i].recoverSymbols());
+                            }
+                            translations[mine] = (finalTranslation).join("\n");
+                        })
+                            .catch((error) => {
+                            console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
+                            let pre = document.createElement("pre");
+                            pre.style.color = "red";
+                            pre.style.fontWeight = "bold";
+                            pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
+                            consoleWindow.appendChild(pre);
+                        })
+                            .finally(() => {
+                            this.freeUrl(myUrl);
+                            updateProgress();
+                            doTranslate();
+                        });
+                    }
+                    else {
                         this.freeUrl(myUrl);
                         updateProgress();
                         doTranslate();
-                    });
+                    }
                 }
             }
             catch (error) {
