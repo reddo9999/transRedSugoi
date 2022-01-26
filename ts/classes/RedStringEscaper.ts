@@ -220,7 +220,7 @@ class RedStringEscaper {
                 } else if ((idx + tag.length) == text.length) {
                     // Everything we find after the first one will be coming before it, not after
                     this.postString = this.storedSymbols[tag] + this.postString;
-                    text = text.substring(0, text.length - tag.length);
+                    text = text.substring(0, idx - 1);
                     found = true;
                 }
             }
