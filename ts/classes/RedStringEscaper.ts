@@ -217,10 +217,10 @@ class RedStringEscaper {
                     this.preString += this.storedSymbols[tag];
                     text = text.substring(tag.length); // replace was dangerous, so we do it old school
                     found = true;
-                } else if ((idx + tag.length) == text.length) {
+                } else if (idx != -1 && (idx + tag.length) == text.length) {
                     // Everything we find after the first one will be coming before it, not after
                     this.postString = this.storedSymbols[tag] + this.postString;
-                    text = text.substring(0, idx - 1);
+                    text = text.substring(0, idx);
                     found = true;
                 }
             }
