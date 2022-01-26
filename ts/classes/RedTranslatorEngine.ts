@@ -194,51 +194,63 @@ class RedTranslatorEngineWrapper {
                         lines.splice(i, 1, ...split);
                     }
 
-                    let sugoiArray : Array<string> = []
+                    let sugoiArray : Array<string> = [];
+                    let sugoiArrayTracker : {[index : number] : number} = {}; // Keeps track of which translated string is from which tag
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i].trim();
 
                         // After a while, empty lines make the AI behave ... erratically
                         // Probably best to skip them all together
-                        if (line == "") continue;
+                        //if (line == "") continue;
 
                         // escape!
                         let tags = new RedStringEscaper(line, escapingType, splitEnds, true);
-                        curated.push(tags);
-                        sugoiArray.push(tags.getReplacedText());
+                        let myIndex = curated.push(tags);
+                        let escapedText = tags.getReplacedText();
+                        if (escapedText.trim() != "") {
+                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText);
+                        }
                     }
 
-                    fetch(myUrl, {
-                        method		: 'post',
-                        body		: JSON.stringify({content: sugoiArray, message: "translate sentences"}),
-                        headers		: { 'Content-Type': 'application/json' },
-                    })
-                    .then(async (response) => {
-                        let result = await response.json();
-                        let finalTranslation : Array<string> = [];
-                        for (let i = 0; i < curated.length; i++) {
-                            // For some reason, Sugoi really dislikes empty strings. Ideally we wouldn't send any, but beacause some strings can be comprised entirely of symbols, it can still happen
-                            // I don't want to code an ideal solution, so instead I'll just do this.
-                            if (curated[i].getReplacedText() != "") {
-                                curated[i].setTranslatedText(result[i]);
+                    if (sugoiArray.length > 0) {
+                        fetch(myUrl, {
+                            method		: 'post',
+                            body		: JSON.stringify({content: sugoiArray, message: "translate sentences"}),
+                            headers		: { 'Content-Type': 'application/json' },
+                        })
+                        .then(async (response) => {
+                            let result = await response.json();
+                            let finalTranslation : Array<string> = [];
+                            for (let i = 0; i < curated.length; i++) {
+                                // For some reason, Sugoi really dislikes empty strings. Ideally we wouldn't send any, but beacause some strings can be comprised entirely of symbols, it can still happen
+                                // I don't want to code an ideal solution, so instead I'll just do this.
+                                let translatedIndex = sugoiArrayTracker[i];
+                                if (result[translatedIndex] != undefined) {
+                                    curated[i].setTranslatedText(result[translatedIndex]);
+                                }
+                                finalTranslation.push(curated[i].recoverSymbols());
                             }
-                            finalTranslation.push(curated[i].recoverSymbols());
-                        }
-                        translations[mine] = (finalTranslation).join("\n");
-                    })
-                    .catch((error) => {
-                        console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
-                        let pre = document.createElement("pre");
-                        pre.style.color = "red";
-                        pre.style.fontWeight = "bold";
-                        pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
-                        consoleWindow.appendChild(pre);
-                    })
-                    .finally(() => {
+                            translations[mine] = (finalTranslation).join("\n");
+                        })
+                        .catch((error) => {
+                            console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
+                            let pre = document.createElement("pre");
+                            pre.style.color = "red";
+                            pre.style.fontWeight = "bold";
+                            pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
+                            consoleWindow.appendChild(pre);
+                        })
+                        .finally(() => {
+                            this.freeUrl(myUrl);
+                            updateProgress();
+                            doTranslate();
+                        });
+                    } else {
+                        // Nothing to translate?
                         this.freeUrl(myUrl);
                         updateProgress();
                         doTranslate();
-                    });
+                    }
                 }
             } catch (error : any) {
                 console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", error);
