@@ -173,9 +173,9 @@ class RedStringEscaper {
                     text = text.substring(tag.length);
                     found = true;
                 }
-                else if ((idx + tag.length) == text.length) {
+                else if (idx != -1 && (idx + tag.length) == text.length) {
                     this.postString = this.storedSymbols[tag] + this.postString;
-                    text = text.substring(0, text.length - tag.length);
+                    text = text.substring(0, idx);
                     found = true;
                 }
             }
