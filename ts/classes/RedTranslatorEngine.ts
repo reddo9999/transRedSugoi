@@ -199,14 +199,11 @@ class RedTranslatorEngineWrapper {
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i].trim();
 
-                        // After a while, empty lines make the AI behave ... erratically
-                        // Probably best to skip them all together
-                        //if (line == "") continue;
-
                         // escape!
                         let tags = new RedStringEscaper(line, escapingType, splitEnds, true);
                         let myIndex = curated.push(tags);
                         let escapedText = tags.getReplacedText();
+                        // After a while, empty lines make the AI behave ... erratically
                         if (escapedText.trim() != "") {
                             sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText);
                         }
