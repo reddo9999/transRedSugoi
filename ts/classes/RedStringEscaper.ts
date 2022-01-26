@@ -155,7 +155,7 @@ class RedStringEscaper {
         // It turns people into pigs! Pigs!
         // let's remove those
         if (this.removeUnks) {
-        finalString = finalString.replaceAll("<unk>", "");
+            finalString = finalString.replaceAll("<unk>", "");
         }
         return finalString;
     }
