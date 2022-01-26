@@ -8,6 +8,7 @@ class RedTranslatorEngineWrapper {
     private translatorEngine : TranslatorEngine;
     private urls : Array<string> = [];
     private urlUsage : Array<number> = [];
+    private urlScore : Array<number> = [];
     private allowTranslation : boolean = true;
     private paused : boolean = false;
     private waiting : Array<Function> = [];
@@ -49,10 +50,12 @@ class RedTranslatorEngineWrapper {
         if (this.urls.length != urls.length) {
             this.urls = [...urls];
             this.urlUsage = new Array(urls.length).fill(0);
+            this.urlScore = new Array(urls.length).fill(0);
         }
 
         let idx = this.urlUsage.indexOf(Math.min(...this.urlUsage));
         this.urlUsage[idx]++;
+        this.urlScore[idx]++;
         return this.urls[idx];
     }
 
@@ -60,7 +63,13 @@ class RedTranslatorEngineWrapper {
         this.urlUsage[this.urls.indexOf(url)]--;
     }
 
+    public resetScores () {
+        this.urlScore = new Array(this.urls.length).fill(0);
+    }
+
     public translate (text : Array<string>, options : any) {
+        this.resetScores();
+        let batchStart = new Date().getTime();
         this.resume(true);
         console.log("[REDSUGOI] TRANSLATE:\n", text, options);
         this.allowTranslation = true;
@@ -107,6 +116,22 @@ class RedTranslatorEngineWrapper {
             if (finished == threads) {
                 if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
                     ui.hideBusyOverlay();
+                } else {
+                    let batchEnd = new Date().getTime();
+                    let pre = document.createElement("pre");
+                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
+                    let servers = [...this.urls];
+                    servers.sort((a, b) => {
+                        return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
+                    });
+                    for (let i = 0; i < servers.length; i++) {
+                        pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+                    }
+
+                    let seconds = Math.round((batchEnd - batchStart)/100)/10;
+
+                    pre.appendChild(document.createTextNode(`\n\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds)/10} rows per second!`))
+                    consoleWindow.appendChild(pre);
                 }
                 if (typeof options.onAfterLoading == 'function') {
                     result.translationText = translations.join();
