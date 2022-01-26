@@ -243,6 +243,7 @@ class RedTranslatorEngineWrapper {
         this.allowTranslation = true;
         this.paused = false;
         this.waiting = [];
+        this.translationCache = {};
         let escapingTitleMap = RedPlaceholderTypeNames;
         this.translatorEngine = new TranslatorEngine({
             id: thisAddon.package.name,
@@ -390,6 +391,7 @@ class RedTranslatorEngineWrapper {
     }
     translate(text, options) {
         this.resetScores();
+        let cacheHits = 0;
         let batchStart = new Date().getTime();
         this.resume(true);
         console.log("[REDSUGOI] TRANSLATE:\n", text, options);
@@ -443,7 +445,8 @@ class RedTranslatorEngineWrapper {
                         pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
                     }
                     let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
-                    pre.appendChild(document.createTextNode(`\n\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds) / 10} rows per second!`));
+                    pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds) / 10} rows per second!`));
+                    pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${cacheHits} translations through cache hits!`));
                     consoleWindow.appendChild(pre);
                 }
                 if (typeof options.onAfterLoading == 'function') {
@@ -497,10 +500,10 @@ class RedTranslatorEngineWrapper {
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i].trim();
                         let tags = new RedStringEscaper(line, escapingType, splitEnds, true);
-                        let myIndex = curated.push(tags);
+                        let myIndex = curated.push(tags) - 1;
                         let escapedText = tags.getReplacedText();
-                        if (escapedText.trim() != "") {
-                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText);
+                        if (escapedText.trim() != "" && this.translationCache[escapedText] == undefined) {
+                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText) - 1;
                         }
                     }
                     if (sugoiArray.length > 0) {
@@ -515,7 +518,12 @@ class RedTranslatorEngineWrapper {
                             for (let i = 0; i < curated.length; i++) {
                                 let translatedIndex = sugoiArrayTracker[i];
                                 if (result[translatedIndex] != undefined) {
+                                    this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
                                     curated[i].setTranslatedText(result[translatedIndex]);
+                                }
+                                else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
+                                    cacheHits++;
+                                    curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
                                 }
                                 finalTranslation.push(curated[i].recoverSymbols());
                             }

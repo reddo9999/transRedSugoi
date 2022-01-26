@@ -60,6 +60,7 @@ declare class RedTranslatorEngineWrapper {
     private allowTranslation;
     private paused;
     private waiting;
+    private translationCache;
     getEngine(): TranslatorEngine;
     abort(): void;
     pause(): void;
