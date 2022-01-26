@@ -56,6 +56,7 @@ declare class RedTranslatorEngineWrapper {
     private translatorEngine;
     private urls;
     private urlUsage;
+    private urlScore;
     private allowTranslation;
     private paused;
     private waiting;
@@ -65,6 +66,7 @@ declare class RedTranslatorEngineWrapper {
     resume(reset?: boolean): void;
     getUrl(): string;
     freeUrl(url: string): void;
+    resetScores(): void;
     translate(text: Array<string>, options: any): void;
     constructor(thisAddon: any);
 }

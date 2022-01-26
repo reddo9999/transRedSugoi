@@ -239,6 +239,7 @@ class RedTranslatorEngineWrapper {
     constructor(thisAddon) {
         this.urls = [];
         this.urlUsage = [];
+        this.urlScore = [];
         this.allowTranslation = true;
         this.paused = false;
         this.waiting = [];
@@ -374,15 +375,22 @@ class RedTranslatorEngineWrapper {
         if (this.urls.length != urls.length) {
             this.urls = [...urls];
             this.urlUsage = new Array(urls.length).fill(0);
+            this.urlScore = new Array(urls.length).fill(0);
         }
         let idx = this.urlUsage.indexOf(Math.min(...this.urlUsage));
         this.urlUsage[idx]++;
+        this.urlScore[idx]++;
         return this.urls[idx];
     }
     freeUrl(url) {
         this.urlUsage[this.urls.indexOf(url)]--;
     }
+    resetScores() {
+        this.urlScore = new Array(this.urls.length).fill(0);
+    }
     translate(text, options) {
+        this.resetScores();
+        let batchStart = new Date().getTime();
         this.resume(true);
         console.log("[REDSUGOI] TRANSLATE:\n", text, options);
         this.allowTranslation = true;
@@ -422,6 +430,21 @@ class RedTranslatorEngineWrapper {
             if (finished == threads) {
                 if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
                     ui.hideBusyOverlay();
+                }
+                else {
+                    let batchEnd = new Date().getTime();
+                    let pre = document.createElement("pre");
+                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
+                    let servers = [...this.urls];
+                    servers.sort((a, b) => {
+                        return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
+                    });
+                    for (let i = 0; i < servers.length; i++) {
+                        pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+                    }
+                    let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
+                    pre.appendChild(document.createTextNode(`\n\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds) / 10} rows per second!`));
+                    consoleWindow.appendChild(pre);
                 }
                 if (typeof options.onAfterLoading == 'function') {
                     result.translationText = translations.join();
@@ -496,6 +519,11 @@ class RedTranslatorEngineWrapper {
                     })
                         .catch((error) => {
                         console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
+                        let pre = document.createElement("pre");
+                        pre.style.color = "red";
+                        pre.style.fontWeight = "bold";
+                        pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
+                        consoleWindow.appendChild(pre);
                     })
                         .finally(() => {
                         this.freeUrl(myUrl);
@@ -504,8 +532,13 @@ class RedTranslatorEngineWrapper {
                     });
                 }
             }
-            catch (e) {
-                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", e);
+            catch (error) {
+                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", error);
+                let pre = document.createElement("pre");
+                pre.style.color = "red";
+                pre.style.fontWeight = "bold";
+                pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON THREAD - " + error.name + ': ' + error.message));
+                consoleWindow.appendChild(pre);
                 complete();
             }
         };
