@@ -16,6 +16,8 @@ class RedTranslatorEngineWrapper {
     // In most scenarios this will not help, but if there is a consistent string reuse it might.
     // e.g. CharacterName: at the start of every Dialogue.
     // Plus not redoing the work is just good practice.
+    // Would it be worth it to save this to a file and keep updating it through multiple games?
+    // The bigger it gets the slower it should be to access, but wouldn't it still be faster than repeating the work?
     private translationCache : {[text : string] : string} = {};
 
     public getEngine () {
@@ -252,7 +254,17 @@ class RedTranslatorEngineWrapper {
                             doTranslate();
                         });
                     } else {
-                        // Nothing to translate?
+                        // Nothing to translate or all cache hits
+                        let finalTranslation : Array<string> = [];
+                        for (let i = 0; i < curated.length; i++) {
+                            let translatedIndex = sugoiArrayTracker[i];
+                            if (this.translationCache[curated[i].getReplacedText()] != undefined) {
+                                cacheHits++;
+                                curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
+                            }
+                            finalTranslation.push(curated[i].recoverSymbols());
+                        }
+                        translations[mine] = (finalTranslation).join("\n");
                         this.freeUrl(myUrl);
                         updateProgress();
                         doTranslate();
