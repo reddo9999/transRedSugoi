@@ -12,6 +12,11 @@ class RedTranslatorEngineWrapper {
     private allowTranslation : boolean = true;
     private paused : boolean = false;
     private waiting : Array<Function> = [];
+    // Cache Translations so we can save up time!
+    // In most scenarios this will not help, but if there is a consistent string reuse it might.
+    // e.g. CharacterName: at the start of every Dialogue.
+    // Plus not redoing the work is just good practice.
+    private translationCache : {[text : string] : string} = {};
 
     public getEngine () {
         return this.translatorEngine;
@@ -69,6 +74,7 @@ class RedTranslatorEngineWrapper {
 
     public translate (text : Array<string>, options : any) {
         this.resetScores();
+        let cacheHits = 0;
         let batchStart = new Date().getTime();
         this.resume(true);
         console.log("[REDSUGOI] TRANSLATE:\n", text, options);
@@ -130,7 +136,8 @@ class RedTranslatorEngineWrapper {
 
                     let seconds = Math.round((batchEnd - batchStart)/100)/10;
 
-                    pre.appendChild(document.createTextNode(`\n\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds)/10} rows per second!`))
+                    pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds)/10} rows per second!`));
+                    pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${cacheHits} translations through cache hits!`));
                     consoleWindow.appendChild(pre);
                 }
                 if (typeof options.onAfterLoading == 'function') {
@@ -204,7 +211,7 @@ class RedTranslatorEngineWrapper {
                         let myIndex = curated.push(tags) - 1;
                         let escapedText = tags.getReplacedText();
                         // After a while, empty lines make the AI behave ... erratically
-                        if (escapedText.trim() != "") {
+                        if (escapedText.trim() != "" && this.translationCache[escapedText] == undefined) {
                             sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText) - 1;
                         }
                     }
@@ -221,7 +228,11 @@ class RedTranslatorEngineWrapper {
                             for (let i = 0; i < curated.length; i++) {
                                 let translatedIndex = sugoiArrayTracker[i];
                                 if (result[translatedIndex] != undefined) {
+                                    this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
                                     curated[i].setTranslatedText(result[translatedIndex]);
+                                } else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
+                                    cacheHits++;
+                                    curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
                                 }
                                 finalTranslation.push(curated[i].recoverSymbols());
                             }
