@@ -203,6 +203,11 @@ class RedTranslatorEngineWrapper {
                     })
                     .catch((error) => {
                         console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
+                        let pre = document.createElement("pre");
+                        pre.style.color = "red";
+                        pre.style.fontWeight = "bold";
+                        pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
+                        consoleWindow.appendChild(pre);
                     })
                     .finally(() => {
                         this.freeUrl(myUrl);
@@ -210,8 +215,13 @@ class RedTranslatorEngineWrapper {
                         doTranslate();
                     });
                 }
-            } catch (e) {
-                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", e);
+            } catch (error : any) {
+                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", error);
+                let pre = document.createElement("pre");
+                pre.style.color = "red";
+                pre.style.fontWeight = "bold";
+                pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON THREAD - " + error.name + ': ' + error.message));
+                consoleWindow.appendChild(pre);
                 complete();
             }
         }
