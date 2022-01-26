@@ -544,6 +544,16 @@ class RedTranslatorEngineWrapper {
                         });
                     }
                     else {
+                        let finalTranslation = [];
+                        for (let i = 0; i < curated.length; i++) {
+                            let translatedIndex = sugoiArrayTracker[i];
+                            if (this.translationCache[curated[i].getReplacedText()] != undefined) {
+                                cacheHits++;
+                                curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
+                            }
+                            finalTranslation.push(curated[i].recoverSymbols());
+                        }
+                        translations[mine] = (finalTranslation).join("\n");
                         this.freeUrl(myUrl);
                         updateProgress();
                         doTranslate();
