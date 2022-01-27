@@ -7,11 +7,14 @@ declare interface TranslationEngineOptionSchema<Type> {
 }
 
 declare interface TranslationEngineOptionFormUpdater {
-    key : string;
+    key? : string;
+    title? : string;
+    fieldHtmlClass? : string;
     inlinetitle? : string;
     type? : string;
     titleMap? : {[id : string] : string};
-    onChange : function;
+    onChange? : function;
+    items? : {[id : string] : any};
 }
 
 declare interface TranslationEngineOptionForm {
