@@ -293,6 +293,16 @@ class RedTranslatorEngineWrapper {
         }
     }
 
+    public isValidHttpUrl(urlString : string) {
+        let url;
+        try {
+          url = new URL(urlString);
+        } catch (_) {
+          return false;  
+        }
+        return url.protocol === "http:" || url.protocol === "https:";
+    }
+
     constructor (thisAddon : any) {
         let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
@@ -357,7 +367,7 @@ class RedTranslatorEngineWrapper {
                       var urls = value.replaceAll("\r", "").split("\n");
                       var validUrls = [];
                       for (var i in urls) {
-                          if (!isValidHttpUrl(urls[i])) continue;
+                          if (!this.isValidHttpUrl(urls[i])) continue;
                           validUrls.push(urls[i]);
                       }
                       this.translatorEngine.update("targetUrl", validUrls.join("\n"));
