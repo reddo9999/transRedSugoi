@@ -388,7 +388,7 @@ class RedTranslatorEngineWrapper {
                 "useCache": {
                     "type": "boolean",
                     "title": "Use Cache",
-                    "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. Recommended is ON.",
+                    "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. The cache only lasts until you close Translator++. Recommended is ON.",
                     "default":true
                 },
                 "detectStrings": {
