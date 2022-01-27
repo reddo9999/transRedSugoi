@@ -68,11 +68,13 @@ declare class RedTranslatorEngineWrapper {
     getUrl(): string;
     freeUrl(url: string): void;
     resetScores(): void;
+    isCaching(): boolean;
+    isKeepingScripts(): boolean;
     translate(text: Array<string>, options: any): void;
+    isValidHttpUrl(urlString: string): boolean;
     constructor(thisAddon: any);
 }
 declare var thisAddon: any;
 declare var packageName: any;
-declare function isValidHttpUrl(urlString: string): boolean;
 declare var thisEngine: RedTranslatorEngineWrapper;
 declare var trans: any;

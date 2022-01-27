@@ -265,21 +265,21 @@ class RedTranslatorEngineWrapper {
                     "targetUrl": {
                         "type": "string",
                         "title": "Target URL(s)",
-                        "description": "Sugoi Translator target URL.",
+                        "description": "Sugoi Translator target URL. If you have multiple servers, you can put one in each line.",
                         "default": "http://localhost:14366/",
                         "required": true
                     },
                     "maxParallelJob": {
                         "type": "number",
                         "title": "Max Parallel job",
-                        "description": "Amount of requests done simultaneously. Due to the small latency between calls, you'll usually want 3 or 5 requests per server. You won't gain any actual speed if your resource usage is already at 100%, might even make it slower, so try to find a number that results in no waste, but also results in no overworking.",
+                        "description": "The amount of requests which will be sent simultaneously. Due to the small latency between sending a request and receiving a response, you'll usually want at least 5 requests per server so that you don't leave resources idling. Bigger numbers are also fine, but there are diminishing returns and you will lose Cache benefits if the number is too large. Recommended values are 5 to 10 per server (so if you have two servers, ideal number would be between 10 and 20). Remember, the goal is to not have anything idle, but you also don't want to overwhelm your servers to the point they start underperforming.",
                         "default": 5,
                         "required": true
                     },
                     "escapeAlgorithm": {
                         "type": "string",
                         "title": "Code Escaping Algorithm",
-                        "description": "Escaping algorithm for inline code inside dialogues. Sugoi Translator is unpredictable. Hex Placeholder seems to work, but is interpreted weirdly. Pole Position Placeholder seems to be kept as-is more frequently and doesn't make a mess as often. Closed Nines will enclose a large number by two bounding 9s. It appears to get mangled by Sugoi very often.",
+                        "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. All options are available, should a particular project require them.",
                         "default": RedPlaceholderType.poleposition,
                         "required": false,
                         "enum": RedPlaceholderTypeArray
@@ -287,7 +287,19 @@ class RedTranslatorEngineWrapper {
                     "splitEnds": {
                         "type": "boolean",
                         "title": "Split Ends",
-                        "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced.",
+                        "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced. If the symbols at the corners are not actually part of the text this will actually improve translation accuracy while also increasing speed. Recommended is ON.",
+                        "default": true
+                    },
+                    "useCache": {
+                        "type": "boolean",
+                        "title": "Use Cache",
+                        "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. Recommended is ON.",
+                        "default": true
+                    },
+                    "detectStrings": {
+                        "type": "boolean",
+                        "title": "Literal String Detection",
+                        "description": "Attempts to detect literal strings and safeguards them so that they don't stop being strings after translation. Heavily recommended to be ON, particularly if translating scripts.",
                         "default": true
                     },
                 },
@@ -300,7 +312,7 @@ class RedTranslatorEngineWrapper {
                             var urls = value.replaceAll("\r", "").split("\n");
                             var validUrls = [];
                             for (var i in urls) {
-                                if (!isValidHttpUrl(urls[i]))
+                                if (!this.isValidHttpUrl(urls[i]))
                                     continue;
                                 validUrls.push(urls[i]);
                             }
@@ -329,6 +341,22 @@ class RedTranslatorEngineWrapper {
                         "onChange": (evt) => {
                             var value = $(evt.target).prop("checked");
                             this.translatorEngine.update("splitEnds", value);
+                        }
+                    },
+                    {
+                        "key": "useCache",
+                        "inlinetitle": "Use Cache",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).prop("checked");
+                            this.translatorEngine.update("useCache", value);
+                        }
+                    },
+                    {
+                        "key": "detectStrings",
+                        "inlinetitle": "Literal String Detection",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).prop("checked");
+                            this.translatorEngine.update("detectStrings", value);
                         }
                     }
                 ]
@@ -388,6 +416,14 @@ class RedTranslatorEngineWrapper {
     }
     resetScores() {
         this.urlScore = new Array(this.urls.length).fill(0);
+    }
+    isCaching() {
+        let useCache = this.getEngine().getOptions().useCache;
+        return useCache == undefined ? true : useCache == true;
+    }
+    isKeepingScripts() {
+        let detectStrings = this.getEngine().getOptions().detectStrings;
+        return detectStrings == undefined ? true : detectStrings == true;
     }
     translate(text, options) {
         this.resetScores();
@@ -488,12 +524,28 @@ class RedTranslatorEngineWrapper {
                     }
                     for (let i = lines.length - 1; i >= 0; i--) {
                         let line = lines[i];
-                        let split = line.split(/((?:\r?\n)+[｛（［【「『〝⟨「]+)/);
+                        let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「]+)/);
                         for (let k = 1; k < split.length - 1; k++) {
                             split[k] += split[k + 1];
                             split.splice(k + 1, 1);
                         }
                         lines.splice(i, 1, ...split);
+                    }
+                    let isScript = false;
+                    let quoteType = "";
+                    if (this.isKeepingScripts() &&
+                        lines.length == 1 &&
+                        ["'", '"'].indexOf(lines[0].trim().charAt(0)) != -1 &&
+                        lines[0].charAt(lines[0].trim().length - 1) == lines[0].trim().charAt(0)) {
+                        try {
+                            let innerString = JSON.parse(lines[0]);
+                            isScript = true;
+                            quoteType = lines[0].trim().charAt(0);
+                            lines[0] = innerString;
+                        }
+                        catch (e) {
+                            console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", lines[0], e);
+                        }
                     }
                     let sugoiArray = [];
                     let sugoiArrayTracker = {};
@@ -518,7 +570,9 @@ class RedTranslatorEngineWrapper {
                             for (let i = 0; i < curated.length; i++) {
                                 let translatedIndex = sugoiArrayTracker[i];
                                 if (result[translatedIndex] != undefined) {
-                                    this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
+                                    if (this.isCaching()) {
+                                        this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
+                                    }
                                     curated[i].setTranslatedText(result[translatedIndex]);
                                 }
                                 else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
@@ -527,7 +581,15 @@ class RedTranslatorEngineWrapper {
                                 }
                                 finalTranslation.push(curated[i].recoverSymbols());
                             }
-                            translations[mine] = (finalTranslation).join("\n");
+                            let finalTranslationString = finalTranslation.join("\n");
+                            if (isScript) {
+                                finalTranslationString = JSON.stringify(finalTranslation);
+                                if (finalTranslationString.charAt(0) != quoteType) {
+                                    finalTranslationString = finalTranslationString.replaceAll(quoteType, `\\${quoteType}`);
+                                    finalTranslationString = quoteType + finalTranslationString.substring(1, finalTranslationString.length - 1) + quoteType;
+                                }
+                            }
+                            translations[mine] = finalTranslationString;
                         })
                             .catch((error) => {
                             console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
@@ -574,19 +636,19 @@ class RedTranslatorEngineWrapper {
             doTranslate();
         }
     }
+    isValidHttpUrl(urlString) {
+        let url;
+        try {
+            url = new URL(urlString);
+        }
+        catch (_) {
+            return false;
+        }
+        return url.protocol === "http:" || url.protocol === "https:";
+    }
 }
 var thisAddon = this;
 var packageName = thisAddon.package.name;
-function isValidHttpUrl(urlString) {
-    let url;
-    try {
-        url = new URL(urlString);
-    }
-    catch (_) {
-        return false;
-    }
-    return url.protocol === "http:" || url.protocol === "https:";
-}
 var thisEngine = new RedTranslatorEngineWrapper(thisAddon);
 window.trans[packageName] = thisEngine.getEngine();
 $(document).ready(function () {
