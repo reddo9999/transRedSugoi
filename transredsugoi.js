@@ -358,7 +358,26 @@ class RedTranslatorEngineWrapper {
                             var value = $(evt.target).prop("checked");
                             this.translatorEngine.update("detectStrings", value);
                         }
-                    }
+                    },
+                    {
+                        "type": "actions",
+                        "title": "Local Server Manager",
+                        "fieldHtmlClass": "actionButtonSet",
+                        "items": [
+                            {
+                                "type": "button",
+                                "title": "Open server manager",
+                                "onClick": function () {
+                                    try {
+                                        trans.sugoitrans.openServerManager();
+                                    }
+                                    catch (e) {
+                                        alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                                    }
+                                }
+                            }
+                        ]
+                    },
                 ]
             }
         });
