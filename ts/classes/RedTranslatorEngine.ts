@@ -216,20 +216,20 @@ class RedTranslatorEngineWrapper {
                     // Is this a script?
                     let isScript = false;
                     let quoteType = "";
-                    if (
-                            this.isKeepingScripts() && 
-                            lines.length == 1 && 
-                            ["'", '"'].indexOf(lines[0].trim().charAt(0)) != -1 && 
-                            lines[0].charAt(lines[0].trim().length - 1) == lines[0].trim().charAt(0)
-                        ) {
-                        // sure looks like one, but is it?
-                        try {
-                            let innerString = JSON.parse(lines[0]);
-                            isScript = true;
-                            quoteType = lines[0].trim().charAt(0);
-                            lines[0] = innerString;
-                        } catch (e) {
-                            console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", lines[0], e);
+                    if (this.isKeepingScripts() && lines.length == 1) {
+                        let trimmed = lines[0].trim();
+                        if (["'", '"'].indexOf(trimmed.charAt(0)) != -1 && 
+                             trimmed.charAt(0) == trimmed.charAt(trimmed.length - 1)
+                             ) {
+                            // sure looks like one, but is it?
+                            try {
+                                let innerString = JSON.parse(trimmed);
+                                isScript = true;
+                                quoteType = trimmed.charAt(0);
+                                lines[0] = innerString;
+                            } catch (e) {
+                                console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", lines[0], e);
+                            }
                         }
                     }
 
