@@ -79,6 +79,11 @@ class RedTranslatorEngineWrapper {
         return useCache == undefined ? true : useCache == true;
     }
 
+    public isKeepingScripts () : boolean {
+        let detectStrings = this.getEngine().getOptions().detectStrings;
+        return detectStrings == undefined ? true : detectStrings == true;
+    }
+
     public translate (text : Array<string>, options : any) {
         this.resetScores();
         let cacheHits = 0;
@@ -208,6 +213,26 @@ class RedTranslatorEngineWrapper {
                         lines.splice(i, 1, ...split);
                     }
 
+                    // Is this a script?
+                    let isScript = false;
+                    let quoteType = "";
+                    if (
+                            this.isKeepingScripts() && 
+                            lines.length == 1 && 
+                            ["'", '"'].indexOf(lines[0].trim().charAt(0)) != -1 && 
+                            lines[0].charAt(lines[0].trim().length - 1) == lines[0].trim().charAt(0)
+                        ) {
+                        // sure looks like one, but is it?
+                        try {
+                            let innerString = JSON.parse(lines[0]);
+                            isScript = true;
+                            quoteType = lines[0].trim().charAt(0);
+                            lines[0] = innerString;
+                        } catch (e) {
+                            console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", lines[0], e);
+                        }
+                    }
+
                     let sugoiArray : Array<string> = [];
                     let sugoiArrayTracker : {[index : number] : number} = {}; // Keeps track of which translated string is from which tag
                     for (let i = 0; i < lines.length; i++) {
@@ -245,7 +270,16 @@ class RedTranslatorEngineWrapper {
                                 }
                                 finalTranslation.push(curated[i].recoverSymbols());
                             }
-                            translations[mine] = (finalTranslation).join("\n");
+                            let finalTranslationString = finalTranslation.join("\n");
+                            if (isScript) {
+                                finalTranslationString = JSON.stringify(finalTranslation);
+                                if (finalTranslationString.charAt(0) != quoteType) {
+                                    // escape the quotes
+                                    finalTranslationString = finalTranslationString.replaceAll(quoteType, `\\${quoteType}`);
+                                    finalTranslationString = quoteType + finalTranslationString.substring(1, finalTranslationString.length - 1) + quoteType;
+                                }
+                            }
+                            translations[mine] = finalTranslationString;
                         })
                         .catch((error) => {
                             console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
@@ -357,6 +391,12 @@ class RedTranslatorEngineWrapper {
                     "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. Recommended is ON.",
                     "default":true
                 },
+                "detectStrings": {
+                    "type": "boolean",
+                    "title": "Literal String Detection",
+                    "description": "Attempts to detect literal strings and safeguards them so that they don't stop being strings after translation. Heavily recommended to be ON, particularly if translating scripts.",
+                    "default":true
+                },
               },
               "form": [
                 {
@@ -403,6 +443,14 @@ class RedTranslatorEngineWrapper {
                     "onChange": (evt : Event) => {
                       var value = $(<HTMLInputElement> evt.target).prop("checked");
                       this.translatorEngine.update("useCache", value);
+                    }
+                },
+                {
+                    "key": "detectStrings",
+                    "inlinetitle": "Literal String Detection",
+                    "onChange": (evt : Event) => {
+                      var value = $(<HTMLInputElement> evt.target).prop("checked");
+                      this.translatorEngine.update("detectStrings", value);
                     }
                 }
               ]
