@@ -74,6 +74,11 @@ class RedTranslatorEngineWrapper {
         this.urlScore = new Array(this.urls.length).fill(0);
     }
 
+    public isCaching () : boolean {
+        let useCache = this.getEngine().getOptions().useCache;
+        return useCache == undefined ? true : useCache == true;
+    }
+
     public translate (text : Array<string>, options : any) {
         this.resetScores();
         let cacheHits = 0;
@@ -230,7 +235,9 @@ class RedTranslatorEngineWrapper {
                             for (let i = 0; i < curated.length; i++) {
                                 let translatedIndex = sugoiArrayTracker[i];
                                 if (result[translatedIndex] != undefined) {
-                                    this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
+                                    if (this.isCaching()) {
+                                        this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
+                                    }
                                     curated[i].setTranslatedText(result[translatedIndex]);
                                 } else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
                                     cacheHits++;
@@ -309,21 +316,21 @@ class RedTranslatorEngineWrapper {
                 "targetUrl": {
                     "type": "string",
                     "title": "Target URL(s)",
-                    "description": "Sugoi Translator target URL.",
+                    "description": "Sugoi Translator target URL. If you have multiple servers, you can put one in each line.",
                     "default":"http://localhost:14366/",
                     "required":true
                 },
                 "maxParallelJob": {
                     "type": "number",
                     "title": "Max Parallel job",
-                    "description": "Amount of requests done simultaneously. Due to the small latency between calls, you'll usually want 3 or 5 requests per server. You won't gain any actual speed if your resource usage is already at 100%, might even make it slower, so try to find a number that results in no waste, but also results in no overworking.",
+                    "description": "The amount of requests which will be sent simultaneously. Due to the small latency between sending a request and receiving a response, you'll usually want at least 5 requests per server so that you don't leave resources idling. Bigger numbers are also fine, but there are diminishing returns and you will lose Cache benefits if the number is too large. Recommended values are 5 to 10 per server (so if you have two servers, ideal number would be between 10 and 20). Remember, the goal is to not have anything idle, but you also don't want to overwhelm your servers to the point they start underperforming.",
                     "default":5,
                     "required":true
                 },
                 "escapeAlgorithm": {
                   "type": "string",
                   "title": "Code Escaping Algorithm",
-                  "description": "Escaping algorithm for inline code inside dialogues. Sugoi Translator is unpredictable. Hex Placeholder seems to work, but is interpreted weirdly. Pole Position Placeholder seems to be kept as-is more frequently and doesn't make a mess as often. Closed Nines will enclose a large number by two bounding 9s. It appears to get mangled by Sugoi very often.",
+                  "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. All options are available, should a particular project require them.",
                   "default": RedPlaceholderType.poleposition,
                   "required":false,
                   "enum": RedPlaceholderTypeArray
@@ -331,7 +338,13 @@ class RedTranslatorEngineWrapper {
                 "splitEnds": {
                     "type": "boolean",
                     "title": "Split Ends",
-                    "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced.",
+                    "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced. If the symbols at the corners are not actually part of the text this will actually improve translation accuracy while also increasing speed. Recommended is ON.",
+                    "default":true
+                },
+                "useCache": {
+                    "type": "boolean",
+                    "title": "Use Cache",
+                    "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. Recommended is ON.",
                     "default":true
                 },
               },
@@ -373,7 +386,15 @@ class RedTranslatorEngineWrapper {
                       var value = $(<HTMLInputElement> evt.target).prop("checked");
                       this.translatorEngine.update("splitEnds", value);
                     }
-                }	
+                },
+                {
+                    "key": "useCache",
+                    "inlinetitle": "Use Cache",
+                    "onChange": (evt : Event) => {
+                      var value = $(<HTMLInputElement> evt.target).prop("checked");
+                      this.translatorEngine.update("useCache", value);
+                    }
+                }
               ]
             }
         });
