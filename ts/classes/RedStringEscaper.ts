@@ -184,7 +184,7 @@ class RedStringEscaper {
              */
             if (typeof formulas[i] == 'function') {
                 console.log(`formula ${i} is a function`);
-                var arrayStrings = formulas[i].call(this, text);
+                var arrayStrings = (<Function> formulas[i]).call(this, text);
                 console.log(`result`, arrayStrings);
                 if (typeof arrayStrings == 'string') arrayStrings = [arrayStrings];
                 if (Array.isArray(arrayStrings) == false) continue;
@@ -198,7 +198,7 @@ class RedStringEscaper {
                 }
             } else {
                 console.log("replacing....");
-                text = text.replaceAll(formulas[i], (match) => {
+                text = text.replaceAll(<RegExp> formulas[i], (match) => {
                     return this.storeSymbol(match);
                 });
             }
@@ -237,7 +237,7 @@ class RedStringEscaper {
     }
 
     public static cachedFormulaString = "";
-    public static cachedFormulas : Array<any> = []; // I'm gonna be real, I don't have any idea what these are
+    public static cachedFormulas : Array<RegExp | Function> = [];
 
     public static getActiveFormulas () {
         sys.config.escaperPatterns = sys.config.escaperPatterns || [];
@@ -246,13 +246,13 @@ class RedStringEscaper {
             return RedStringEscaper.cachedFormulas;
         }
         // Update cache
-        let formulas = [];
+        let formulas : Array<RegExp | Function> = [];
         for (var i in sys.config.escaperPatterns) {
             console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
             if (typeof sys.config.escaperPatterns[i] !== "object") continue;
             if (!sys.config.escaperPatterns[i].value) continue;
-            var newReg = "";
             try {
+                var newReg : RegExp | Function;
                 console.log(sys.config.escaperPatterns[i].value);
                 if (common.isRegExp(sys.config.escaperPatterns[i].value)) {
                     console.log("is regex");
@@ -264,8 +264,11 @@ class RedStringEscaper {
                     console.log("Is string");
                     newReg = JSON.parse(sys.config.escaperPatterns[i].value);
                 }
+                if (newReg != undefined) {
+                    formulas.push(newReg);
+                }
             } catch (e){
-                console.warn("[TAG PLACEHOLDER] Error Trying to render ", sys.config.escaperPatterns[i], e);
+                console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", sys.config.escaperPatterns[i], e);
             }
             if (newReg) formulas.push(newReg);
         }
