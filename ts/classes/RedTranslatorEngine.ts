@@ -415,6 +415,47 @@ class RedTranslatorEngineWrapper {
                     }
                 },
                 {
+                    "type": "actions",
+                    "title" : "Local Server Manager",
+                    "fieldHtmlClass": "actionButtonSet",
+                    "items": [
+                      {
+                        "type": "button",
+                        "title": "Open server manager",
+                        "onClick" : function() {
+                            try {
+                                trans.sugoitrans.openServerManager()
+                            } catch (e) {
+                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                            }
+                        }
+                      }
+            
+                    ]
+                },
+// For now this doesn't work, probably something with the two windows being separate
+/*                 {
+                    "type": "actions",
+                    "title" : "Copy Sugoi Translator's Servers to here",
+                    "fieldHtmlClass": "actionButtonSet",
+                    "items": [
+                      {
+                        "type": "button",
+                        "title": "Copy Sugoi Translator's Servers to here",
+                        "onClick" : () => {
+                            try {
+                                let form = <HTMLTextAreaElement> $("[name=targetUrl]")[0];
+                                form.focus();
+                                form.value = trans.sugoitrans.getOptions().targetUrl;
+                                form.blur();
+                            } catch (e) {
+                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                            }
+                        }
+                      }
+                    ]
+                }, */
+                {
                     "key": "maxParallelJob",
                     "onChange": (evt : Event) => {
                       var value = <string> $(<HTMLInputElement> evt.target).val();
