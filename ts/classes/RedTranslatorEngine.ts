@@ -397,6 +397,13 @@ class RedTranslatorEngineWrapper {
                     "description": "Attempts to detect literal strings and safeguards them so that they don't stop being strings after translation. Heavily recommended to be ON, particularly if translating scripts.",
                     "default":true
                 },
+// changing the structure is problems
+/*                 "mergeSymbols": {
+                    "type": "boolean",
+                    "title": "Merge Escaped Symbols",
+                    "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
+                    "default":true
+                }, */
               },
               "form": [
                 {
@@ -495,23 +502,12 @@ class RedTranslatorEngineWrapper {
                     }
                 },
                 {
-                    "type": "actions",
-                    "title" : "Local Server Manager",
-                    "fieldHtmlClass": "actionButtonSet",
-                    "items": [
-                      {
-                        "type": "button",
-                        "title": "Open server manager",
-                        "onClick" : function() {
-                            try {
-                                trans.sugoitrans.openServerManager()
-                            } catch (e) {
-                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                            }
-                        }
-                      }
-            
-                    ]
+                    "key": "mergeSymbols",
+                    "inlinetitle": "Merge Escaped Symbols",
+                    "onChange": (evt : Event) => {
+                      var value = $(<HTMLInputElement> evt.target).prop("checked");
+                      this.translatorEngine.update("detectStrings", value);
+                    }
                 },
               ]
             }
