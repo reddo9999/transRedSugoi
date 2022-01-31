@@ -229,6 +229,23 @@ class RedStringEscaper {
                 }
             }
         }
+
+        // Replace sequential occurrences of Symbols with a single symbol!
+        // TESTING THIS IS HELL ON EARTH SOMEONE PLEASE TEST THIS I DON'T HAVE GOOD SENTENCES TO TEST IT
+        // Theoretically, this should result in less mangling of symbols as the translator is fed less of them to begin with
+        let regExpObj : any = {};
+        regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
+        regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
+        regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
+        regExpObj[RedPlaceholderType.closedTagPlaceholder] = /(<[0-9]{2,}\/>)/g;
+        regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
+        regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
+
+        if (regExpObj[this.type] != undefined) {
+            text = text.replaceAll(regExpObj[this.type], (match) => {
+                return this.storeSymbol(match);
+            });
+        }
         
         this.currentText = text;
         //console.log("%cEscaped text", 'background: #222; color: #bada55');
