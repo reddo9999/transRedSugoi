@@ -143,10 +143,13 @@ class RedStringEscaper {
             console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
-                let newText = this.currentText.replaceAll(key, this.storedSymbols[key]);
-                if (newText != this.currentText) {
-                    this.currentText = newText;
+                let idx = this.currentText.indexOf(key);
+                while (idx != -1) {
                     found = true;
+                    this.currentText =  this.currentText.substring(0, idx) +
+                                        this.storedSymbols[key] +
+                                        this.currentText.substring(idx + key.length);
+                    idx = this.currentText.indexOf(key);
                 }
             }
         }
