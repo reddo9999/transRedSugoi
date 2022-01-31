@@ -84,6 +84,11 @@ class RedTranslatorEngineWrapper {
         return detectStrings == undefined ? true : detectStrings == true;
     }
 
+    public isMergingSymbols () : boolean {
+        let mergeSymbols = this.getEngine().getOptions().mergeSymbols;
+        return mergeSymbols == undefined ? true : mergeSymbols == true;
+    }
+
     public translate (text : Array<string>, options : any) {
         this.resetScores();
         let cacheHits = 0;
@@ -163,6 +168,7 @@ class RedTranslatorEngineWrapper {
         let escapingType = this.getEngine().getOptions().escapeAlgorithm || RedPlaceholderType.poleposition;
         let splitEnds = this.getEngine().getOptions().splitEnds;
         splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
+        let mergeSymbols = this.isMergingSymbols();
 
         let doTranslate = async () => {
             if (this.paused) {
@@ -239,7 +245,7 @@ class RedTranslatorEngineWrapper {
                         let line = lines[i].trim();
 
                         // escape!
-                        let tags = new RedStringEscaper(line, escapingType, splitEnds, true);
+                        let tags = new RedStringEscaper(line, escapingType, splitEnds, mergeSymbols, true);
                         let myIndex = curated.push(tags) - 1;
                         let escapedText = tags.getReplacedText();
                         // After a while, empty lines make the AI behave ... erratically

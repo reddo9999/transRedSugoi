@@ -38,6 +38,7 @@ class RedStringEscaper {
     private type : RedPlaceholderType = RedPlaceholderType.poleposition;
     private splitEnds : boolean = true;
     private removeUnks : boolean = true;
+    private mergeSymbols : boolean = true;
     private symbolAffix : number = 1;
     private currentSymbol : number = 4;
     private hexCounter : number = 983041;
@@ -49,12 +50,13 @@ class RedStringEscaper {
     private preString : string = "";
     private postString : string = "";
 
-	constructor (text : string, type? : RedPlaceholderType, splitEnds? : boolean, noUnks? : boolean)  {
+	constructor (text : string, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
 		this.text = text;
 		this.currentText = text;
         this.type = type || RedPlaceholderType.poleposition;
         this.splitEnds = splitEnds == true;
         this.removeUnks = noUnks == true;
+        this.mergeSymbols = mergeSymbols == true;
         this.escape();
 	}
 
@@ -233,18 +235,20 @@ class RedStringEscaper {
         // Replace sequential occurrences of Symbols with a single symbol!
         // TESTING THIS IS HELL ON EARTH SOMEONE PLEASE TEST THIS I DON'T HAVE GOOD SENTENCES TO TEST IT
         // Theoretically, this should result in less mangling of symbols as the translator is fed less of them to begin with
-        let regExpObj : any = {};
-        regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
-        regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
-        regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
-        regExpObj[RedPlaceholderType.closedTagPlaceholder] = /(<[0-9]{2,}\/>)/g;
-        regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
-        regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
+        if (this.mergeSymbols) {
+            let regExpObj : any = {};
+            regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
+            regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
+            regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
+            regExpObj[RedPlaceholderType.closedTagPlaceholder] = /(<[0-9]{2,}\/>)/g;
+            regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
+            regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
 
-        if (regExpObj[this.type] != undefined) {
-            text = text.replaceAll(regExpObj[this.type], (match) => {
-                return this.storeSymbol(match);
-            });
+            if (regExpObj[this.type] != undefined) {
+                text = text.replaceAll(regExpObj[this.type], (match) => {
+                    return this.storeSymbol(match);
+                });
+            }
         }
         
         this.currentText = text;
