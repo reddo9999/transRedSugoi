@@ -270,7 +270,6 @@ class RedStringEscaper {
             } catch (e){
                 console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", sys.config.escaperPatterns[i], e);
             }
-            if (newReg) formulas.push(newReg);
         }
 
         // Since sugoi only translates japanese, might as well remove anything else
