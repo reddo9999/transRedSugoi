@@ -397,12 +397,12 @@ class RedTranslatorEngineWrapper {
                     "description": "Attempts to detect literal strings and safeguards them so that they don't stop being strings after translation. Heavily recommended to be ON, particularly if translating scripts.",
                     "default":true
                 },
-                 "mergeSymbols": {
-                    "type": "boolean",
-                    "title": "Merge Escaped Symbols",
-                    "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
-                    "default":true
-                },
+                "mergeSymbols": {
+                   "type": "boolean",
+                   "title": "Merge Escaped Symbols",
+                   "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
+                   "default":true
+               },
               },
               "form": [
                 {
