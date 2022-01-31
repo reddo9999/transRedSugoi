@@ -208,6 +208,7 @@ class RedStringEscaper {
         // Safety vs Quality?
         // Results are VERY good when the symbols aren't actually part of the sentence, which escaped symbols at start or end most likely are.
         // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
+        this.currentText = this.currentText.trim();
         let found = true;
         while (found && this.splitEnds) {
             found = false;
