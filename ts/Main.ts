@@ -1,12 +1,16 @@
-/// <reference path="classes/RedTranslatorEngine.ts" />
+/// <reference path="classes/RedSugoiEngine.ts" />
 
 var thisAddon = <any> this;
-var packageName = thisAddon.package.name;
-var thisEngine = new RedTranslatorEngineWrapper(thisAddon);
+let wrappers = [new RedSugoiEngine(thisAddon)];
 
 declare var trans : any;
-window.trans[packageName] = thisEngine.getEngine();
 
-$(document).ready(function() {
-	thisEngine.getEngine().init();
+wrappers.forEach(wrapper => {
+	trans[wrapper.getEngine().id] = wrapper.getEngine();
+});
+
+$(document).ready(() => {
+	wrappers.forEach(wrapper => {
+		wrapper.getEngine().init();
+	});
 });

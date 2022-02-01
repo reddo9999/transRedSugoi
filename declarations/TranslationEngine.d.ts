@@ -22,18 +22,31 @@ declare interface TranslationEngineOptionForm {
     form : Array<TranslationEngineOptionFormUpdater>;
 }
 
+declare interface TranslatorEngineOptions {
+    onAfterLoading : () => void | undefined;
+    onError : () => void | undefined;
+    always : () => void | undefined;
+}
+
+declare interface TranslatorEngineResults {
+    sourceText : string;
+    translationText : string;
+    source : Array<string>;
+    translation : Array<String>
+}
+
 declare interface TranslationEngineOptions {
-    id : string;
-    name : string;
+    id? : string;
+    name? : string;
     author : string;
     version : string;
-    description : string;
-    batchDelay : number;
-    skipReferencePair : boolean;
-    lineDelimiter : string;
-    mode : string;
-    targetUrl : string;
-    languages : {[id : string] : string};
+    description? : string;
+    batchDelay? : number;
+    skipReferencePair? : boolean;
+    lineDelimiter? : string;
+    mode? : string;
+    targetUrl? : string;
+    languages? : {[id : string] : string};
     optionsForm : TranslationEngineOptionForm;
 }
 
@@ -43,6 +56,7 @@ declare class TranslatorEngine {
     init() : void;
     escapeCharacter (sentence : string);
     escapeLineBreak (text : string);
+    id : string;
     fixTranslationFormatting (text : string);
     getOptions (...args : any[]) : {[id : string] : any};
     loadOptions () : void;

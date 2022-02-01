@@ -1,24 +1,30 @@
 /// <reference path="RedStringEscaper.ts" />
 declare var ui : any;
 
+interface RedScriptCheckResponse {
+    isScript : boolean;
+    quoteType? : string;
+    newLine? : string;
+}
+
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
-class RedTranslatorEngineWrapper {
-    private translatorEngine : TranslatorEngine;
-    private urls : Array<string> = [];
-    private urlUsage : Array<number> = [];
-    private urlScore : Array<number> = [];
-    private allowTranslation : boolean = true;
-    private paused : boolean = false;
-    private waiting : Array<Function> = [];
+abstract class RedTranslatorEngineWrapper {
+    protected translatorEngine : TranslatorEngine;
+    protected urls : Array<string> = [];
+    protected urlUsage : Array<number> = [];
+    protected urlScore : Array<number> = [];
+    protected allowTranslation : boolean = true;
+    protected paused : boolean = false;
+    protected waiting : Array<Function> = [];
     // Cache Translations so we can save up time!
     // In most scenarios this will not help, but if there is a consistent string reuse it might.
     // e.g. CharacterName: at the start of every Dialogue.
     // Plus not redoing the work is just good practice.
     // Would it be worth it to save this to a file and keep updating it through multiple games?
     // The bigger it gets the slower it should be to access, but wouldn't it still be faster than repeating the work?
-    private translationCache : {[text : string] : string} = {};
+    protected translationCache : {[text : string] : string} = {};
 
     public getEngine () {
         return this.translatorEngine;
@@ -47,32 +53,6 @@ class RedTranslatorEngineWrapper {
         }
     }
 
-    /**
-     * Updates URL array and picks the one with the least connections
-     * @returns string
-     */
-    public getUrl () {
-        let thisEngine = this.translatorEngine;
-        let urls = thisEngine.targetUrl.replaceAll("\r", "").split("\n");
-        if (this.urls.length != urls.length) {
-            this.urls = [...urls];
-            this.urlUsage = new Array(urls.length).fill(0);
-            this.urlScore = new Array(urls.length).fill(0);
-        }
-
-        let idx = this.urlUsage.indexOf(Math.min(...this.urlUsage));
-        this.urlUsage[idx]++;
-        this.urlScore[idx]++;
-        return this.urls[idx];
-    }
-
-    public freeUrl (url : string) {
-        this.urlUsage[this.urls.indexOf(url)]--;
-    }
-
-    public resetScores () {
-        this.urlScore = new Array(this.urls.length).fill(0);
-    }
 
     public isCaching () : boolean {
         let useCache = this.getEngine().getOptions().useCache;
@@ -89,248 +69,108 @@ class RedTranslatorEngineWrapper {
         return mergeSymbols == undefined ? true : mergeSymbols == true;
     }
 
-    public translate (text : Array<string>, options : any) {
-        this.resetScores();
-        let cacheHits = 0;
-        let batchStart = new Date().getTime();
-        this.resume(true);
-        console.log("[REDSUGOI] TRANSLATE:\n", text, options);
-        this.allowTranslation = true;
-        options = options||{};
+    abstract doTranslate (text : Array<string>, options : TranslatorEngineOptions) : Promise<TranslatorEngineResults>;
 
-        options.onAfterLoading = options.onAfterLoading||function() {};
-        options.onError = options.onError||function() {};
-        options.always = options.always||function() {};
+    public breakRow (text : string) : Array<string> {
+        // now we need to prepare the stuff we'll send over to Sugoi.
+        // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
+        // probably the best way to detect those is through blank lines.
+        // Might be a good idea to also split if new lines start with something that we're escaping
+        // First Step = "Break if you find one or more empty lines"
+        let lines = text.split(/( *\r?\n(?:\r?\n)+ *)/);
 
-        // Since it's offline we shan't make batches. The overhead, I hope, should be small!
-        let threads = this.getEngine().getOptions().maxParallelJob || 1;
-        let pick = 0;
-        let finished = 0;
-        let translations : Array<string> = new Array(text.length); // errors will be gracefully left empty I HOPE
+        // Second Step = "Break if a line ends with something that finishes a sentence"
+        for (let i = lines.length - 1; i >= 0; i--) {
+            let line = lines[i];
+            let split = line.split(/([｝）］】」』〟⟩！？。・…‥：]+ *\r?\n)/);
+            // We need to give back the end of the sentence so that it translates correctly
+            for (let k = 0; k < split.length - 1; k++) {
+                split[k] += split[k+1];
+                split.splice(k+1, 1);
+            }
+            lines.splice(i, 1, ...split);
+        }
 
-        let result = {
-			'sourceText':text.join(), 
-			'translationText':"",
-			'source':text, 
-			'translation': <Array<string>> []
-		};
-
-        let consoleWindow = $("#loadingOverlay .console")[0];
-        let progressCurrent = document.createTextNode("0");
-        let progressTotal = document.createTextNode("/" + text.length.toString());
-        let pre = document.createElement("pre");
-        pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
-        pre.appendChild(progressCurrent);
-        pre.appendChild(progressTotal);
-
-        let translatedLines = 0;
-        let updateProgress = () => {
-            progressCurrent.nodeValue = (++translatedLines).toString();
-        };
-
-        if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
-            ui.showBusyOverlay();
-        } else {
-            consoleWindow.appendChild(pre);
+        // Third step = "Break if a line starts with something that initiates a sentence"
+        for (let i = lines.length - 1; i >= 0; i--) {
+            let line = lines[i];
+            let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「]+)/);
+            // We need to give back the start of the sentence so that it translates correctly
+            for (let k = 1; k < split.length - 1; k++) {
+                split[k] += split[k+1];
+                split.splice(k+1, 1);
+            }
+            lines.splice(i, 1, ...split);
         }
         
-        let complete = () => {
-            finished++;
-            if (finished == threads) {
-                if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
-                    ui.hideBusyOverlay();
-                } else {
-                    let batchEnd = new Date().getTime();
-                    let pre = document.createElement("pre");
-                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
-                    let servers = [...this.urls];
-                    servers.sort((a, b) => {
-                        return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
-                    });
-                    for (let i = 0; i < servers.length; i++) {
-                        pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+        return lines;
+    }
+
+    public isScript (brokenRow : Array<string>) : RedScriptCheckResponse {
+        let isScript = false;
+        let quoteType = "";
+        if (this.isKeepingScripts() && brokenRow.length == 1) {
+            let trimmed = brokenRow[0].trim();
+            if (["'", '"'].indexOf(trimmed.charAt(0)) != -1 && 
+                 trimmed.charAt(0) == trimmed.charAt(trimmed.length - 1)
+                 ) {
+                // sure looks like one, but is it?
+                try {
+                    let innerString = JSON.parse(trimmed);
+                    isScript = true;
+                    quoteType = trimmed.charAt(0);
+                    return {
+                        isScript : true,
+                        quoteType : quoteType,
+                        newLine : innerString
                     }
-
-                    let seconds = Math.round((batchEnd - batchStart)/100)/10;
-
-                    pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds)/10} rows per second!`));
-                    pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${cacheHits} translations through cache hits!`));
-                    consoleWindow.appendChild(pre);
-                }
-                if (typeof options.onAfterLoading == 'function') {
-                    result.translationText = translations.join();
-                    result.translation = translations;
-                    options.onAfterLoading.call(this.translatorEngine, result);
+                } catch (e) {
+                    console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", brokenRow[0], e);
                 }
             }
         }
+        return {isScript : false}
+    }
 
+    public curateRow (row : string) : Array<RedStringEscaper> {
         let escapingType = this.getEngine().getOptions().escapeAlgorithm || RedPlaceholderType.poleposition;
         let splitEnds = this.getEngine().getOptions().splitEnds;
         splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
         let mergeSymbols = this.isMergingSymbols();
 
-        let doTranslate = async () => {
-            if (this.paused) {
-                this.waiting.push(doTranslate);
-                return;
-            }
-            if (!this.allowTranslation) {
-                complete();
-                return;
-            }
-            try {
-                let mine = pick++;
-                if (mine >= text.length) {
-                    complete();
-                } else {
-                    // ajax
-                    let myUrl = this.getUrl();
+        let lines = this.breakRow(row);
+        let scriptCheck = this.isScript(lines);
+        
+        let curated : Array<RedStringEscaper> = [];
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            let escaped = new RedStringEscaper(line, scriptCheck, escapingType, splitEnds, mergeSymbols, true);
+            curated.push(escaped);
+        }
+        return curated;
+    }
 
-                    let curated : Array<RedStringEscaper> = [];
-                    // now we need to prepare the stuff we'll send over to Sugoi.
-                    // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
-                    // probably the best way to detect those is through blank lines.
-                    // Might be a good idea to also split if new lines start with something that we're escaping
-                    // First Step = "Break if you find one or more empty lines"
-                    let lines = text[mine].split(/( *\r?\n(?:\r?\n)+ *)/);
+    public translate (text : Array<string>, options : any) {
+        options = options||{};
+        options.onAfterLoading = options.onAfterLoading||function() {};
+        options.onError = options.onError||function() {};
+        options.always = options.always||function() {};
 
-                    // Second Step = "Break if a line ends with something that finishes a sentence"
-                    for (let i = lines.length - 1; i >= 0; i--) {
-                        let line = lines[i];
-                        let split = line.split(/([｝）］】」』〟⟩！？。・…‥：]+ *\r?\n)/);
-                        // We need to give back the end of the sentence so that it translates correctly
-                        for (let k = 0; k < split.length - 1; k++) {
-                            split[k] += split[k+1];
-                            split.splice(k+1, 1);
-                        }
-                        lines.splice(i, 1, ...split);
-                    }
-
-                    // Third step = "Break if a line starts with something that initiates a sentence"
-                    for (let i = lines.length - 1; i >= 0; i--) {
-                        let line = lines[i];
-                        let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「]+)/);
-                        // We need to give back the start of the sentence so that it translates correctly
-                        for (let k = 1; k < split.length - 1; k++) {
-                            split[k] += split[k+1];
-                            split.splice(k+1, 1);
-                        }
-                        lines.splice(i, 1, ...split);
-                    }
-
-                    // Is this a script?
-                    let isScript = false;
-                    let quoteType = "";
-                    if (this.isKeepingScripts() && lines.length == 1) {
-                        let trimmed = lines[0].trim();
-                        if (["'", '"'].indexOf(trimmed.charAt(0)) != -1 && 
-                             trimmed.charAt(0) == trimmed.charAt(trimmed.length - 1)
-                             ) {
-                            // sure looks like one, but is it?
-                            try {
-                                let innerString = JSON.parse(trimmed);
-                                isScript = true;
-                                quoteType = trimmed.charAt(0);
-                                lines[0] = innerString;
-                            } catch (e) {
-                                console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", lines[0], e);
-                            }
-                        }
-                    }
-
-                    let sugoiArray : Array<string> = [];
-                    let sugoiArrayTracker : {[index : number] : number} = {}; // Keeps track of which translated string is from which tag
-                    for (let i = 0; i < lines.length; i++) {
-                        let line = lines[i].trim();
-
-                        // escape!
-                        let tags = new RedStringEscaper(line, escapingType, splitEnds, mergeSymbols, true);
-                        let myIndex = curated.push(tags) - 1;
-                        let escapedText = tags.getReplacedText();
-                        // After a while, empty lines make the AI behave ... erratically
-                        if (escapedText.trim() != "" && this.translationCache[escapedText] == undefined) {
-                            sugoiArrayTracker[myIndex] = sugoiArray.push(escapedText) - 1;
-                        }
-                    }
-
-                    if (sugoiArray.length > 0) {
-                        fetch(myUrl, {
-                            method		: 'post',
-                            body		: JSON.stringify({content: sugoiArray, message: "translate sentences"}),
-                            headers		: { 'Content-Type': 'application/json' },
-                        })
-                        .then(async (response) => {
-                            let result = await response.json();
-                            let finalTranslation : Array<string> = [];
-                            for (let i = 0; i < curated.length; i++) {
-                                let translatedIndex = sugoiArrayTracker[i];
-                                if (result[translatedIndex] != undefined) {
-                                    if (this.isCaching()) {
-                                        this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
-                                    }
-                                    curated[i].setTranslatedText(result[translatedIndex]);
-                                } else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
-                                    cacheHits++;
-                                    curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
-                                }
-                                finalTranslation.push(curated[i].recoverSymbols());
-                            }
-                            let finalTranslationString = finalTranslation.join("\n");
-                            if (isScript) {
-                                finalTranslationString = JSON.stringify(finalTranslation);
-                                if (finalTranslationString.charAt(0) != quoteType) {
-                                    // escape the quotes
-                                    finalTranslationString = finalTranslationString.replaceAll(quoteType, `\\${quoteType}`);
-                                    finalTranslationString = quoteType + finalTranslationString.substring(1, finalTranslationString.length - 1) + quoteType;
-                                }
-                            }
-                            translations[mine] = finalTranslationString;
-                        })
-                        .catch((error) => {
-                            console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
-                            let pre = document.createElement("pre");
-                            pre.style.color = "red";
-                            pre.style.fontWeight = "bold";
-                            pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
-                            consoleWindow.appendChild(pre);
-                        })
-                        .finally(() => {
-                            this.freeUrl(myUrl);
-                            updateProgress();
-                            doTranslate();
-                        });
-                    } else {
-                        // Nothing to translate or all cache hits
-                        let finalTranslation : Array<string> = [];
-                        for (let i = 0; i < curated.length; i++) {
-                            let translatedIndex = sugoiArrayTracker[i];
-                            if (this.translationCache[curated[i].getReplacedText()] != undefined) {
-                                cacheHits++;
-                                curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
-                            }
-                            finalTranslation.push(curated[i].recoverSymbols());
-                        }
-                        translations[mine] = (finalTranslation).join("\n");
-                        this.freeUrl(myUrl);
-                        updateProgress();
-                        doTranslate();
-                    }
-                }
-            } catch (error : any) {
-                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", error);
-                let pre = document.createElement("pre");
-                pre.style.color = "red";
-                pre.style.fontWeight = "bold";
-                pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON THREAD - " + error.name + ': ' + error.message));
-                consoleWindow.appendChild(pre);
-                complete();
-            }
+        if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
+            ui.showBusyOverlay();
         }
 
-        for (let i = 0; i < threads; i++) {
-            doTranslate();
-        }
+        let translation = this.doTranslate(text, options);
+
+        translation.then((result) => {
+            options.onAfterLoading.call(this.translatorEngine, result);
+        }).catch((reason) => {
+            console.error("[RedTranslatorEngine] Well shit.", reason);
+        }).finally(() => {
+            if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
+                ui.hideBusyOverlay();
+            }
+        });
     }
 
     public isValidHttpUrl(urlString : string) {
@@ -343,40 +183,15 @@ class RedTranslatorEngineWrapper {
         return url.protocol === "http:" || url.protocol === "https:";
     }
 
-    constructor (thisAddon : any) {
+    constructor (thisAddon : any, extraOptions : {[id : string] : any}, extraSchema : {[id : string] : TranslationEngineOptionSchema<any>}, extraForm : Array<TranslationEngineOptionFormUpdater>) {
         let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
         this.translatorEngine = new TranslatorEngine({
-            id:thisAddon.package.name,
-            name:thisAddon.package.title,
             author:thisAddon.package.author.name,
             version:thisAddon.package.version,
-            description:thisAddon.package.description,
-            batchDelay:1,
-            skipReferencePair:true,
-            lineDelimiter: "<br>",
-            mode: "rowByRow",
-            targetUrl:"http://localhost:14366/",
-            languages:{
-                "en": "English",
-                "ja": "Japanese"
-              },
+            ...extraOptions,
             optionsForm:{
               "schema": {
-                "targetUrl": {
-                    "type": "string",
-                    "title": "Target URL(s)",
-                    "description": "Sugoi Translator target URL. If you have multiple servers, you can put one in each line.",
-                    "default":"http://localhost:14366/",
-                    "required":true
-                },
-                "maxParallelJob": {
-                    "type": "number",
-                    "title": "Max Parallel job",
-                    "description": "The amount of requests which will be sent simultaneously. Due to the small latency between sending a request and receiving a response, you'll usually want at least 5 requests per server so that you don't leave resources idling. Bigger numbers are also fine, but there are diminishing returns and you will lose Cache benefits if the number is too large. Recommended values are 5 to 10 per server (so if you have two servers, ideal number would be between 10 and 20). Remember, the goal is to not have anything idle, but you also don't want to overwhelm your servers to the point they start underperforming.",
-                    "default":5,
-                    "required":true
-                },
                 "escapeAlgorithm": {
                   "type": "string",
                   "title": "Code Escaping Algorithm",
@@ -409,71 +224,9 @@ class RedTranslatorEngineWrapper {
                    "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
                    "default":true
                },
+               ...extraSchema
               },
               "form": [
-                {
-                    "key": "targetUrl",
-                    "type": "textarea",
-                    "onChange": (evt : Event) => {
-                      var value = <string> $(<HTMLInputElement> evt.target).val();
-                      var urls = value.replaceAll("\r", "").split("\n");
-                      var validUrls = [];
-                      for (var i in urls) {
-                          if (!this.isValidHttpUrl(urls[i])) continue;
-                          validUrls.push(urls[i]);
-                      }
-                      this.translatorEngine.update("targetUrl", validUrls.join("\n"));
-                      $(<HTMLInputElement> evt.target).val(validUrls.join("\n"));
-                    }
-                },
-                {
-                    "type": "actions",
-                    "title" : "Local Server Manager",
-                    "fieldHtmlClass": "actionButtonSet",
-                    "items": [
-                      {
-                        "type": "button",
-                        "title": "Open server manager",
-                        "onClick" : function() {
-                            try {
-                                trans.sugoitrans.openServerManager()
-                            } catch (e) {
-                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                            }
-                        }
-                      }
-            
-                    ]
-                },
-// For now this doesn't work, probably something with the two windows being separate
-/*                 {
-                    "type": "actions",
-                    "title" : "Copy Sugoi Translator's Servers to here",
-                    "fieldHtmlClass": "actionButtonSet",
-                    "items": [
-                      {
-                        "type": "button",
-                        "title": "Copy Sugoi Translator's Servers to here",
-                        "onClick" : () => {
-                            try {
-                                let form = <HTMLTextAreaElement> $("[name=targetUrl]")[0];
-                                form.focus();
-                                form.value = trans.sugoitrans.getOptions().targetUrl;
-                                form.blur();
-                            } catch (e) {
-                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                            }
-                        }
-                      }
-                    ]
-                }, */
-                {
-                    "key": "maxParallelJob",
-                    "onChange": (evt : Event) => {
-                      var value = <string> $(<HTMLInputElement> evt.target).val();
-                      this.translatorEngine.update("maxParallelJob", parseInt(value));
-                    }
-                },
                 {
                   "key": "escapeAlgorithm",
                   "titleMap": escapingTitleMap,
@@ -514,6 +267,7 @@ class RedTranslatorEngineWrapper {
                       this.translatorEngine.update("detectStrings", value);
                     }
                 },
+                ...extraForm
               ]
             }
         });

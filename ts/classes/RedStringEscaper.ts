@@ -50,13 +50,21 @@ class RedStringEscaper {
     private preString : string = "";
     private postString : string = "";
 
-	constructor (text : string, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
+    private isScript : boolean = false;
+    private quoteType : string = "";
+
+	constructor (text : string, scriptCheck : RedScriptCheckResponse, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
 		this.text = text;
 		this.currentText = text;
         this.type = type || RedPlaceholderType.poleposition;
         this.splitEnds = splitEnds == true;
         this.removeUnks = noUnks == true;
         this.mergeSymbols = mergeSymbols == true;
+        this.isScript = scriptCheck.isScript;
+        if (this.isScript) {
+            this.quoteType = <string> scriptCheck.quoteType;
+            this.text = <string> scriptCheck.newLine;
+        }
         this.escape();
 	}
 
@@ -162,6 +170,16 @@ class RedStringEscaper {
         if (this.removeUnks) {
             finalString = finalString.replaceAll("<unk>", "");
         }
+
+        if (this.isScript) {
+            finalString = JSON.stringify(finalString);
+            if (finalString.charAt(0) != this.quoteType) {
+                // escape the quotes
+                finalString = finalString.replaceAll(this.quoteType, `\\${this.quoteType}`);
+                finalString = this.quoteType + finalString.substring(1, finalString.length - 1) + this.quoteType;
+            }
+        }
+
         return finalString;
     }
 
