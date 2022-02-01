@@ -213,8 +213,16 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                                     if (this.isCaching()) {
                                         this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
                                     }
+                                    console.log("[RedSugoi] Translated a thing!", {
+                                        originalText : curated[i].getOriginalText(),
+                                        translatedText : result[translatedIndex]
+                                    });
                                     curated[i].setTranslatedText(result[translatedIndex]);
                                 } else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
+                                    console.log("[RedSugoi] Got a cache hit!", {
+                                        originalText : curated[i].getOriginalText(),
+                                        translatedText : result[translatedIndex]
+                                    });
                                     cacheHits++;
                                     curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
                                 }
