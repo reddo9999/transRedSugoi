@@ -195,7 +195,7 @@ class RedStringEscaper {
         }
         let formulas = RedStringEscaper.getActiveFormulas();
         let text = this.currentText || this.text;
-        console.log("Formulas : ", formulas);
+        //console.log("Formulas : ", formulas);
         for (var i=0; i<formulas.length; i++) {
             if (!Boolean(formulas[i])) continue;
             
@@ -203,9 +203,9 @@ class RedStringEscaper {
              * Function should return a string or Array of strings
              */
             if (typeof formulas[i] == 'function') {
-                console.log(`formula ${i} is a function`);
+                //console.log(`formula ${i} is a function`);
                 var arrayStrings = (<Function> formulas[i]).call(this, text);
-                console.log(`result`, arrayStrings);
+                //console.log(`result`, arrayStrings);
                 if (typeof arrayStrings == 'string') arrayStrings = [arrayStrings];
                 if (Array.isArray(arrayStrings) == false) continue;
 
@@ -217,7 +217,7 @@ class RedStringEscaper {
                     });				
                 }
             } else {
-                console.log("replacing....");
+                //console.log("replacing....");
                 text = text.replaceAll(<RegExp> formulas[i], (match) => {
                     return this.storeSymbol(match);
                 });
@@ -287,20 +287,20 @@ class RedStringEscaper {
         // Update cache
         let formulas : Array<RegExp | Function> = [];
         for (var i in sys.config.escaperPatterns) {
-            console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
+            //console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
             if (typeof sys.config.escaperPatterns[i] !== "object") continue;
             if (!sys.config.escaperPatterns[i].value) continue;
             try {
                 var newReg : RegExp | Function;
-                console.log(sys.config.escaperPatterns[i].value);
+                //console.log(sys.config.escaperPatterns[i].value);
                 if (common.isRegExp(sys.config.escaperPatterns[i].value)) {
-                    console.log("is regex");
+                    //console.log("is regex");
                     newReg = common.evalRegExpStr(sys.config.escaperPatterns[i].value);
                 } else if (common.isStringFunction(sys.config.escaperPatterns[i].value)) {
-                    console.log("pattern ", i, "is function");
+                    //console.log("pattern ", i, "is function");
                     newReg = RedStringEscaper.renderFunction(sys.config.escaperPatterns[i].value);
                 } else {
-                    console.log("Is string");
+                    //console.log("Is string");
                     newReg = JSON.parse(sys.config.escaperPatterns[i].value);
                 }
                 if (newReg != undefined) {
