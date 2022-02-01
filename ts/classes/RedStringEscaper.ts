@@ -150,7 +150,7 @@ class RedStringEscaper {
         // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
         let found = true;
         while (found) {
-            console.warn("Recover loop");
+            //console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
                 let idx = this.currentText.indexOf(key);
