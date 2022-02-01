@@ -221,7 +221,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                                 } else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
                                     console.log("[RedSugoi] Got a cache hit!", {
                                         originalText : curated[i].getOriginalText(),
-                                        translatedText : result[translatedIndex]
+                                        translatedText : this.translationCache[curated[i].getReplacedText()]
                                     });
                                     cacheHits++;
                                     curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
