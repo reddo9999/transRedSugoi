@@ -63,7 +63,7 @@ class RedStringEscaper {
         this.isScript = scriptCheck.isScript;
         if (this.isScript) {
             this.quoteType = <string> scriptCheck.quoteType;
-            this.text = <string> scriptCheck.newLine;
+            this.currentText = <string> scriptCheck.newLine;
         }
         this.escape();
 	}
