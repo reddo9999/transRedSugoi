@@ -194,6 +194,11 @@ abstract class RedTranslatorEngineWrapper {
             author:thisAddon.package.author.name,
             version:thisAddon.package.version,
             ...extraOptions,
+            escapeAlgorithm : RedPlaceholderType.poleposition,
+            splitEnds : true,
+            useCache : true,
+            detectStrings : true,
+            mergeSymbols : true,
             optionsForm:{
               "schema": {
                 "escapeAlgorithm": {

@@ -18,6 +18,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 lineDelimiter: "<br>",
                 mode: "rowByRow",
                 maxRequestLength : Number.MAX_VALUE,
+                maxParallelJob : 5,
             }
             ,
             {
