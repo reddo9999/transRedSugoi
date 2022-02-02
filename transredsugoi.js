@@ -11,13 +11,13 @@ var RedPlaceholderType;
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 var RedPlaceholderTypeNames;
 (function (RedPlaceholderTypeNames) {
-    RedPlaceholderTypeNames["poleposition"] = "Poleposition";
-    RedPlaceholderTypeNames["hexPlaceholder"] = "Hex Placeholder";
-    RedPlaceholderTypeNames["noEscape"] = "No escaping";
-    RedPlaceholderTypeNames["ninesOfRandomness"] = "Closed Nines";
-    RedPlaceholderTypeNames["tagPlaceholder"] = "Tag Placeholder";
-    RedPlaceholderTypeNames["closedTagPlaceholder"] = "Tag Placeholder (Closed Tags)";
-    RedPlaceholderTypeNames["fullTagPlaceholder"] = "Tag Placeholder (Full XML-style Tag)";
+    RedPlaceholderTypeNames["poleposition"] = "Poleposition (e.g. #24)";
+    RedPlaceholderTypeNames["hexPlaceholder"] = "Hex Placeholder (e.g. 0xffffff)";
+    RedPlaceholderTypeNames["noEscape"] = "No escaping (will translate everything)";
+    RedPlaceholderTypeNames["ninesOfRandomness"] = "Closed Nines (e.g. 9123412349)";
+    RedPlaceholderTypeNames["tagPlaceholder"] = "Tag Placeholder (e.g. <24>)";
+    RedPlaceholderTypeNames["closedTagPlaceholder"] = "Tag Placeholder Closed Tags (e.g. <24/>)";
+    RedPlaceholderTypeNames["fullTagPlaceholder"] = "Tag Placeholder Full XML-style Tag (e.g. <24></24>)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
 let RedPlaceholderTypeArray = [
     RedPlaceholderType.poleposition,
@@ -274,6 +274,11 @@ class RedTranslatorEngineWrapper {
             author: thisAddon.package.author.name,
             version: thisAddon.package.version,
             ...extraOptions,
+            escapeAlgorithm: RedPlaceholderType.poleposition,
+            splitEnds: true,
+            useCache: true,
+            detectStrings: true,
+            mergeSymbols: true,
             optionsForm: {
                 "schema": {
                     "escapeAlgorithm": {
@@ -512,6 +517,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             lineDelimiter: "<br>",
             mode: "rowByRow",
             maxRequestLength: Number.MAX_VALUE,
+            maxParallelJob: 5,
         }, {
             "targetUrl": {
                 "type": "string",
