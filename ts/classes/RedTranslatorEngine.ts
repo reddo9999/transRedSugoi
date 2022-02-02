@@ -107,7 +107,6 @@ abstract class RedTranslatorEngineWrapper {
     }
 
     public isScript (brokenRow : Array<string>) : RedScriptCheckResponse {
-        let isScript = false;
         let quoteType = "";
         if (this.isKeepingScripts() && brokenRow.length == 1) {
             let trimmed = brokenRow[0].trim();
@@ -116,9 +115,14 @@ abstract class RedTranslatorEngineWrapper {
                  ) {
                 // sure looks like one, but is it?
                 try {
-                    let innerString = JSON.parse(trimmed);
-                    isScript = true;
                     quoteType = trimmed.charAt(0);
+                    if (quoteType == "'") {
+                        // These are actually invalid, so... extra work for us.
+                        trimmed = trimmed.replaceAll('"', '\\"');
+                        trimmed = '"' + trimmed.substring(1, trimmed.length - 1) + '"';
+                        // It's okay, we'll go back to the original quoteType later.
+                    }
+                    let innerString = JSON.parse(trimmed);
                     return {
                         isScript : true,
                         quoteType : quoteType,
