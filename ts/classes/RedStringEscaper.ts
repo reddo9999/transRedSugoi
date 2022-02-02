@@ -14,13 +14,13 @@ enum RedPlaceholderType {
 // I wonder if we could initiate this through calling the above...
 // I'd rather not have to change both
 enum RedPlaceholderTypeNames {
-    poleposition = "Poleposition",
-    hexPlaceholder = "Hex Placeholder",
-    noEscape = "No escaping",
-    ninesOfRandomness = "Closed Nines",
-    tagPlaceholder = "Tag Placeholder",
-    closedTagPlaceholder = "Tag Placeholder (Closed Tags)",
-    fullTagPlaceholder = "Tag Placeholder (Full XML-style Tag)",
+    poleposition = "Poleposition (e.g. #24)",
+    hexPlaceholder = "Hex Placeholder (e.g. 0xffffff)",
+    noEscape = "No escaping (will translate everything)",
+    ninesOfRandomness = "Closed Nines (e.g. 9123412349)",
+    tagPlaceholder = "Tag Placeholder (e.g. <24>)",
+    closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. <24/>)",
+    fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. <24></24>)",
 }
 
 let RedPlaceholderTypeArray = [
