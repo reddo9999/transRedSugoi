@@ -1,9 +1,9 @@
 {
     "name": "transredsugoi",
     "title": "RedSugoi",
-    "description": "Red's idea of translating through Sugoi",
-    "main": "redsugoi.js",
-    "version": "0.13",
+    "description": "Red's Translation Engine Wrapper for Sugoi Translator. Special focus on handling text. Will support other translators later!",
+    "main": "transredsugoi.js",
+    "version": "0.15",
     "icon": "icon.ico",
     "author": {
         "name": "Reddo"

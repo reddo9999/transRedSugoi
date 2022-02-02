@@ -24,6 +24,7 @@ declare class RedStringEscaper {
     private type;
     private splitEnds;
     private removeUnks;
+    private mergeSymbols;
     private symbolAffix;
     private currentSymbol;
     private hexCounter;
@@ -33,7 +34,9 @@ declare class RedStringEscaper {
     private currentText;
     private preString;
     private postString;
-    constructor(text: string, type?: RedPlaceholderType, splitEnds?: boolean, noUnks?: boolean);
+    private isScript;
+    private quoteType;
+    constructor(text: string, scriptCheck: RedScriptCheckResponse, type?: RedPlaceholderType, splitEnds?: boolean, mergeSymbols?: boolean, noUnks?: boolean);
     getTag(): string;
     getClosedTag(): string;
     getFullTag(): string;
@@ -47,34 +50,53 @@ declare class RedStringEscaper {
     recoverSymbols(): string;
     escape(): string;
     static cachedFormulaString: string;
-    static cachedFormulas: Array<any>;
-    static getActiveFormulas(): any[];
+    static cachedFormulas: Array<RegExp | Function>;
+    static getActiveFormulas(): (Function | RegExp)[];
     static renderFunction(string: string): any;
 }
 declare var ui: any;
-declare class RedTranslatorEngineWrapper {
-    private translatorEngine;
-    private urls;
-    private urlUsage;
-    private urlScore;
-    private allowTranslation;
-    private paused;
-    private waiting;
-    private translationCache;
+interface RedScriptCheckResponse {
+    isScript: boolean;
+    quoteType?: string;
+    newLine?: string;
+}
+declare abstract class RedTranslatorEngineWrapper {
+    protected translatorEngine: TranslatorEngine;
+    protected urls: Array<string>;
+    protected urlUsage: Array<number>;
+    protected urlScore: Array<number>;
+    protected allowTranslation: boolean;
+    protected paused: boolean;
+    protected waiting: Array<Function>;
+    protected translationCache: {
+        [text: string]: string;
+    };
     getEngine(): TranslatorEngine;
     abort(): void;
     pause(): void;
     resume(reset?: boolean): void;
+    isCaching(): boolean;
+    isKeepingScripts(): boolean;
+    isMergingSymbols(): boolean;
+    abstract doTranslate(text: Array<string>, options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
+    breakRow(text: string): Array<string>;
+    isScript(brokenRow: Array<string>): RedScriptCheckResponse;
+    curateRow(row: string): Array<RedStringEscaper>;
+    translate(text: Array<string>, options: any): void;
+    isValidHttpUrl(urlString: string): boolean;
+    constructor(thisAddon: any, extraOptions: {
+        [id: string]: any;
+    }, extraSchema: {
+        [id: string]: TranslationEngineOptionSchema<any>;
+    }, extraForm: Array<TranslationEngineOptionFormUpdater>);
+}
+declare class RedSugoiEngine extends RedTranslatorEngineWrapper {
+    constructor(thisAddon: any);
     getUrl(): string;
     freeUrl(url: string): void;
     resetScores(): void;
-    isCaching(): boolean;
-    isKeepingScripts(): boolean;
-    translate(text: Array<string>, options: any): void;
-    isValidHttpUrl(urlString: string): boolean;
-    constructor(thisAddon: any);
+    doTranslate(text: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
 }
 declare var thisAddon: any;
-declare var packageName: any;
-declare var thisEngine: RedTranslatorEngineWrapper;
+declare let wrappers: RedSugoiEngine[];
 declare var trans: any;
