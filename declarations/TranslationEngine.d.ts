@@ -51,7 +51,7 @@ declare interface TranslationEngineOptions {
 }
 
 declare class TranslatorEngine {
-    constructor(options : TranslationEngineOptions);
+    constructor(options : any);
     update(id : string, value : any);
     init() : void;
     escapeCharacter (sentence : string);
