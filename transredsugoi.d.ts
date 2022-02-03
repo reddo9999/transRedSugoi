@@ -79,6 +79,11 @@ declare abstract class RedTranslatorEngineWrapper {
     isKeepingScripts(): boolean;
     isMergingSymbols(): boolean;
     abstract doTranslate(text: Array<string>, options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
+    private cacheHits;
+    hasCache(text: string): boolean;
+    getCache(text: string): string;
+    setCache(text: string, translation: string): void;
+    getCacheHits(): number;
     breakRow(text: string): Array<string>;
     isScript(brokenRow: Array<string>): RedScriptCheckResponse;
     curateRow(row: string): Array<RedStringEscaper>;
@@ -91,12 +96,36 @@ declare abstract class RedTranslatorEngineWrapper {
     }, extraForm: Array<TranslationEngineOptionFormUpdater>);
 }
 declare class RedSugoiEngine extends RedTranslatorEngineWrapper {
+    getUrl(): string;
+    updateUrls(): void;
+    getUrlCount(): number;
+    freeUrl(url: string): void;
+    resetScores(): void;
+    doTranslate(rows: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
+    doTranslateOld(text: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
+    constructor(thisAddon: any);
+}
+declare var thisAddon: any;
+declare let wrappers: RedSugoiEngine[];
+declare var trans: any;
+declare class RedDeepLEngine extends RedTranslatorEngineWrapper {
     constructor(thisAddon: any);
     getUrl(): string;
     freeUrl(url: string): void;
     resetScores(): void;
     doTranslate(text: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
 }
-declare var thisAddon: any;
-declare let wrappers: RedSugoiEngine[];
-declare var trans: any;
+declare class RedStringRowHandler {
+    private originalRow;
+    private curatedLines;
+    private translatableLines;
+    private translatableLinesIndex;
+    private translatedLines;
+    constructor(row: string, wrapper: RedTranslatorEngineWrapper);
+    getOriginalRow(): string;
+    getTranslatedRow(): string;
+    getTranslatableLines(): string[];
+    insertTranslation(text: string, index: number): void;
+    applyTranslation(): void;
+    isDone(index: number): boolean;
+}
