@@ -71,6 +71,27 @@ abstract class RedTranslatorEngineWrapper {
 
     abstract doTranslate (text : Array<string>, options : TranslatorEngineOptions) : Promise<TranslatorEngineResults>;
 
+    private cacheHits = 0;
+
+    public hasCache (text : string) {
+        return this.translationCache[text] != undefined;
+    }
+
+    public getCache (text : string) {
+        this.cacheHits++;
+        return this.translationCache[text];
+    }
+
+    public setCache (text : string, translation : string) {
+        this.translationCache[text] = translation;
+    }
+
+    public getCacheHits () {
+        let result = this.cacheHits;
+        this.cacheHits = 0;
+        return result;
+    }
+
     public breakRow (text : string) : Array<string> {
         // now we need to prepare the stuff we'll send over to Sugoi.
         // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
