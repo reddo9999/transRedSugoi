@@ -142,6 +142,12 @@ class RedStringEscaper {
                 case RedPlaceholderType.closedTagPlaceholder:
                     tag = this.getClosedTag();
                     break;
+                case RedPlaceholderType.curlie:
+                    tag = this.getCurly();
+                    break;
+                case RedPlaceholderType.doubleCurlie:
+                    tag = this.getDoubleCurly();
+                    break;
             }
             this.storedSymbols[tag.trim()] = text;
             this.reverseSymbols[text] = tag.trim();
