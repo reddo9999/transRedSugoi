@@ -97,12 +97,12 @@ declare abstract class RedTranslatorEngineWrapper {
 }
 declare class RedSugoiEngine extends RedTranslatorEngineWrapper {
     getUrl(): string;
+    reduceScore(url: string): void;
     updateUrls(): void;
     getUrlCount(): number;
     freeUrl(url: string): void;
     resetScores(): void;
     doTranslate(rows: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
-    doTranslateOld(text: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
     constructor(thisAddon: any);
 }
 declare var thisAddon: any;

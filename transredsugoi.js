@@ -525,11 +525,23 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         this.urlScore[idx]++;
         return this.urls[idx];
     }
+    reduceScore(url) {
+        let idx = this.urls.indexOf(url);
+        if (idx != -1) {
+            this.urlScore[idx]--;
+        }
+    }
     updateUrls() {
         let thisEngine = this.translatorEngine;
         let urls = thisEngine.targetUrl.replaceAll("\r", "").split("\n");
         if (this.urls.length != urls.length) {
             this.urls = [...urls];
+            for (let i = 0; i < this.urls.length; i++) {
+                this.urls[i] = this.urls[i].trim();
+                if (this.urls[i].charAt(this.urls[i].length - 1) != "/") {
+                    this.urls[i] += "/";
+                }
+            }
             this.urlUsage = new Array(urls.length).fill(0);
             this.urlScore = new Array(urls.length).fill(0);
         }
@@ -617,7 +629,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                         let pre = document.createElement("pre");
                         pre.style.color = "red";
                         pre.style.fontWeight = "bold";
-                        pre.appendChild(document.createTextNode("[REDSUGOI] Error translating a batch, received invalid response. Skipping..."));
+                        pre.appendChild(document.createTextNode(`[RedSugoi] Error while fetching from ${myServer}, received invalid response from server. Skipping batch.`));
                         consoleWindow.appendChild(pre);
                         return;
                     }
@@ -632,7 +644,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     let pre = document.createElement("pre");
                     pre.style.color = "red";
                     pre.style.fontWeight = "bold";
-                    pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
+                    pre.appendChild(document.createTextNode(`[RedSugoi] Error while fetching from ${myServer} - ${error.name}: ${error.message}\n${' '.repeat(11)}If all fetch attempts fail on this server, check if it's still up.`));
+                    this.reduceScore(myServer);
                     consoleWindow.appendChild(pre);
                 })
                     .finally(() => {
@@ -689,162 +702,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             }
         });
     }
-    doTranslateOld(text, options) {
-        this.resetScores();
-        let cacheHits = 0;
-        let batchStart = new Date().getTime();
-        this.resume(true);
-        this.allowTranslation = true;
-        console.log("[REDSUGOI] TRANSLATE:\n", text, options);
-        let consoleWindow = $("#loadingOverlay .console")[0];
-        let progressTotal = document.createTextNode("/" + text.length.toString());
-        let pre = document.createElement("pre");
-        let progressNode = document.createTextNode("0");
-        pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
-        pre.appendChild(progressNode);
-        pre.appendChild(progressTotal);
-        consoleWindow.appendChild(pre);
-        let threads = this.getEngine().getOptions().maxParallelJob || 1;
-        let pick = 0;
-        let finished = 0;
-        let translations = new Array(text.length);
-        let result = {
-            'sourceText': text.join(),
-            'translationText': "",
-            'source': text,
-            'translation': []
-        };
-        let translatedLines = 0;
-        let updateProgress = () => {
-            progressNode.nodeValue = (++translatedLines).toString();
-        };
-        let complete = (onSuccess, onError) => {
-            finished++;
-            if (finished == threads) {
-                let batchEnd = new Date().getTime();
-                let pre = document.createElement("pre");
-                pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
-                let servers = [...this.urls];
-                servers.sort((a, b) => {
-                    return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
-                });
-                for (let i = 0; i < servers.length; i++) {
-                    pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
-                }
-                let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds) / 10} rows per second!`));
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${cacheHits} translations through cache hits!`));
-                consoleWindow.appendChild(pre);
-                result.translationText = translations.join();
-                result.translation = translations;
-                onSuccess(result);
-            }
-        };
-        let doTranslate = async (onSuccess, onError) => {
-            if (this.paused) {
-                this.waiting.push(doTranslate);
-                return;
-            }
-            if (!this.allowTranslation) {
-                complete(onSuccess, onError);
-                return;
-            }
-            try {
-                let mine = pick++;
-                if (mine >= text.length) {
-                    complete(onSuccess, onError);
-                }
-                else {
-                    let sugoiArray = [];
-                    let sugoiArrayTracker = {};
-                    let curated = this.curateRow(text[mine]);
-                    for (let i = 0; i < curated.length; i++) {
-                        let escapedText = curated[i].getReplacedText();
-                        if (escapedText.trim() != "" && this.translationCache[escapedText] == undefined) {
-                            sugoiArrayTracker[i] = sugoiArray.push(escapedText) - 1;
-                        }
-                    }
-                    let myUrl = this.getUrl();
-                    if (sugoiArray.length > 0) {
-                        fetch(myUrl, {
-                            method: 'post',
-                            body: JSON.stringify({ content: sugoiArray, message: "translate sentences" }),
-                            headers: { 'Content-Type': 'application/json' },
-                        })
-                            .then(async (response) => {
-                            let result = await response.json();
-                            let finalTranslation = [];
-                            for (let i = 0; i < curated.length; i++) {
-                                let translatedIndex = sugoiArrayTracker[i];
-                                if (result[translatedIndex] != undefined) {
-                                    if (this.isCaching()) {
-                                        this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
-                                    }
-                                    console.log("[RedSugoi] Translated a thing!", {
-                                        originalText: curated[i].getOriginalText(),
-                                        translatedText: result[translatedIndex]
-                                    });
-                                    curated[i].setTranslatedText(result[translatedIndex]);
-                                }
-                                else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
-                                    console.log("[RedSugoi] Got a cache hit!", {
-                                        originalText: curated[i].getOriginalText(),
-                                        translatedText: this.translationCache[curated[i].getReplacedText()]
-                                    });
-                                    cacheHits++;
-                                    curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
-                                }
-                                finalTranslation.push(curated[i].recoverSymbols());
-                            }
-                            let finalTranslationString = finalTranslation.join("\n");
-                            translations[mine] = finalTranslationString;
-                        })
-                            .catch((error) => {
-                            console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
-                            let pre = document.createElement("pre");
-                            pre.style.color = "red";
-                            pre.style.fontWeight = "bold";
-                            pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
-                            consoleWindow.appendChild(pre);
-                        })
-                            .finally(() => {
-                            this.freeUrl(myUrl);
-                            updateProgress();
-                            doTranslate(onSuccess, onError);
-                        });
-                    }
-                    else {
-                        let finalTranslation = [];
-                        for (let i = 0; i < curated.length; i++) {
-                            if (this.translationCache[curated[i].getReplacedText()] != undefined) {
-                                cacheHits++;
-                                curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
-                            }
-                            finalTranslation.push(curated[i].recoverSymbols());
-                        }
-                        translations[mine] = (finalTranslation).join("\n");
-                        this.freeUrl(myUrl);
-                        updateProgress();
-                        doTranslate(onSuccess, onError);
-                    }
-                }
-            }
-            catch (error) {
-                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", error);
-                let pre = document.createElement("pre");
-                pre.style.color = "red";
-                pre.style.fontWeight = "bold";
-                pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON THREAD - " + error.name + ': ' + error.message));
-                consoleWindow.appendChild(pre);
-                complete(onSuccess, onError);
-            }
-        };
-        return new Promise((onSuccess, onError) => {
-            for (let i = 0; i < threads; i++) {
-                doTranslate(onSuccess, onError);
-            }
-        });
-    }
     constructor(thisAddon) {
         super(thisAddon, {
             id: "redsugoi",
@@ -873,14 +730,14 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             "maxParallelJob": {
                 "type": "number",
                 "title": "Max Parallel job",
-                "description": "The amount of translations that are sent to the server per request. Sweet spot will vary with hardware.",
+                "description": "The amount of translations that are sent to the server per request. Sweet spot will vary with hardware. In general, the bigger the number, the faster it goes - provided you have enough RAM/VRAM. Lower numbers should be used with multiple servers for effective load balancing.",
                 "default": 5,
                 "required": true
             },
             "threads": {
                 "type": "number",
                 "title": "Threads",
-                "description": "The amount of requests that are sent per server.",
+                "description": "The amount of requests that are sent per server. This can be used to combat latency between Translator++ making a request and waiting on the answer, resulting in less idle time for the servers. This is a per-server setting, so if you have three servers and three threads, that's 3 requests per server for a total of 9 open requests.",
                 "default": 1,
                 "required": true
             },
