@@ -14,6 +14,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         return this.urls[idx];
     }
 
+    public reduceScore (url : string) {
+        let idx = this.urls.indexOf(url);
+        if (idx != -1) {
+            this.urlScore[idx]--; // shame on you little server.
+        }
+    }
+
     public updateUrls () {
         let thisEngine = this.translatorEngine;
         let urls = thisEngine.targetUrl.replaceAll("\r", "").split("\n");
@@ -138,7 +145,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                         let pre = document.createElement("pre");
                         pre.style.color = "red";
                         pre.style.fontWeight = "bold";
-                        pre.appendChild(document.createTextNode("[REDSUGOI] Error translating a batch, received invalid response. Skipping..."));
+                        pre.appendChild(document.createTextNode(`[RedSugoi] Error while fetching from ${myServer}, received invalid response from server. Skipping batch.`));
                         consoleWindow.appendChild(pre);
                         return;
                     }
@@ -153,7 +160,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     let pre = document.createElement("pre");
                     pre.style.color = "red";
                     pre.style.fontWeight = "bold";
-                    pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
+                    pre.appendChild(document.createTextNode(`[RedSugoi] Error while fetching from ${myServer} - ${error.name}: ${error.message}\n${' '.repeat(11)}If all fetch attempts fail on this server, check if it's still up.`));
+                    this.reduceScore(myServer);
                     consoleWindow.appendChild(pre);
                 })
                 .finally(() => {
