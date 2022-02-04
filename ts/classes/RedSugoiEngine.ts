@@ -138,6 +138,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     headers		: { 'Content-Type': 'application/json' },
                 })
                 .then(async (response) => {
+                    if (response.ok) {
                         let result = await response.json();
                         console.log("[RedSugoi] Fetched from " + myServer + ". Received:" + result.length.toString());
                         if (result.length != myLines.length) {
@@ -149,6 +150,9 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                             this.setCache(myLines[i], result[i]);
                         }
                         translatedLines += myLines.length;
+                    } else {
+                        throw new Error(`${response.status.toString()} - ${response.statusText}`);
+                    }
                 })
                 .catch((error) => {
                     console.error("[REDSUGOI] ERROR ON FETCH USING " + myServer, "   Payload: " + myLines.join("\n"), error);
