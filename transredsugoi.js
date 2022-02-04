@@ -596,6 +596,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
         let threads = this.getEngine().getOptions().threads || 1;
         let completedThreads = 0;
+        this.updateUrls();
         let totalThreads = this.getUrlCount() * threads;
         let complete;
         let doTranslate = (onSuccess, onError) => {
