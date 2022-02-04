@@ -23,8 +23,8 @@ enum RedPlaceholderTypeNames {
     tagPlaceholder = "Tag Placeholder (e.g. &lt;24&gt;)",
     closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. &lt;24/&gt;)",
     fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
-    curlie = "Curlies (e.g. {A})",
-    doubleCurlie = "Double Curlies (e.g. {{A}})",
+    curlie = "Curlies (e.g. letter enclosed by curly brackets)",
+    doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)",
 }
 
 let RedPlaceholderTypeArray = [
