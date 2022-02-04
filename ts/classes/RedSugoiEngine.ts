@@ -19,6 +19,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         let urls = thisEngine.targetUrl.replaceAll("\r", "").split("\n");
         if (this.urls.length != urls.length) {
             this.urls = [...urls];
+            // Some users might forget the final slash, let's fix that. Might as well make sure it's nice and trimmed while at it.
+            for (let i = 0; i < this.urls.length; i++) {
+                this.urls[i] = this.urls[i].trim();
+                if (this.urls[i].charAt(this.urls[i].length - 1) != "/") {
+                    this.urls[i] += "/";
+                }
+            }
             this.urlUsage = new Array(urls.length).fill(0);
             this.urlScore = new Array(urls.length).fill(0);
         }
