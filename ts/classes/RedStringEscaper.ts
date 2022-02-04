@@ -5,7 +5,7 @@ enum RedPlaceholderType {
     poleposition = "poleposition",
     hexPlaceholder = "hexPlaceholder",
     noEscape = "noEscape",
-    ninesOfRandomness = "closedNines",
+    ninesOfRandomness = "ninesOfRandomness",
     tagPlaceholder = "tagPlaceholder",
     closedTagPlaceholder = "closedTagPlaceholder",
     fullTagPlaceholder = "fullTagPlaceholder",
