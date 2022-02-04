@@ -138,22 +138,17 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     headers		: { 'Content-Type': 'application/json' },
                 })
                 .then(async (response) => {
-                    let result = await response.json();
-                    console.log("[RedSugoi] Fetched from " + myServer + ". Received:" + result.length.toString());
-                    if (result.length != myLines.length) {
-                        console.error("[REDSUGOI] MISMATCH ON RESPONSE:", myLines, result);
-                        let pre = document.createElement("pre");
-                        pre.style.color = "red";
-                        pre.style.fontWeight = "bold";
-                        pre.appendChild(document.createTextNode(`[RedSugoi] Error while fetching from ${myServer}, received invalid response from server. Skipping batch.`));
-                        consoleWindow.appendChild(pre);
-                        return;
-                    }
-                    for (let i = 0; i < result.length; i++) {
-                        translations[i + myStart] = result[i];
-                        this.setCache(myLines[i], result[i]);
-                    }
-                    translatedLines += myLines.length;
+                        let result = await response.json();
+                        console.log("[RedSugoi] Fetched from " + myServer + ". Received:" + result.length.toString());
+                        if (result.length != myLines.length) {
+                            console.error("[REDSUGOI] MISMATCH ON RESPONSE:", myLines, result);
+                            throw new Error(`Received invalid response - length mismatch, check server stability.`);
+                        }
+                        for (let i = 0; i < result.length; i++) {
+                            translations[i + myStart] = result[i];
+                            this.setCache(myLines[i], result[i]);
+                        }
+                        translatedLines += myLines.length;
                 })
                 .catch((error) => {
                     console.error("[REDSUGOI] ERROR ON FETCH USING " + myServer, "   Payload: " + myLines.join("\n"), error);
