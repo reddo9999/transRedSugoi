@@ -9,6 +9,8 @@ enum RedPlaceholderType {
     tagPlaceholder = "tagPlaceholder",
     closedTagPlaceholder = "closedTagPlaceholder",
     fullTagPlaceholder = "fullTagPlaceholder",
+    curlie = "curlie",
+    doubleCurlie = "doubleCurlie",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -21,6 +23,8 @@ enum RedPlaceholderTypeNames {
     tagPlaceholder = "Tag Placeholder (e.g. &lt;24&gt;)",
     closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. &lt;24/&gt;)",
     fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
+    curlie = "Curlies (e.g. {A})",
+    doubleCurlie = "Double Curlies (e.g. {{A}})",
 }
 
 let RedPlaceholderTypeArray = [
@@ -31,6 +35,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.tagPlaceholder,
     RedPlaceholderType.closedTagPlaceholder,
     RedPlaceholderType.fullTagPlaceholder,
+    RedPlaceholderType.curlie,
+    RedPlaceholderType.doubleCurlie,
 ];
 
 class RedStringEscaper {
@@ -46,6 +52,8 @@ class RedStringEscaper {
     private storedSymbols : {[tag : string] : string} = {};
     private reverseSymbols : {[text : string] : string} = {};
     private currentText : string;
+
+    private curlyCount = 65; //A
 
     private preString : string = "";
     private postString : string = "";
@@ -87,6 +95,14 @@ class RedStringEscaper {
 
     public getHexPlaceholder () {
         return "0x" + (this.hexCounter++).toString(16);
+    }
+
+    public getCurly () {
+        return "{" + String.fromCharCode(this.curlyCount++) + "}";
+    }
+
+    public getDoubleCurly () {
+        return "{{" + String.fromCharCode(this.curlyCount++) + "}}";
     }
 
     public getClosedNines () {
@@ -258,9 +274,11 @@ class RedStringEscaper {
             regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
             regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
             regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
-            regExpObj[RedPlaceholderType.closedTagPlaceholder] = /(<[0-9]{2,}\/>)/g;
+            regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
             regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
             regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
+            regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
+            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/g;
 
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
