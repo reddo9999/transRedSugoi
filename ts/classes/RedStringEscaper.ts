@@ -18,9 +18,9 @@ enum RedPlaceholderTypeNames {
     hexPlaceholder = "Hex Placeholder (e.g. 0xffffff)",
     noEscape = "No escaping (will translate everything)",
     ninesOfRandomness = "Closed Nines (e.g. 9123412349)",
-    tagPlaceholder = "Tag Placeholder (e.g. <24>)",
-    closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. <24/>)",
-    fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. <24></24>)",
+    tagPlaceholder = "Tag Placeholder (e.g. &lt;24&gt;)",
+    closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. &lt;24/&gt;)",
+    fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
 }
 
 let RedPlaceholderTypeArray = [
