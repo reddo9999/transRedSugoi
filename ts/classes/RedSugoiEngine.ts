@@ -430,14 +430,14 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "maxParallelJob": {
                     "type": "number",
                     "title": "Max Parallel job",
-                    "description": "The amount of translations that are sent to the server per request. Sweet spot will vary with hardware.",
+                    "description": "The amount of translations that are sent to the server per request. Sweet spot will vary with hardware. In general, the bigger the number, the faster it goes - provided you have enough RAM/VRAM. Lower numbers should be used with multiple servers for effective load balancing.",
                     "default":5,
                     "required":true
                 },
                 "threads": {
                     "type": "number",
                     "title": "Threads",
-                    "description": "The amount of requests that are sent per server.",
+                    "description": "The amount of requests that are sent per server. This can be used to combat latency between Translator++ making a request and waiting on the answer, resulting in less idle time for the servers. This is a per-server setting, so if you have three servers and three threads, that's 3 requests per server for a total of 9 open requests.",
                     "default":1,
                     "required":true
                 },
