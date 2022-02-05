@@ -325,6 +325,28 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     ]
                 },
                 {
+                    "type": "actions",
+                    "title" : "Copy Sugoi Translator Target URL",
+                    "fieldHtmlClass": "actionButtonSet",
+                    "items": [
+                      {
+                        "type": "button",
+                        "title": "Copy Sugoi Translator Target URL",
+                        "onClick" : function(ev : any) {
+                            try {
+                                let headHoncho = (ev.target).parentNode.parentNode;
+                                let $targetUrl = $(headHoncho).find('[name="targetUrl"]')
+                                $targetUrl.val(trans.sugoitrans.targetUrl);
+                                trans.redsugoi.update("targetUrl", trans.sugoiTrans.targetUrl);
+                            } catch (e) {
+                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                            }
+                        }
+                      }
+            
+                    ]
+                },
+                {
                     "key": "maxParallelJob",
                     "onChange": (evt : Event) => {
                       var value = <string> $(<HTMLInputElement> evt.target).val();
