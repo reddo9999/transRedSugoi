@@ -55,34 +55,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
 
     // Goals of refactor:
     // Split rows evenly between servers in single requests that respect maximum simultaneous translations.
-    public doTranslate (rows: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults> {
+    public doTranslate (toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>> {
         this.resetScores();
-        this.resume(true);
-        this.allowTranslation = true;
-        console.log("[REDSUGOI] TRANSLATE:\n", rows, options);
+        console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
         let batchStart = new Date().getTime();
 
-        let result : TranslatorEngineResults = {
-			'sourceText':rows.join(), 
-			'translationText':"",
-			'source':rows, 
-			'translation': <Array<string>> []
-		};
-
-        
-
-        // First step: curate every single line and keep track of it
-        let rowHandlers : Array<RedStringRowHandler> = [];
-        let toTranslate : Array<string> = [];
-        let translations : Array<string> = [];
         let translating = 0;
-        for (let i = 0; i < rows.length; i++) {
-            let handler = new RedStringRowHandler(rows[i], this);
-            rowHandlers.push(handler);
-            
-            // Second step: separate every line that will need to be translated
-            toTranslate.push(...handler.getTranslatableLines());
-        }
+        let translations : Array<string> = [];
 
         // Set up progress
         let consoleWindow = $("#loadingOverlay .console")[0];
@@ -113,12 +92,12 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         this.updateUrls();
         let totalThreads = this.getUrlCount() * threads;
         let complete : 
-            (onSuccess : (result : TranslatorEngineResults) => void, 
+            (onSuccess : (result : Array<string>) => void, 
              onError : (error : Error) => void) 
              => void;
 
         // Third step: perform translations
-        let doTranslate = (onSuccess : (result : TranslatorEngineResults) => void, onError : (error : Error) => void) => {
+        let doTranslate = (onSuccess : (result : Array<string>) => void, onError : (error : Error) => void) => {
             if (translating >= toTranslate.length) {
                 console.log("[RedSugoi] Thread has no more work to do.");
                 complete(onSuccess, onError);
@@ -174,46 +153,10 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             }
         }
 
-        complete = (onSuccess : (result : TranslatorEngineResults) => void, onError : (error : Error) => void) => {
+        complete = (onSuccess : (result : Array<string>) => void, onError : (error : Error) => void) => {
             if (++completedThreads == totalThreads) {
-                // Fourth step: return translations to each object
-                let curatedIndex = 0;
-                let internalIndex = 0;
-
-                let finalTranslations : Array<string> = [];
-                let curated : RedStringRowHandler = rowHandlers[curatedIndex];
-
-                // Move through translations
-                let moveRows = () => {
-                    while (curated != undefined && curated.isDone(internalIndex)) {
-                        curated.applyTranslation();
-                        finalTranslations.push(curated.getTranslatedRow());
-                        internalIndex = 0;
-                        curated = rowHandlers[++curatedIndex];
-                    }
-                }
-
-                // Check for empty rows
-                moveRows();
-
-                // Move through translations
-                for (let outerIndex = 0; outerIndex < translations.length; outerIndex++) {
-                    let translation = translations[outerIndex];
-                    curated = rowHandlers[curatedIndex];
-
-                    // Move through lines
-                    curated.insertTranslation(translation, internalIndex++);
-
-                    // Move through rows
-                    moveRows();
-                }
-
-                // Final step: set up result object
-                result.translation = finalTranslations;
-                result.translationText = finalTranslations.join("\n");
-
                 // return the object
-                onSuccess(result);
+                onSuccess(translations);
 
                 // Update progress
                 let batchEnd = new Date().getTime();

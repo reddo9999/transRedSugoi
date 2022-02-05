@@ -69,8 +69,6 @@ abstract class RedTranslatorEngineWrapper {
         return mergeSymbols == undefined ? true : mergeSymbols == true;
     }
 
-    abstract doTranslate (text : Array<string>, options : TranslatorEngineOptions) : Promise<TranslatorEngineResults>;
-
     private cacheHits = 0;
 
     public hasCache (text : string) {
@@ -175,7 +173,9 @@ abstract class RedTranslatorEngineWrapper {
         return curated;
     }
 
-    public translate (text : Array<string>, options : any) {
+    abstract doTranslate (toTranslate : Array<string>, options : TranslatorEngineOptions) : Promise<Array<string>>;
+
+    public translate (rows : Array<string>, options : any) {
         options = options||{};
         options.onAfterLoading = options.onAfterLoading||function() {};
         options.onError = options.onError||function() {};
@@ -184,10 +184,71 @@ abstract class RedTranslatorEngineWrapper {
         if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
             ui.showBusyOverlay();
         }
+        
+        // Unpause if paused
+        this.resume(true);
+        this.allowTranslation = true;
 
-        let translation = this.doTranslate(text, options);
+        // Set up T++ result object
+        let result : TranslatorEngineResults = {
+			'sourceText':rows.join(), 
+			'translationText':"",
+			'source':rows, 
+			'translation': <Array<string>> []
+		};
+        
+        // First step: curate every single line and keep track of it
+        let rowHandlers : Array<RedStringRowHandler> = [];
+        let toTranslate : Array<string> = [];
+        for (let i = 0; i < rows.length; i++) {
+            let handler = new RedStringRowHandler(rows[i], this);
+            rowHandlers.push(handler);
+            
+            // Second step: separate every line that will need to be translated
+            toTranslate.push(...handler.getTranslatableLines());
+        }
 
-        translation.then((result) => {
+        // Third step: send translatable lines to the translator handler
+        let translation = this.doTranslate(toTranslate, options);
+
+        // After receiving...
+        translation.then((translations) => {
+            // Fourth step: return translations to each object
+            let curatedIndex = 0;
+            let internalIndex = 0;
+
+            let finalTranslations : Array<string> = [];
+            let curated : RedStringRowHandler = rowHandlers[curatedIndex];
+
+            // Move through translations
+            let moveRows = () => {
+                while (curated != undefined && curated.isDone(internalIndex)) {
+                    curated.applyTranslation();
+                    finalTranslations.push(curated.getTranslatedRow());
+                    internalIndex = 0;
+                    curated = rowHandlers[++curatedIndex];
+                }
+            }
+
+            // Check for empty rows
+            moveRows();
+
+            // Move through translations
+            for (let outerIndex = 0; outerIndex < translations.length; outerIndex++) {
+                let translation = translations[outerIndex];
+                curated = rowHandlers[curatedIndex];
+
+                // Move through lines
+                curated.insertTranslation(translation, internalIndex++);
+
+                // Move through rows
+                moveRows();
+            }
+
+            // Final step: set up result object
+            result.translation = finalTranslations;
+            result.translationText = finalTranslations.join("\n");
+
             options.onAfterLoading.call(this.translatorEngine, result);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
