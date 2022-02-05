@@ -269,7 +269,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             
                     ]
                 },
-                {
+/*                 {
                     "type": "actions",
                     "title" : "Copy Sugoi Translator Target URL",
                     "fieldHtmlClass": "actionButtonSet",
@@ -290,7 +290,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                       }
             
                     ]
-                },
+                }, */
                 {
                     "key": "maxParallelJob",
                     "onChange": (evt : Event) => {
