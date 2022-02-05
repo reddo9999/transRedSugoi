@@ -235,9 +235,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             }
         }
 
-
-        (<any> window).rowHandlers = rowHandlers;
-
         
         return new Promise((onSuccess, onError) => {
             for (let i = 0; i < totalThreads; i++) {
