@@ -168,6 +168,12 @@ class RedStringEscaper {
     }
 
     public recoverSymbols () {
+        // DEBUG
+        //console.log(this.currentText, this.storedSymbols);
+
+        // This needs to be done FIRST!!!!!!!!!!!!!!
+        this.currentText = this.preString + this.currentText + this.postString;
+
         // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
         // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
         let found = true;
@@ -185,24 +191,26 @@ class RedStringEscaper {
                 }
             }
         }
-        let finalString = this.preString + this.currentText + this.postString;
         // Sugoi fails and adds <unk> where it doesn't understand something
         // It turns people into pigs! Pigs!
         // let's remove those
         if (this.removeUnks) {
-            finalString = finalString.replaceAll("<unk>", "");
+            this.currentText = this.currentText.replaceAll("<unk>", "");
         }
 
         if (this.isScript) {
-            finalString = JSON.stringify(finalString);
-            if (finalString.charAt(0) != this.quoteType) {
+            this.currentText = JSON.stringify(this.currentText);
+            if (this.currentText.charAt(0) != this.quoteType) {
                 // escape the quotes
-                finalString = finalString.replaceAll(this.quoteType, `\\${this.quoteType}`);
-                finalString = this.quoteType + finalString.substring(1, finalString.length - 1) + this.quoteType;
+                this.currentText = this.currentText.replaceAll(this.quoteType, `\\${this.quoteType}`);
+                this.currentText = this.quoteType + this.currentText.substring(1, this.currentText.length - 1) + this.quoteType;
             }
         }
+        
+        // DEBUG
+        // console.log(finalString, this.storedSymbols);
 
-        return finalString;
+        return this.currentText;
     }
 
     /**
