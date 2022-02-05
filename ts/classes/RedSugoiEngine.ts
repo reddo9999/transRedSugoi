@@ -71,11 +71,19 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
         pre.appendChild(progressNode);
         pre.appendChild(progressTotal);
+        let crashDetector = document.createTextNode("");
+        let spinny = "/-\\|/-\\|";
+        let spinnyi = 0;
+        pre.appendChild(crashDetector);
         consoleWindow.appendChild(pre);
         let translatedLines = 0;
 
-        console.log("[RedSugoi] Translations to send:", toTranslate);
+        let spinnyInterval = setInterval(() => {
+            spinnyi = (spinnyi + 1) % spinny.length;
+            crashDetector.nodeValue = " " + spinny.charAt(spinnyi);
+        }, 100);
 
+        console.log("[RedSugoi] Translations to send:", toTranslate);
         
         let updateProgress = () => {
             // A filthy hack for a filthy code
@@ -160,6 +168,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
 
         complete = (onSuccess : (result : Array<string>) => void, onError : (error : Error) => void) => {
             if (++completedThreads == totalThreads) {
+                crashDetector.nodeValue = "";
+                clearInterval(spinnyInterval);
                 // return the object
                 onSuccess(translations);
 
