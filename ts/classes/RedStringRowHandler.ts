@@ -48,7 +48,12 @@ class RedStringRowHandler {
 
     public applyTranslation () {
         for (let i = 0; i < this.translatedLines.length; i++) {
-            this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(this.translatedLines[i]);
+            // Some of them might be undefined
+            // Ideally we'd check outside, but we need to keep moving forward while translating.
+            let translation = this.translatedLines[i];
+            if (translation != undefined) {
+                this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);
+            }
         }
     }
 
