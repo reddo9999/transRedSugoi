@@ -229,7 +229,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
 
                 let seconds = Math.round((batchEnd - batchStart)/100)/10;
 
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * rows.length / seconds)/10} rows per second!`));
+                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds)/10} characters per second!`));
                 pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${this.getCacheHits()} translations through cache hits!`));
                 consoleWindow.appendChild(pre);
             }
