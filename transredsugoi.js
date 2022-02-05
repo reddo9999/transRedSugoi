@@ -141,6 +141,7 @@ class RedStringEscaper {
         this.currentText = text;
     }
     recoverSymbols() {
+        this.currentText = this.preString + this.currentText + this.postString;
         let found = true;
         while (found) {
             found = false;
@@ -155,18 +156,17 @@ class RedStringEscaper {
                 }
             }
         }
-        let finalString = this.preString + this.currentText + this.postString;
         if (this.removeUnks) {
-            finalString = finalString.replaceAll("<unk>", "");
+            this.currentText = this.currentText.replaceAll("<unk>", "");
         }
         if (this.isScript) {
-            finalString = JSON.stringify(finalString);
-            if (finalString.charAt(0) != this.quoteType) {
-                finalString = finalString.replaceAll(this.quoteType, `\\${this.quoteType}`);
-                finalString = this.quoteType + finalString.substring(1, finalString.length - 1) + this.quoteType;
+            this.currentText = JSON.stringify(this.currentText);
+            if (this.currentText.charAt(0) != this.quoteType) {
+                this.currentText = this.currentText.replaceAll(this.quoteType, `\\${this.quoteType}`);
+                this.currentText = this.quoteType + this.currentText.substring(1, this.currentText.length - 1) + this.quoteType;
             }
         }
-        return finalString;
+        return this.currentText;
     }
     escape() {
         if (this.type == RedPlaceholderType.noEscape) {
@@ -871,7 +871,10 @@ class RedStringRowHandler {
     }
     applyTranslation() {
         for (let i = 0; i < this.translatedLines.length; i++) {
-            this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(this.translatedLines[i]);
+            let translation = this.translatedLines[i];
+            if (translation != undefined) {
+                this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);
+            }
         }
     }
     isDone(index) {
