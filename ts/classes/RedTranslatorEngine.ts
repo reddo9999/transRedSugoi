@@ -95,13 +95,15 @@ abstract class RedTranslatorEngineWrapper {
         // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
         // probably the best way to detect those is through blank lines.
         // Might be a good idea to also split if new lines start with something that we're escaping
+
+
         // First Step = "Break if you find one or more empty lines"
         let lines = text.split(/( *\r?\n(?:\r?\n)+ *)/);
 
         // Second Step = "Break if a line ends with something that finishes a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/([｝）］】」』〟⟩！？。・…‥：]+ *\r?\n)/);
+            let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *\r?\n)/);
             // We need to give back the end of the sentence so that it translates correctly
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k+1];
@@ -113,7 +115,7 @@ abstract class RedTranslatorEngineWrapper {
         // Third step = "Break if a line starts with something that initiates a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「]+)/);
+            let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「"'>\\\/]+)/);
             // We need to give back the start of the sentence so that it translates correctly
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k+1];
