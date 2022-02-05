@@ -4,19 +4,23 @@ declare enum RedPlaceholderType {
     poleposition = "poleposition",
     hexPlaceholder = "hexPlaceholder",
     noEscape = "noEscape",
-    ninesOfRandomness = "closedNines",
+    ninesOfRandomness = "ninesOfRandomness",
     tagPlaceholder = "tagPlaceholder",
     closedTagPlaceholder = "closedTagPlaceholder",
-    fullTagPlaceholder = "fullTagPlaceholder"
+    fullTagPlaceholder = "fullTagPlaceholder",
+    curlie = "curlie",
+    doubleCurlie = "doubleCurlie"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
     hexPlaceholder = "Hex Placeholder (e.g. 0xffffff)",
     noEscape = "No escaping (will translate everything)",
     ninesOfRandomness = "Closed Nines (e.g. 9123412349)",
-    tagPlaceholder = "Tag Placeholder (e.g. <24>)",
-    closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. <24/>)",
-    fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. <24></24>)"
+    tagPlaceholder = "Tag Placeholder (e.g. &lt;24&gt;)",
+    closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. &lt;24/&gt;)",
+    fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
+    curlie = "Curlies (e.g. letter enclosed by curly brackets)",
+    doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
 declare class RedStringEscaper {
@@ -32,6 +36,7 @@ declare class RedStringEscaper {
     private storedSymbols;
     private reverseSymbols;
     private currentText;
+    private curlyCount;
     private preString;
     private postString;
     private isScript;
@@ -42,6 +47,8 @@ declare class RedStringEscaper {
     getFullTag(): string;
     getPolePosition(): string;
     getHexPlaceholder(): string;
+    getCurly(): string;
+    getDoubleCurly(): string;
     getClosedNines(): string;
     storeSymbol(text: string): string;
     getOriginalText(): string;
@@ -78,7 +85,6 @@ declare abstract class RedTranslatorEngineWrapper {
     isCaching(): boolean;
     isKeepingScripts(): boolean;
     isMergingSymbols(): boolean;
-    abstract doTranslate(text: Array<string>, options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
     private cacheHits;
     hasCache(text: string): boolean;
     getCache(text: string): string;
@@ -87,7 +93,8 @@ declare abstract class RedTranslatorEngineWrapper {
     breakRow(text: string): Array<string>;
     isScript(brokenRow: Array<string>): RedScriptCheckResponse;
     curateRow(row: string): Array<RedStringEscaper>;
-    translate(text: Array<string>, options: any): void;
+    abstract doTranslate(toTranslate: Array<string>, options: TranslatorEngineOptions): Promise<Array<string>>;
+    translate(rows: Array<string>, options: any): void;
     isValidHttpUrl(urlString: string): boolean;
     constructor(thisAddon: any, extraOptions: {
         [id: string]: any;
@@ -102,19 +109,12 @@ declare class RedSugoiEngine extends RedTranslatorEngineWrapper {
     getUrlCount(): number;
     freeUrl(url: string): void;
     resetScores(): void;
-    doTranslate(rows: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
+    doTranslate(toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>>;
     constructor(thisAddon: any);
 }
 declare var thisAddon: any;
 declare let wrappers: RedSugoiEngine[];
 declare var trans: any;
-declare class RedDeepLEngine extends RedTranslatorEngineWrapper {
-    constructor(thisAddon: any);
-    getUrl(): string;
-    freeUrl(url: string): void;
-    resetScores(): void;
-    doTranslate(text: string[], options: TranslatorEngineOptions): Promise<TranslatorEngineResults>;
-}
 declare class RedStringRowHandler {
     private originalRow;
     private curatedLines;

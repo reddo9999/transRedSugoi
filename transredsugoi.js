@@ -4,10 +4,12 @@ var RedPlaceholderType;
     RedPlaceholderType["poleposition"] = "poleposition";
     RedPlaceholderType["hexPlaceholder"] = "hexPlaceholder";
     RedPlaceholderType["noEscape"] = "noEscape";
-    RedPlaceholderType["ninesOfRandomness"] = "closedNines";
+    RedPlaceholderType["ninesOfRandomness"] = "ninesOfRandomness";
     RedPlaceholderType["tagPlaceholder"] = "tagPlaceholder";
     RedPlaceholderType["closedTagPlaceholder"] = "closedTagPlaceholder";
     RedPlaceholderType["fullTagPlaceholder"] = "fullTagPlaceholder";
+    RedPlaceholderType["curlie"] = "curlie";
+    RedPlaceholderType["doubleCurlie"] = "doubleCurlie";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 var RedPlaceholderTypeNames;
 (function (RedPlaceholderTypeNames) {
@@ -15,9 +17,11 @@ var RedPlaceholderTypeNames;
     RedPlaceholderTypeNames["hexPlaceholder"] = "Hex Placeholder (e.g. 0xffffff)";
     RedPlaceholderTypeNames["noEscape"] = "No escaping (will translate everything)";
     RedPlaceholderTypeNames["ninesOfRandomness"] = "Closed Nines (e.g. 9123412349)";
-    RedPlaceholderTypeNames["tagPlaceholder"] = "Tag Placeholder (e.g. <24>)";
-    RedPlaceholderTypeNames["closedTagPlaceholder"] = "Tag Placeholder Closed Tags (e.g. <24/>)";
-    RedPlaceholderTypeNames["fullTagPlaceholder"] = "Tag Placeholder Full XML-style Tag (e.g. <24></24>)";
+    RedPlaceholderTypeNames["tagPlaceholder"] = "Tag Placeholder (e.g. &lt;24&gt;)";
+    RedPlaceholderTypeNames["closedTagPlaceholder"] = "Tag Placeholder Closed Tags (e.g. &lt;24/&gt;)";
+    RedPlaceholderTypeNames["fullTagPlaceholder"] = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)";
+    RedPlaceholderTypeNames["curlie"] = "Curlies (e.g. letter enclosed by curly brackets)";
+    RedPlaceholderTypeNames["doubleCurlie"] = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
 let RedPlaceholderTypeArray = [
     RedPlaceholderType.poleposition,
@@ -27,6 +31,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.tagPlaceholder,
     RedPlaceholderType.closedTagPlaceholder,
     RedPlaceholderType.fullTagPlaceholder,
+    RedPlaceholderType.curlie,
+    RedPlaceholderType.doubleCurlie,
 ];
 class RedStringEscaper {
     constructor(text, scriptCheck, type, splitEnds, mergeSymbols, noUnks) {
@@ -40,6 +46,7 @@ class RedStringEscaper {
         this.closedNinesLength = 7;
         this.storedSymbols = {};
         this.reverseSymbols = {};
+        this.curlyCount = 65;
         this.preString = "";
         this.postString = "";
         this.isScript = false;
@@ -73,6 +80,12 @@ class RedStringEscaper {
     getHexPlaceholder() {
         return "0x" + (this.hexCounter++).toString(16);
     }
+    getCurly() {
+        return "{" + String.fromCharCode(this.curlyCount++) + "}";
+    }
+    getDoubleCurly() {
+        return "{{" + String.fromCharCode(this.curlyCount++) + "}}";
+    }
     getClosedNines() {
         return "9" +
             Array.from({ length: this.closedNinesLength }, () => Math.floor(Math.random() * 10).toString()).join("")
@@ -105,6 +118,12 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.closedTagPlaceholder:
                     tag = this.getClosedTag();
+                    break;
+                case RedPlaceholderType.curlie:
+                    tag = this.getCurly();
+                    break;
+                case RedPlaceholderType.doubleCurlie:
+                    tag = this.getDoubleCurly();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -200,9 +219,11 @@ class RedStringEscaper {
             regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
             regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
             regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
-            regExpObj[RedPlaceholderType.closedTagPlaceholder] = /(<[0-9]{2,}\/>)/g;
+            regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
             regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
             regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
+            regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
+            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/g;
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
                     return this.storeSymbol(match);
@@ -428,7 +449,7 @@ class RedTranslatorEngineWrapper {
         let lines = text.split(/( *\r?\n(?:\r?\n)+ *)/);
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/([｝）］】」』〟⟩！？。・…‥：]+ *\r?\n)/);
+            let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *\r?\n)/);
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
@@ -437,7 +458,7 @@ class RedTranslatorEngineWrapper {
         }
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「]+)/);
+            let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「"'>\\\/]+)/);
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
@@ -487,7 +508,7 @@ class RedTranslatorEngineWrapper {
         }
         return curated;
     }
-    translate(text, options) {
+    translate(rows, options) {
         options = options || {};
         options.onAfterLoading = options.onAfterLoading || function () { };
         options.onError = options.onError || function () { };
@@ -495,8 +516,44 @@ class RedTranslatorEngineWrapper {
         if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
             ui.showBusyOverlay();
         }
-        let translation = this.doTranslate(text, options);
-        translation.then((result) => {
+        this.resume(true);
+        this.allowTranslation = true;
+        let result = {
+            'sourceText': rows.join(),
+            'translationText': "",
+            'source': rows,
+            'translation': []
+        };
+        let rowHandlers = [];
+        let toTranslate = [];
+        for (let i = 0; i < rows.length; i++) {
+            let handler = new RedStringRowHandler(rows[i], this);
+            rowHandlers.push(handler);
+            toTranslate.push(...handler.getTranslatableLines());
+        }
+        let translation = this.doTranslate(toTranslate, options);
+        translation.then((translations) => {
+            let curatedIndex = 0;
+            let internalIndex = 0;
+            let finalTranslations = [];
+            let curated = rowHandlers[curatedIndex];
+            let moveRows = () => {
+                while (curated != undefined && curated.isDone(internalIndex)) {
+                    curated.applyTranslation();
+                    finalTranslations.push(curated.getTranslatedRow());
+                    internalIndex = 0;
+                    curated = rowHandlers[++curatedIndex];
+                }
+            };
+            moveRows();
+            for (let outerIndex = 0; outerIndex < translations.length; outerIndex++) {
+                let translation = translations[outerIndex];
+                curated = rowHandlers[curatedIndex];
+                curated.insertTranslation(translation, internalIndex++);
+                moveRows();
+            }
+            result.translation = finalTranslations;
+            result.translationText = finalTranslations.join("\n");
             options.onAfterLoading.call(this.translatorEngine, result);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
@@ -558,27 +615,12 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
     resetScores() {
         this.urlScore = new Array(this.urls.length).fill(0);
     }
-    doTranslate(rows, options) {
+    doTranslate(toTranslate, options) {
         this.resetScores();
-        this.resume(true);
-        this.allowTranslation = true;
-        console.log("[REDSUGOI] TRANSLATE:\n", rows, options);
+        console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
         let batchStart = new Date().getTime();
-        let result = {
-            'sourceText': rows.join(),
-            'translationText': "",
-            'source': rows,
-            'translation': []
-        };
-        let rowHandlers = [];
-        let toTranslate = [];
-        let translations = [];
         let translating = 0;
-        for (let i = 0; i < rows.length; i++) {
-            let handler = new RedStringRowHandler(rows[i], this);
-            rowHandlers.push(handler);
-            toTranslate.push(...handler.getTranslatableLines());
-        }
+        let translations = [];
         let consoleWindow = $("#loadingOverlay .console")[0];
         let progressTotal = document.createTextNode("/" + toTranslate.length.toString());
         let pre = document.createElement("pre");
@@ -600,6 +642,11 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         let totalThreads = this.getUrlCount() * threads;
         let complete;
         let doTranslate = (onSuccess, onError) => {
+            if (!this.allowTranslation || this.paused) {
+                return this.waiting.push(() => {
+                    doTranslate(onSuccess, onError);
+                });
+            }
             if (translating >= toTranslate.length) {
                 console.log("[RedSugoi] Thread has no more work to do.");
                 complete(onSuccess, onError);
@@ -658,28 +705,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         };
         complete = (onSuccess, onError) => {
             if (++completedThreads == totalThreads) {
-                let curatedIndex = 0;
-                let internalIndex = 0;
-                let finalTranslations = [];
-                let curated = rowHandlers[curatedIndex];
-                let moveRows = () => {
-                    while (curated != undefined && curated.isDone(internalIndex)) {
-                        curated.applyTranslation();
-                        finalTranslations.push(curated.getTranslatedRow());
-                        internalIndex = 0;
-                        curated = rowHandlers[++curatedIndex];
-                    }
-                };
-                moveRows();
-                for (let outerIndex = 0; outerIndex < translations.length; outerIndex++) {
-                    let translation = translations[outerIndex];
-                    curated = rowHandlers[curatedIndex];
-                    curated.insertTranslation(translation, internalIndex++);
-                    moveRows();
-                }
-                result.translation = finalTranslations;
-                result.translationText = finalTranslations.join("\n");
-                onSuccess(result);
+                onSuccess(translations);
                 let batchEnd = new Date().getTime();
                 let pre = document.createElement("pre");
                 pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
@@ -691,12 +717,11 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
                 }
                 let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * rows.length / seconds) / 10} rows per second!`));
+                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds) / 10} characters per second!`));
                 pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${this.getCacheHits()} translations through cache hits!`));
                 consoleWindow.appendChild(pre);
             }
         };
-        window.rowHandlers = rowHandlers;
         return new Promise((onSuccess, onError) => {
             for (let i = 0; i < totalThreads; i++) {
                 doTranslate(onSuccess, onError);
@@ -779,6 +804,28 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 ]
             },
             {
+                "type": "actions",
+                "title": "Copy Sugoi Translator Target URL",
+                "fieldHtmlClass": "actionButtonSet",
+                "items": [
+                    {
+                        "type": "button",
+                        "title": "Copy Sugoi Translator Target URL",
+                        "onClick": function (ev) {
+                            try {
+                                let headHoncho = (ev.target).parentNode.parentNode;
+                                let $targetUrl = $(headHoncho).find('[name="targetUrl"]');
+                                $targetUrl.val(trans.sugoitrans.targetUrl);
+                                trans.redsugoi.update("targetUrl", trans.sugoiTrans.targetUrl);
+                            }
+                            catch (e) {
+                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                            }
+                        }
+                    }
+                ]
+            },
+            {
                 "key": "maxParallelJob",
                 "onChange": (evt) => {
                     var value = $(evt.target).val();
@@ -805,259 +852,6 @@ $(document).ready(() => {
         wrapper.getEngine().init();
     });
 });
-class RedDeepLEngine extends RedTranslatorEngineWrapper {
-    constructor(thisAddon) {
-        super(thisAddon, {
-            id: "reddeepl",
-            name: "Red DeepL Translator",
-            targetUrl: "http://localhost:14366/",
-            languages: {
-                "en": "English",
-                "ja": "Japanese"
-            },
-            description: thisAddon.package.description,
-            batchDelay: 1,
-            skipReferencePair: true,
-            lineDelimiter: "<br>",
-            mode: "rowByRow",
-            maxRequestLength: Number.MAX_VALUE,
-            maxParallelJob: 5,
-        }, {
-            "targetUrl": {
-                "type": "string",
-                "title": "Target URL(s)",
-                "description": "Sugoi Translator target URL. If you have multiple servers, you can put one in each line. IMPORTANT: This is not updated by the default Sugoi Translator plugin! You need to set it up separatedly!",
-                "default": "http://localhost:14366/",
-                "required": true
-            },
-            "maxParallelJob": {
-                "type": "number",
-                "title": "Max Parallel job",
-                "description": "The amount of requests which will be sent simultaneously. Due to the small latency between sending a request and receiving a response, you'll usually want at least 5 requests per server so that you don't leave resources idling. Bigger numbers are also fine, but there are diminishing returns and you will lose Cache benefits if the number is too large. Recommended values are 5 to 10 per server (so if you have two servers, ideal number would be between 10 and 20). Remember, the goal is to not have anything idle, but you also don't want to overwhelm your servers to the point they start underperforming.",
-                "default": 5,
-                "required": true
-            },
-        }, [
-            {
-                "key": "targetUrl",
-                "type": "textarea",
-                "onChange": (evt) => {
-                    var value = $(evt.target).val();
-                    var urls = value.replaceAll("\r", "").split("\n");
-                    var validUrls = [];
-                    for (var i in urls) {
-                        if (!this.isValidHttpUrl(urls[i]))
-                            continue;
-                        validUrls.push(urls[i]);
-                    }
-                    this.translatorEngine.update("targetUrl", validUrls.join("\n"));
-                    $(evt.target).val(validUrls.join("\n"));
-                }
-            },
-            {
-                "type": "actions",
-                "title": "Local Server Manager",
-                "fieldHtmlClass": "actionButtonSet",
-                "items": [
-                    {
-                        "type": "button",
-                        "title": "Open server manager",
-                        "onClick": function () {
-                            try {
-                                trans.sugoitrans.openServerManager();
-                            }
-                            catch (e) {
-                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                            }
-                        }
-                    }
-                ]
-            },
-            {
-                "key": "maxParallelJob",
-                "onChange": (evt) => {
-                    var value = $(evt.target).val();
-                    this.translatorEngine.update("maxParallelJob", parseInt(value));
-                }
-            },
-        ]);
-    }
-    getUrl() {
-        let thisEngine = this.translatorEngine;
-        let urls = thisEngine.targetUrl.replaceAll("\r", "").split("\n");
-        if (this.urls.length != urls.length) {
-            this.urls = [...urls];
-            this.urlUsage = new Array(urls.length).fill(0);
-            this.urlScore = new Array(urls.length).fill(0);
-        }
-        let idx = this.urlUsage.indexOf(Math.min(...this.urlUsage));
-        this.urlUsage[idx]++;
-        this.urlScore[idx]++;
-        return this.urls[idx];
-    }
-    freeUrl(url) {
-        this.urlUsage[this.urls.indexOf(url)]--;
-    }
-    resetScores() {
-        this.urlScore = new Array(this.urls.length).fill(0);
-    }
-    doTranslate(text, options) {
-        this.resetScores();
-        let cacheHits = 0;
-        let batchStart = new Date().getTime();
-        this.resume(true);
-        this.allowTranslation = true;
-        console.log("[REDSUGOI] TRANSLATE:\n", text, options);
-        let consoleWindow = $("#loadingOverlay .console")[0];
-        let progressTotal = document.createTextNode("/" + text.length.toString());
-        let pre = document.createElement("pre");
-        let progressNode = document.createTextNode("0");
-        pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
-        pre.appendChild(progressNode);
-        pre.appendChild(progressTotal);
-        consoleWindow.appendChild(pre);
-        let threads = this.getEngine().getOptions().maxParallelJob || 1;
-        let pick = 0;
-        let finished = 0;
-        let translations = new Array(text.length);
-        let result = {
-            'sourceText': text.join(),
-            'translationText': "",
-            'source': text,
-            'translation': []
-        };
-        let translatedLines = 0;
-        let updateProgress = () => {
-            progressNode.nodeValue = (++translatedLines).toString();
-        };
-        let complete = (onSuccess, onError) => {
-            finished++;
-            if (finished == threads) {
-                let batchEnd = new Date().getTime();
-                let pre = document.createElement("pre");
-                pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
-                let servers = [...this.urls];
-                servers.sort((a, b) => {
-                    return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
-                });
-                for (let i = 0; i < servers.length; i++) {
-                    pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
-                }
-                let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * text.length / seconds) / 10} rows per second!`));
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${cacheHits} translations through cache hits!`));
-                consoleWindow.appendChild(pre);
-                result.translationText = translations.join();
-                result.translation = translations;
-                onSuccess(result);
-            }
-        };
-        let doTranslate = async (onSuccess, onError) => {
-            if (this.paused) {
-                this.waiting.push(doTranslate);
-                return;
-            }
-            if (!this.allowTranslation) {
-                complete(onSuccess, onError);
-                return;
-            }
-            try {
-                let mine = pick++;
-                if (mine >= text.length) {
-                    complete(onSuccess, onError);
-                }
-                else {
-                    let sugoiArray = [];
-                    let sugoiArrayTracker = {};
-                    let curated = this.curateRow(text[mine]);
-                    for (let i = 0; i < curated.length; i++) {
-                        let escapedText = curated[i].getReplacedText();
-                        if (escapedText.trim() != "" && this.translationCache[escapedText] == undefined) {
-                            sugoiArrayTracker[i] = sugoiArray.push(escapedText) - 1;
-                        }
-                    }
-                    let myUrl = this.getUrl();
-                    if (sugoiArray.length > 0) {
-                        fetch(myUrl, {
-                            method: 'post',
-                            body: JSON.stringify({ content: sugoiArray, message: "translate sentences" }),
-                            headers: { 'Content-Type': 'application/json' },
-                        })
-                            .then(async (response) => {
-                            let result = await response.json();
-                            let finalTranslation = [];
-                            for (let i = 0; i < curated.length; i++) {
-                                let translatedIndex = sugoiArrayTracker[i];
-                                if (result[translatedIndex] != undefined) {
-                                    if (this.isCaching()) {
-                                        this.translationCache[curated[i].getReplacedText()] = result[translatedIndex];
-                                    }
-                                    console.log("[RedSugoi] Translated a thing!", {
-                                        originalText: curated[i].getOriginalText(),
-                                        translatedText: result[translatedIndex]
-                                    });
-                                    curated[i].setTranslatedText(result[translatedIndex]);
-                                }
-                                else if (this.translationCache[curated[i].getReplacedText()] != undefined) {
-                                    console.log("[RedSugoi] Got a cache hit!", {
-                                        originalText: curated[i].getOriginalText(),
-                                        translatedText: this.translationCache[curated[i].getReplacedText()]
-                                    });
-                                    cacheHits++;
-                                    curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
-                                }
-                                finalTranslation.push(curated[i].recoverSymbols());
-                            }
-                            let finalTranslationString = finalTranslation.join("\n");
-                            translations[mine] = finalTranslationString;
-                        })
-                            .catch((error) => {
-                            console.error("[REDSUGOI] ERROR ON FETCH USING " + myUrl, "   Payload: " + text[mine], error);
-                            let pre = document.createElement("pre");
-                            pre.style.color = "red";
-                            pre.style.fontWeight = "bold";
-                            pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON FETCH - " + error.name + ': ' + error.message));
-                            consoleWindow.appendChild(pre);
-                        })
-                            .finally(() => {
-                            this.freeUrl(myUrl);
-                            updateProgress();
-                            doTranslate(onSuccess, onError);
-                        });
-                    }
-                    else {
-                        let finalTranslation = [];
-                        for (let i = 0; i < curated.length; i++) {
-                            if (this.translationCache[curated[i].getReplacedText()] != undefined) {
-                                cacheHits++;
-                                curated[i].setTranslatedText(this.translationCache[curated[i].getReplacedText()]);
-                            }
-                            finalTranslation.push(curated[i].recoverSymbols());
-                        }
-                        translations[mine] = (finalTranslation).join("\n");
-                        this.freeUrl(myUrl);
-                        updateProgress();
-                        doTranslate(onSuccess, onError);
-                    }
-                }
-            }
-            catch (error) {
-                console.error("[REDSUGOI] ERROR ON THREAD EXECUTION, SKIPPING", error);
-                let pre = document.createElement("pre");
-                pre.style.color = "red";
-                pre.style.fontWeight = "bold";
-                pre.appendChild(document.createTextNode("[REDSUGOI] ERROR ON THREAD - " + error.name + ': ' + error.message));
-                consoleWindow.appendChild(pre);
-                complete(onSuccess, onError);
-            }
-        };
-        return new Promise((onSuccess, onError) => {
-            for (let i = 0; i < threads; i++) {
-                doTranslate(onSuccess, onError);
-            }
-        });
-    }
-}
 class RedStringRowHandler {
     constructor(row, wrapper) {
         this.curatedLines = [];
