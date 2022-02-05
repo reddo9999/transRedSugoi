@@ -98,6 +98,11 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
 
         // Third step: perform translations
         let doTranslate = (onSuccess : (result : Array<string>) => void, onError : (error : Error) => void) => {
+            if (!this.allowTranslation || this.paused) {
+                return this.waiting.push(() => {
+                    doTranslate(onSuccess, onError);
+                });
+            }
             if (translating >= toTranslate.length) {
                 console.log("[RedSugoi] Thread has no more work to do.");
                 complete(onSuccess, onError);
