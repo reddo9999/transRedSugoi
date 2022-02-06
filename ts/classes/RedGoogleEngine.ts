@@ -98,10 +98,28 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 cleanTranslations = cleanTranslations.replaceAll("\n" + rowSeparator, rowSeparator);
                 cleanTranslations = cleanTranslations.replaceAll(rowSeparator + "\n", rowSeparator);
 
+                // Japanese loves repeating sentence enders !!!
+                // Google does not
+                cleanTranslations = cleanTranslations.replaceAll(/\n!/g, "!");
+                cleanTranslations = cleanTranslations.replaceAll(/\n\?/g, "?");
+                cleanTranslations = cleanTranslations.replaceAll(/\n\./g, ".");
+                cleanTranslations = cleanTranslations.replaceAll(/\n;/g, ";");
+
                 let pristineTranslations = cleanTranslations.split(rowSeparator);
-                for (let i = 0; i < pristineTranslations.length; i++) {
-                    translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
-                    this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+
+                if (pristineTranslations.length != batch.length) {
+                    this.error(`[RedGoogle] A batch broke due to mismatch. We sent ${batch.length} sentences and got ${pristineTranslations.length} back. Skipping them. You can find more details in the dev console (F12).`);
+                    console.error("[RedGoogle] Ok, so then we sent THIS batch!");
+                    console.warn(batch);
+                    console.error("[RedGoogle] But they were, like, totally uncool and sent THIS back:");
+                    console.warn(pristineTranslations);
+                    console.error("[RedGoogle] So we didn't translate anything because we lost track of it all!");
+                    console.error("[RedGoogle] Our " + rowSeparator + " should be in there somewhere, changed in some way. Perhaps we need a different one?");
+                } else {
+                    for (let i = 0; i < pristineTranslations.length; i++) {
+                        translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
+                        this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                    }
                 }
 
                 progressCurrent.nodeValue = (parseInt(<string> progressCurrent.nodeValue) + pristineTranslations.length).toString();
