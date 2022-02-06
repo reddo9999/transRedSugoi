@@ -39,6 +39,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.doubleCurlie,
 ];
 
+let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
+
 class RedStringEscaper {
     private text : string;
     private type : RedPlaceholderType = RedPlaceholderType.poleposition;
