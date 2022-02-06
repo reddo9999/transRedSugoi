@@ -11,7 +11,8 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let translations = new Array(toTranslate.length);
         let maxBatchSize = (<any> this.getEngine()).maximumBatchSize;
         let delay = (<any> this.getEngine()).innerDelay;
-        let rowSeparator = "<newrowmarker>";
+        //let rowSeparator = "<newrowmarker>";
+        let rowSeparator = (<any> this.getEngine()).lineSubstitute;
 
         let progressCurrent = document.createTextNode("0");
         let progressTotal = document.createTextNode("/" + toTranslate.length);
