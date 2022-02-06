@@ -909,7 +909,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let translations = new Array(toTranslate.length);
         let maxBatchSize = this.getEngine().maximumBatchSize;
         let delay = this.getEngine().innerDelay;
-        let rowSeparator = "<newrowmarker>";
+        let rowSeparator = this.getEngine().lineSubstitute;
         let progressCurrent = document.createTextNode("0");
         let progressTotal = document.createTextNode("/" + toTranslate.length);
         let currentAction = document.createTextNode("Starting up...");
