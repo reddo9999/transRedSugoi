@@ -261,6 +261,26 @@ abstract class RedTranslatorEngineWrapper {
         });
     }
 
+    public log (...texts : Array<string>) {
+        let consoleWindow = $("#loadingOverlay .console")[0];
+        let pre = document.createElement("pre");
+        texts.forEach(text => {
+            pre.appendChild(document.createTextNode(text));
+        });
+        consoleWindow.appendChild(pre);
+    }
+
+    public error (...texts : Array<string>) {
+        let consoleWindow = $("#loadingOverlay .console")[0];
+        let pre = document.createElement("pre");
+        pre.style.color = "red";
+        pre.style.fontWeight = "bold";
+        texts.forEach(text => {
+            pre.appendChild(document.createTextNode(text));
+        });
+        consoleWindow.appendChild(pre);
+    }
+
     public isValidHttpUrl(urlString : string) {
         let url;
         try {
