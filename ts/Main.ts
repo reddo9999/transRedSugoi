@@ -4,7 +4,7 @@
 var thisAddon = <any> this;
 let wrappers = [
 	new RedSugoiEngine(thisAddon),
-	//new RedGoogleEngine(thisaddon), // Totally not into making this work right now.
+	new RedGoogleEngine(thisAddon), // Totally not into making this work right now.
 ];
 
 declare var trans : any;
