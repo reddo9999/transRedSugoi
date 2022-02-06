@@ -324,7 +324,7 @@ abstract class RedTranslatorEngineWrapper {
                 "escapeAlgorithm": {
                   "type": "string",
                   "title": "Code Escaping Algorithm",
-                  "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. All options are available, should a particular project require them.",
+                  "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. For Google, it is recommended to use Tag placeholder.",
                   "default": RedPlaceholderType.poleposition,
                   "required":false,
                   "enum": RedPlaceholderTypeArray
