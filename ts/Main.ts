@@ -1,7 +1,11 @@
 /// <reference path="classes/RedSugoiEngine.ts" />
+/// <reference path="classes/RedGoogleEngine.ts" />
 
 var thisAddon = <any> this;
-let wrappers = [new RedSugoiEngine(thisAddon)];
+let wrappers = [
+	new RedSugoiEngine(thisAddon),
+	//new RedGoogleEngine(thisaddon), // Totally not into making this work right now.
+];
 
 declare var trans : any;
 
