@@ -23,6 +23,9 @@ declare enum RedPlaceholderTypeNames {
     doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
+declare let escapingTitleMap: {
+    [id: string]: string;
+};
 declare class RedStringEscaper {
     private text;
     private type;
@@ -36,12 +39,14 @@ declare class RedStringEscaper {
     private storedSymbols;
     private reverseSymbols;
     private currentText;
+    private broken;
     private curlyCount;
     private preString;
     private postString;
     private isScript;
     private quoteType;
     constructor(text: string, scriptCheck: RedScriptCheckResponse, type?: RedPlaceholderType, splitEnds?: boolean, mergeSymbols?: boolean, noUnks?: boolean);
+    break(): void;
     getTag(): string;
     getClosedTag(): string;
     getFullTag(): string;
@@ -95,6 +100,10 @@ declare abstract class RedTranslatorEngineWrapper {
     curateRow(row: string): Array<RedStringEscaper>;
     abstract doTranslate(toTranslate: Array<string>, options: TranslatorEngineOptions): Promise<Array<string>>;
     translate(rows: Array<string>, options: any): void;
+    log(...texts: Array<string>): void;
+    error(...texts: Array<string>): void;
+    print(...elements: Array<Element | Text>): void;
+    printError(...elements: Array<Element | Text>): void;
     isValidHttpUrl(urlString: string): boolean;
     constructor(thisAddon: any, extraOptions: {
         [id: string]: any;
@@ -112,8 +121,16 @@ declare class RedSugoiEngine extends RedTranslatorEngineWrapper {
     doTranslate(toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>>;
     constructor(thisAddon: any);
 }
+declare class RedGoogleEngine extends RedTranslatorEngineWrapper {
+    doTranslate(toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>>;
+    private lastRequest;
+    private delayed;
+    delay(callback: Function): void;
+    abort(): void;
+    constructor(thisAddon: any);
+}
 declare var thisAddon: any;
-declare let wrappers: RedSugoiEngine[];
+declare let wrappers: (RedSugoiEngine | RedGoogleEngine)[];
 declare var trans: any;
 declare class RedStringRowHandler {
     private originalRow;

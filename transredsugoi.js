@@ -34,6 +34,7 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.curlie,
     RedPlaceholderType.doubleCurlie,
 ];
+let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
     constructor(text, scriptCheck, type, splitEnds, mergeSymbols, noUnks) {
         this.type = RedPlaceholderType.poleposition;
@@ -46,6 +47,7 @@ class RedStringEscaper {
         this.closedNinesLength = 7;
         this.storedSymbols = {};
         this.reverseSymbols = {};
+        this.broken = false;
         this.curlyCount = 65;
         this.preString = "";
         this.postString = "";
@@ -63,6 +65,9 @@ class RedStringEscaper {
             this.currentText = scriptCheck.newLine;
         }
         this.escape();
+    }
+    break() {
+        this.broken = true;
     }
     getTag() {
         return `<${this.symbolAffix++}${this.currentSymbol++}>`;
@@ -135,12 +140,18 @@ class RedStringEscaper {
         return this.text;
     }
     getReplacedText() {
+        if (this.broken) {
+            return "";
+        }
         return this.currentText;
     }
     setTranslatedText(text) {
         this.currentText = text;
     }
     recoverSymbols() {
+        if (this.broken) {
+            return "";
+        }
         this.currentText = this.preString + this.currentText + this.postString;
         let found = true;
         while (found) {
@@ -291,7 +302,6 @@ class RedTranslatorEngineWrapper {
         this.waiting = [];
         this.translationCache = {};
         this.cacheHits = 0;
-        let escapingTitleMap = RedPlaceholderTypeNames;
         this.translatorEngine = new TranslatorEngine({
             author: thisAddon.package.author.name,
             version: thisAddon.package.version,
@@ -303,14 +313,6 @@ class RedTranslatorEngineWrapper {
             mergeSymbols: true,
             optionsForm: {
                 "schema": {
-                    "escapeAlgorithm": {
-                        "type": "string",
-                        "title": "Code Escaping Algorithm",
-                        "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. All options are available, should a particular project require them.",
-                        "default": RedPlaceholderType.poleposition,
-                        "required": false,
-                        "enum": RedPlaceholderTypeArray
-                    },
                     "splitEnds": {
                         "type": "boolean",
                         "title": "Split Ends",
@@ -458,7 +460,7 @@ class RedTranslatorEngineWrapper {
         }
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/((?:\r?\n)+ *[｛（［【「『〝⟨「"'>\\\/]+)/);
+            let split = line.split(/((?:^|(?:\r?\n))+ *[｛（［【「『〝⟨「"'>\\\/]+)/);
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
@@ -563,6 +565,38 @@ class RedTranslatorEngineWrapper {
             }
         });
     }
+    log(...texts) {
+        let elements = [];
+        texts.forEach(text => {
+            elements.push(document.createTextNode(text));
+        });
+        this.print(...elements);
+    }
+    error(...texts) {
+        let elements = [];
+        texts.forEach(text => {
+            elements.push(document.createTextNode(text));
+        });
+        this.printError(...elements);
+    }
+    print(...elements) {
+        let consoleWindow = $("#loadingOverlay .console")[0];
+        let pre = document.createElement("pre");
+        elements.forEach(element => {
+            pre.appendChild(element);
+        });
+        consoleWindow.appendChild(pre);
+    }
+    printError(...elements) {
+        let consoleWindow = $("#loadingOverlay .console")[0];
+        let pre = document.createElement("pre");
+        pre.style.color = "red";
+        pre.style.fontWeight = "bold";
+        elements.forEach(element => {
+            pre.appendChild(element);
+        });
+        consoleWindow.appendChild(pre);
+    }
     isValidHttpUrl(urlString) {
         let url;
         try {
@@ -628,8 +662,16 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         pre.appendChild(document.createTextNode("[RedSugoi] Translating current batch: "));
         pre.appendChild(progressNode);
         pre.appendChild(progressTotal);
+        let crashDetector = document.createTextNode("");
+        let spinny = "/-\\|/-\\|";
+        let spinnyi = 0;
+        pre.appendChild(crashDetector);
         consoleWindow.appendChild(pre);
         let translatedLines = 0;
+        let spinnyInterval = setInterval(() => {
+            spinnyi = (spinnyi + 1) % spinny.length;
+            crashDetector.nodeValue = " " + spinny.charAt(spinnyi);
+        }, 100);
         console.log("[RedSugoi] Translations to send:", toTranslate);
         let updateProgress = () => {
             progressNode.nodeValue = (translatedLines).toString();
@@ -705,6 +747,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         };
         complete = (onSuccess, onError) => {
             if (++completedThreads == totalThreads) {
+                crashDetector.nodeValue = "";
+                clearInterval(spinnyInterval);
                 onSuccess(translations);
                 let batchEnd = new Date().getTime();
                 let pre = document.createElement("pre");
@@ -767,6 +811,14 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "default": 1,
                 "required": true
             },
+            "escapeAlgorithm": {
+                "type": "string",
+                "title": "Code Escaping Algorithm",
+                "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. No particular reason, it just seems to break the least.",
+                "default": RedPlaceholderType.poleposition,
+                "required": false,
+                "enum": RedPlaceholderTypeArray
+            },
         }, [
             {
                 "key": "targetUrl",
@@ -820,8 +872,165 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         ]);
     }
 }
+class RedGoogleEngine extends RedTranslatorEngineWrapper {
+    constructor(thisAddon) {
+        super(thisAddon, {
+            id: "redgoogles",
+            name: "Red Google Translator",
+            languages: {
+                "af": "Afrikaans", "sq": "Albanian", "am": "Amharic", "ar": "Arabic", "hy": "Armenian", "az": "Azerbaijani", "eu": "Basque", "be": "Belarusian", "bn": "Bengali", "bs": "Bosnian", "bg": "Bulgarian", "ca": "Catalan", "ceb": "Cebuano", "zh-CN": "Chinese (Simplified)", "zh-TW": "Chinese (Traditional)", "co": "Corsican", "hr": "Croatian", "cs": "Czech", "da": "Danish", "nl": "Dutch", "en": "English", "eo": "Esperanto", "et": "Estonian", "fi": "Finnish", "fr": "French", "fy": "Frisian", "gl": "Galician", "ka": "Georgian", "de": "German", "el": "Greek", "gu": "Gujarati", "ht": "Haitian Creole", "ha": "Hausa", "haw": "Hawaiian", "he": "Hebrew", "hi": "Hindi", "hmn": "Hmong", "hu": "Hungarian", "is": "Icelandic", "ig": "Igbo", "id": "Indonesian", "ga": "Irish", "it": "Italian", "ja": "Japanese", "jw": "Javanese", "kn": "Kannada", "kk": "Kazakh", "km": "Khmer", "ko": "Korean", "ku": "Kurdish", "ky": "Kyrgyz", "lo": "Lao", "la": "Latin", "lv": "Latvian", "lt": "Lithuanian", "lb": "Luxembourgish", "mk": "Macedonian", "mg": "Malagasy", "ms": "Malay", "ml": "Malayalam", "mt": "Maltese", "mi": "Maori", "mr": "Marathi", "mn": "Mongolian", "my": "Myanmar (Burmese)", "ne": "Nepali", "no": "Norwegian", "ny": "Nyanja (Chichewa)", "ps": "Pashto", "fa": "Persian", "pl": "Polish", "pt": "Portuguese (Portugal, Brazil)", "pa": "Punjabi", "ro": "Romanian", "ru": "Russian", "sm": "Samoan", "gd": "Scots Gaelic", "sr": "Serbian", "st": "Sesotho", "sn": "Shona", "sd": "Sindhi", "si": "Sinhala (Sinhalese)", "sk": "Slovak", "sl": "Slovenian", "so": "Somali", "es": "Spanish", "su": "Sundanese", "sw": "Swahili", "sv": "Swedish", "tl": "Tagalog (Filipino)", "tg": "Tajik", "ta": "Tamil", "te": "Telugu", "th": "Thai", "tr": "Turkish", "uk": "Ukrainian", "ur": "Urdu", "uz": "Uzbek", "vi": "Vietnamese", "cy": "Welsh", "xh": "Xhosa", "yi": "Yiddish", "yo": "Yoruba", "zu": "Zulu"
+            },
+            targetUrl: "https://translate.google.com/translate_a/single",
+            description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
+            batchDelay: 1,
+            innerDelay: 5000,
+            maximumBatchSize: 2000,
+            skipReferencePair: true,
+            lineDelimiter: "<br>",
+            mode: "rowByRow",
+        }, {
+            "escapeAlgorithm": {
+                "type": "string",
+                "title": "Code Escaping Algorithm",
+                "description": "Escaping algorithm used for the Custom Escaper Patterns. For Google, it is recommended to use Tag placeholder, as Google tries to not break tags.",
+                "default": RedPlaceholderType.tagPlaceholder,
+                "required": false,
+                "enum": RedPlaceholderTypeArray
+            },
+        }, []);
+        this.lastRequest = 0;
+        this.delayed = [];
+    }
+    doTranslate(toTranslate, options) {
+        let batchStartTime = new Date().getTime();
+        let sourceLanguage = trans.getSl();
+        let destinationLanguage = trans.getTl();
+        let translating = 0;
+        let translations = new Array(toTranslate.length);
+        let maxBatchSize = this.getEngine().maximumBatchSize;
+        let delay = this.getEngine().innerDelay;
+        let rowSeparator = "<newrowmarker>";
+        let progressCurrent = document.createTextNode("0");
+        let progressTotal = document.createTextNode("/" + toTranslate.length);
+        let currentAction = document.createTextNode("Starting up...");
+        this.print(document.createTextNode("[Red Google] Translating current batch: "), progressCurrent, progressTotal, document.createTextNode(" - "), currentAction);
+        let batchStart = 0;
+        let translate = (onSuccess, onError) => {
+            if (translating >= toTranslate.length) {
+                currentAction.nodeValue = "Done!";
+                let batchEnd = new Date().getTime();
+                let seconds = Math.round((batchEnd - batchStartTime) / 100) / 10;
+                this.log(`[RedGoogle] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds) / 10} characters per second!`);
+                this.log(`[RedGoogle] We skipped ${this.getCacheHits()} translations through cache hits!`);
+                return onSuccess(translations);
+            }
+            currentAction.nodeValue = "Gathering strings...";
+            let batch = [];
+            let batchSize = 0;
+            batchStart = translating;
+            let calcBatchSize = (addition) => {
+                return addition.length + batchSize + (rowSeparator.length * batch.length);
+            };
+            while (translating < toTranslate.length && (batchSize == 0 || maxBatchSize > calcBatchSize(toTranslate[translating]))) {
+                batch.push(toTranslate[translating]);
+                batchSize += toTranslate[translating++].length;
+            }
+            let action = () => {
+                sendToGoogle(batch, onSuccess, onError);
+            };
+            currentAction.nodeValue = "Waiting inner delay...";
+            this.delay(action);
+        };
+        let sendToGoogle = (batch, onSuccess, onError) => {
+            currentAction.nodeValue = "Sending to Google...";
+            console.log("[RedGoogle] Batch: ", batch);
+            common.fetch(this.getEngine().targetUrl, {
+                method: 'get',
+                data: ({
+                    client: "gtx",
+                    sl: sourceLanguage,
+                    tl: destinationLanguage,
+                    dt: 't',
+                    q: batch.join(rowSeparator)
+                }),
+            }).then((data) => {
+                currentAction.nodeValue = "Reading response...";
+                let googleTranslations = data[0];
+                let uglyTranslations = [];
+                for (let i = 0; i < googleTranslations.length; i++) {
+                    uglyTranslations.push(googleTranslations[i][0]);
+                }
+                let cleanTranslations = uglyTranslations.join("\n");
+                cleanTranslations = cleanTranslations.replaceAll(/ *< */g, "<");
+                cleanTranslations = cleanTranslations.replaceAll(/ *> */g, ">");
+                cleanTranslations = cleanTranslations.replaceAll(/[\n]{2,}/g, "\n");
+                cleanTranslations = cleanTranslations.replaceAll(/ *\n/g, "\n");
+                cleanTranslations = cleanTranslations.replaceAll(new RegExp(rowSeparator, "gi"), rowSeparator);
+                cleanTranslations = cleanTranslations.replaceAll("\n" + rowSeparator, rowSeparator);
+                cleanTranslations = cleanTranslations.replaceAll(rowSeparator + "\n", rowSeparator);
+                cleanTranslations = cleanTranslations.replaceAll(/\n!/g, "!");
+                cleanTranslations = cleanTranslations.replaceAll(/\n\?/g, "?");
+                cleanTranslations = cleanTranslations.replaceAll(/\n\./g, ".");
+                cleanTranslations = cleanTranslations.replaceAll(/\n;/g, ";");
+                let pristineTranslations = cleanTranslations.split(rowSeparator);
+                if (pristineTranslations.length != batch.length) {
+                    this.error(`[RedGoogle] A batch broke due to mismatch. We sent ${batch.length} sentences and got ${pristineTranslations.length} back. Skipping them. You can find more details in the dev console (F12).`);
+                    console.error("[RedGoogle] Ok, so then we sent THIS batch!");
+                    console.warn(batch);
+                    console.error("[RedGoogle] But they were, like, totally uncool and sent THIS back:");
+                    console.warn(pristineTranslations);
+                    console.error("[RedGoogle] So we didn't translate anything because we lost track of it all!");
+                    console.error("[RedGoogle] Our " + rowSeparator + " should be in there somewhere, changed in some way. Perhaps we need a different one?");
+                }
+                else {
+                    for (let i = 0; i < pristineTranslations.length; i++) {
+                        translations[batchStart + i] = pristineTranslations[i].trim();
+                        this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                    }
+                }
+                progressCurrent.nodeValue = (parseInt(progressCurrent.nodeValue) + pristineTranslations.length).toString();
+            }).catch(e => {
+                currentAction.nodeValue = "DOH!";
+                this.error("[Red Google] Error on fetch: " + e.message + ". Skipping batch.");
+            }).finally(() => {
+                translate(onSuccess, onError);
+            });
+        };
+        return new Promise((onSuccess, onError) => {
+            translate(onSuccess, onError);
+        });
+    }
+    delay(callback) {
+        let now = (new Date()).getTime();
+        let engineDelay = this.getEngine().innerDelay;
+        let timeDelta = now - this.lastRequest;
+        if (timeDelta >= engineDelay) {
+            this.lastRequest = now;
+            callback();
+        }
+        else {
+            this.delayed.push(callback);
+            setTimeout(() => {
+                let cb = this.delayed.shift();
+                if (cb != undefined) {
+                    this.lastRequest = (new Date()).getTime();
+                    cb();
+                }
+            }, engineDelay - timeDelta);
+        }
+    }
+    abort() {
+        this.allowTranslation = false;
+        this.waiting = [];
+        this.paused = false;
+        this.delayed = [];
+    }
+}
 var thisAddon = this;
-let wrappers = [new RedSugoiEngine(thisAddon)];
+let wrappers = [
+    new RedSugoiEngine(thisAddon),
+    new RedGoogleEngine(thisAddon),
+];
 wrappers.forEach(wrapper => {
     trans[wrapper.getEngine().id] = wrapper.getEngine();
 });
@@ -874,6 +1083,9 @@ class RedStringRowHandler {
             let translation = this.translatedLines[i];
             if (translation != undefined) {
                 this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);
+            }
+            else {
+                this.curatedLines[this.translatableLinesIndex[i]].break();
             }
         }
     }
