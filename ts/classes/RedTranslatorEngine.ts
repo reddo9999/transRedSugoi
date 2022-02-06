@@ -262,21 +262,41 @@ abstract class RedTranslatorEngineWrapper {
     }
 
     public log (...texts : Array<string>) {
+        let elements : Array<Element> = [];
+        texts.forEach(text => {
+            // don't worry ts shhh it's fine 
+            // @ts-ignore
+            elements.push(document.createTextNode(text));
+        });
+        this.print(...elements);
+    }
+
+    public error (...texts : Array<string>) {
+        let elements : Array<Element> = [];
+        texts.forEach(text => {
+            // don't worry ts shhh it's fine 
+            // @ts-ignore
+            elements.push(document.createTextNode(text));
+        });
+        this.printError(...elements);
+    }
+
+    public print (...elements : Array<Element>) {
         let consoleWindow = $("#loadingOverlay .console")[0];
         let pre = document.createElement("pre");
-        texts.forEach(text => {
-            pre.appendChild(document.createTextNode(text));
+        elements.forEach(element => {
+            pre.appendChild(element);
         });
         consoleWindow.appendChild(pre);
     }
 
-    public error (...texts : Array<string>) {
+    public printError (...elements : Array<Element>) {
         let consoleWindow = $("#loadingOverlay .console")[0];
         let pre = document.createElement("pre");
         pre.style.color = "red";
         pre.style.fontWeight = "bold";
-        texts.forEach(text => {
-            pre.appendChild(document.createTextNode(text));
+        elements.forEach(element => {
+            pre.appendChild(element);
         });
         consoleWindow.appendChild(pre);
     }
