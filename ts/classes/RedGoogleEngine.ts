@@ -29,7 +29,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             let batchSize = 0;
 
             // If for some reason we get one huge ass translation, we send it alone
-            while (translating < toTranslate.length && (batchSize == 0 || maxBatchSize < (toTranslate[translating].length + batchSize))) {
+            while (translating < toTranslate.length && (batchSize == 0 || maxBatchSize > (toTranslate[translating].length + batchSize))) {
                 batch.push(toTranslate[translating]);
                 batchSize += toTranslate[translating++].length;
             }
