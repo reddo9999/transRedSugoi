@@ -88,6 +88,9 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 // Fuck empty lines
                 cleanTranslations = cleanTranslations.replaceAll(/[\n]{2,}/g, "\n");
 
+                // Fuck spaces at the end of lines
+                cleanTranslations = cleanTranslations.replaceAll(/ *\n/g, "\n");
+
                 // Case consistency
                 cleanTranslations = cleanTranslations.replaceAll(new RegExp(rowSeparator, "gi"), rowSeparator);
                 
