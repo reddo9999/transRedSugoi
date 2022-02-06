@@ -308,8 +308,6 @@ abstract class RedTranslatorEngineWrapper {
     }
 
     constructor (thisAddon : any, extraOptions : {[id : string] : any}, extraSchema : {[id : string] : TranslationEngineOptionSchema<any>}, extraForm : Array<TranslationEngineOptionFormUpdater>) {
-        let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
-
         this.translatorEngine = new TranslatorEngine({
             author:thisAddon.package.author.name,
             version:thisAddon.package.version,
@@ -321,14 +319,6 @@ abstract class RedTranslatorEngineWrapper {
             mergeSymbols : true,
             optionsForm:{
               "schema": {
-                "escapeAlgorithm": {
-                  "type": "string",
-                  "title": "Code Escaping Algorithm",
-                  "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. For Google, it is recommended to use Tag placeholder.",
-                  "default": RedPlaceholderType.poleposition,
-                  "required":false,
-                  "enum": RedPlaceholderTypeArray
-                },
                 "splitEnds": {
                     "type": "boolean",
                     "title": "Split Ends",

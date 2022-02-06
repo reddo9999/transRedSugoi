@@ -1,4 +1,5 @@
 /// <reference path="RedTranslatorEngine.ts" />
+/// <reference path="RedStringEscaper.ts" />
 
 class RedSugoiEngine extends RedTranslatorEngineWrapper {
 
@@ -243,6 +244,15 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     "default":1,
                     "required":true
                 },
+                "escapeAlgorithm": {
+                    "type": "string",
+                    "title": "Code Escaping Algorithm",
+                    "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. No particular reason, it just seems to break the least.",
+                    "default": RedPlaceholderType.poleposition,
+                    "required":false,
+                    // @ts-ignore shhh it's fine don't worry bb
+                    "enum": RedPlaceholderTypeArray
+                  },
             },
             [
                 {
