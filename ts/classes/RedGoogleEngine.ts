@@ -3,6 +3,7 @@
 class RedGoogleEngine extends RedTranslatorEngineWrapper {
     
     public doTranslate (toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>> {
+        let batchStartTime = new Date().getTime();
         let sourceLanguage = trans.getSl();
         let destinationLanguage = trans.getTl();
 
@@ -10,6 +11,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let translations = new Array(toTranslate.length);
         let maxBatchSize = (<any> this.getEngine()).maximumBatchSize;
         let delay = (<any> this.getEngine()).innerDelay;
+        let rowSeparator = "<row>";
 
         let progressCurrent = document.createTextNode("0");
         let progressTotal = document.createTextNode("/" + toTranslate.length);
@@ -23,13 +25,28 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             currentAction
         );
 
+        let batchStart = 0;
+
         let translate = (onSuccess : (translated : Array<string>) => void, onError : (reason : string) => void) => {
+            if (translating >= toTranslate.length) {
+                currentAction.nodeValue = "Done!";
+                let batchEnd = new Date().getTime();
+                let seconds = Math.round((batchEnd - batchStartTime)/100)/10;
+                this.log(`[RedGoogle] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds)/10} characters per second!`);
+                this.log(`[RedGoogle] We skipped ${this.getCacheHits()} translations through cache hits!`);
+                return onSuccess(translations);
+            }
             currentAction.nodeValue = "Gathering strings...";
             let batch : Array<string> = [];
             let batchSize = 0;
+            batchStart = translating;
+
+            let calcBatchSize = (addition : string) => {
+                return addition.length + batchSize + (rowSeparator.length * batch.length);
+            }
 
             // If for some reason we get one huge ass translation, we send it alone
-            while (translating < toTranslate.length && (batchSize == 0 || maxBatchSize > (toTranslate[translating].length + batchSize))) {
+            while (translating < toTranslate.length && (batchSize == 0 || maxBatchSize > calcBatchSize(toTranslate[translating]))) {
                 batch.push(toTranslate[translating]);
                 batchSize += toTranslate[translating++].length;
             }
@@ -44,6 +61,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
 
         let sendToGoogle = (batch : Array<string>, onSuccess : (translated : Array<string>) => void, onError : (reason : string) => void) => {
             currentAction.nodeValue = "Sending to Google...";
+            console.log("[RedGoogle] Batch: ", batch);
             (<(...any:Array<any>) => Promise<any>> common.fetch)(this.getEngine().targetUrl, {
                 method		: 'get',
                 data: ({
@@ -51,16 +69,44 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                     sl: sourceLanguage,
                     tl: destinationLanguage,
                     dt:'t',
-                    q: batch.join("\n\n\n")
+                    q: batch.join(rowSeparator)
                 }),
                 //headers		: { 'Content-Type': 'application/json' },
-            }).then((a) => {
+            }).then((data) => {
                 currentAction.nodeValue = "Reading response...";
-                (<any>window).response = a;
-                console.log(a);
+                let googleTranslations = data[0]; // Each line becomes a translation...
+                let uglyTranslations = [];
+                for (let i = 0; i < googleTranslations.length; i++) {
+                    uglyTranslations.push(googleTranslations[i][0]);
+                }
+                let cleanTranslations : string = uglyTranslations.join("\n");
+
+                // Google doesn't destroy tags, but it adds spaces... "valid HTML" I guess.
+                cleanTranslations = cleanTranslations.replaceAll(/ *< */g, "<");
+                cleanTranslations = cleanTranslations.replaceAll(/ *> */g, ">");
+                
+                // Fuck empty lines
+                cleanTranslations = cleanTranslations.replaceAll(/[\n]{2,}/g, "\n");
+
+                // Case consistency
+                cleanTranslations = cleanTranslations.replaceAll(new RegExp(rowSeparator, "gi"), rowSeparator);
+                
+                // we want to ignore line breaks on the sides of the row separator
+                cleanTranslations = cleanTranslations.replaceAll("\n" + rowSeparator, rowSeparator);
+                cleanTranslations = cleanTranslations.replaceAll(rowSeparator + "\n", rowSeparator);
+
+                let pristineTranslations = cleanTranslations.split(rowSeparator);
+                for (let i = 0; i < pristineTranslations.length; i++) {
+                    translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
+                    this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                }
+
+                progressCurrent.nodeValue = (parseInt(<string> progressCurrent.nodeValue) + pristineTranslations.length).toString();
             }).catch(e => {
                 currentAction.nodeValue = "DOH!";
-                this.error("[Red Google] Error on fetch: " + e.message);
+                this.error("[Red Google] Error on fetch: " + e.message + ". Skipping batch.");
+            }).finally(() => {
+                translate(onSuccess, onError);
             });
         }
 
@@ -110,7 +156,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
                 batchDelay:1, // We'll handle these ourselves
                 innerDelay: 5000, // Maybe give an option for users? Protect them from themselves?
-                maximumBatchSize : 3000, // This should be limited by default T++, but we'll keep track on our side as well
+                maximumBatchSize : 2000, // This should be limited by default T++, but we'll keep track on our side as well. 3000 gave errors some times!
                 skipReferencePair:true,
                 lineDelimiter: "<br>",
                 mode: "rowByRow",
