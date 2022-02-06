@@ -53,6 +53,8 @@ class RedStringRowHandler {
             let translation = this.translatedLines[i];
             if (translation != undefined) {
                 this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);
+            } else {
+                this.curatedLines[this.translatableLinesIndex[i]].break();
             }
         }
     }

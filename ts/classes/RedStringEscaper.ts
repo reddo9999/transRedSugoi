@@ -52,6 +52,7 @@ class RedStringEscaper {
     private storedSymbols : {[tag : string] : string} = {};
     private reverseSymbols : {[text : string] : string} = {};
     private currentText : string;
+    private broken: boolean = false;
 
     private curlyCount = 65; //A
 
@@ -75,6 +76,10 @@ class RedStringEscaper {
         }
         this.escape();
 	}
+
+    public break () {
+        this.broken = true;
+    }
 
     public getTag () {
         return `<${this.symbolAffix++}${this.currentSymbol++}>`;
@@ -160,6 +165,9 @@ class RedStringEscaper {
     }
 
     public getReplacedText () {
+        if (this.broken) {
+            return "";
+        }
         return this.currentText;
     }
 
@@ -168,6 +176,9 @@ class RedStringEscaper {
     }
 
     public recoverSymbols () {
+        if (this.broken) {
+            return "";
+        }
         // DEBUG
         //console.log(this.currentText, this.storedSymbols);
 
