@@ -987,8 +987,8 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                         translations[batchStart + i] = pristineTranslations[i].trim();
                         this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
                     }
+                    progressCurrent.nodeValue = (parseInt(progressCurrent.nodeValue) + pristineTranslations.length).toString();
                 }
-                progressCurrent.nodeValue = (parseInt(progressCurrent.nodeValue) + pristineTranslations.length).toString();
             }).catch(e => {
                 currentAction.nodeValue = "DOH!";
                 this.error("[Red Google] Error on fetch: " + e.message + ". Skipping batch.");
