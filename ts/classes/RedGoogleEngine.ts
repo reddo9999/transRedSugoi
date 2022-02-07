@@ -13,6 +13,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let delay = (<any> this.getEngine()).innerDelay;
         //let rowSeparator = "<newrowmarker>";
         let rowSeparator = (<any> this.getEngine()).lineSubstitute;
+        //let rowSeparator = String.fromCodePoint(983040); // Cool in theory, not that cool in practice
 
         let progressCurrent = document.createTextNode("0");
         let progressTotal = document.createTextNode("/" + toTranslate.length);
