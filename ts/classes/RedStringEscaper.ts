@@ -11,6 +11,7 @@ enum RedPlaceholderType {
     fullTagPlaceholder = "fullTagPlaceholder",
     curlie = "curlie",
     doubleCurlie = "doubleCurlie",
+    privateUse = "privateUse",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -25,6 +26,7 @@ enum RedPlaceholderTypeNames {
     fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
     curlie = "Curlies (e.g. letter enclosed by curly brackets)",
     doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)",
+    privateUse = "Supplementary Private Use Area-A (👽)"
 }
 
 let RedPlaceholderTypeArray = [
@@ -37,6 +39,7 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.fullTagPlaceholder,
     RedPlaceholderType.curlie,
     RedPlaceholderType.doubleCurlie,
+    RedPlaceholderType.privateUse,
 ];
 
 let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
@@ -57,6 +60,7 @@ class RedStringEscaper {
     private broken: boolean = false;
 
     private curlyCount = 65; //A
+    private privateCounter = 983041; // 👽
 
     private preString : string = "";
     private postString : string = "";
@@ -118,6 +122,10 @@ class RedStringEscaper {
         + "9";
     }
 
+    public getPrivateArea () {
+        return String.fromCodePoint(this.privateCounter++);
+    }
+
     public storeSymbol (text : string) : string {
         // Originally was using tags, hence the name. Then I tried parenthesis.
         // I think the AI might get used to any tags we use and just start. ... killing them
@@ -154,6 +162,9 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.doubleCurlie:
                     tag = this.getDoubleCurly();
+                    break;
+                case RedPlaceholderType.privateUse:
+                    tag = this.getPrivateArea();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -306,6 +317,7 @@ class RedStringEscaper {
             regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
             regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
             regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/g;
+            regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
 
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
