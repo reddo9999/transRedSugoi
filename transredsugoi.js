@@ -10,6 +10,7 @@ var RedPlaceholderType;
     RedPlaceholderType["fullTagPlaceholder"] = "fullTagPlaceholder";
     RedPlaceholderType["curlie"] = "curlie";
     RedPlaceholderType["doubleCurlie"] = "doubleCurlie";
+    RedPlaceholderType["privateUse"] = "privateUse";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 var RedPlaceholderTypeNames;
 (function (RedPlaceholderTypeNames) {
@@ -22,6 +23,7 @@ var RedPlaceholderTypeNames;
     RedPlaceholderTypeNames["fullTagPlaceholder"] = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)";
     RedPlaceholderTypeNames["curlie"] = "Curlies (e.g. letter enclosed by curly brackets)";
     RedPlaceholderTypeNames["doubleCurlie"] = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)";
+    RedPlaceholderTypeNames["privateUse"] = "Supplementary Private Use Area-A (\uD83D\uDC7D)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
 let RedPlaceholderTypeArray = [
     RedPlaceholderType.poleposition,
@@ -33,6 +35,7 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.fullTagPlaceholder,
     RedPlaceholderType.curlie,
     RedPlaceholderType.doubleCurlie,
+    RedPlaceholderType.privateUse,
 ];
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
@@ -49,6 +52,7 @@ class RedStringEscaper {
         this.reverseSymbols = {};
         this.broken = false;
         this.curlyCount = 65;
+        this.privateCounter = 983041;
         this.preString = "";
         this.postString = "";
         this.isScript = false;
@@ -96,6 +100,9 @@ class RedStringEscaper {
             Array.from({ length: this.closedNinesLength }, () => Math.floor(Math.random() * 10).toString()).join("")
             + "9";
     }
+    getPrivateArea() {
+        return String.fromCodePoint(this.privateCounter++);
+    }
     storeSymbol(text) {
         if (this.reverseSymbols[text] != undefined) {
             return this.reverseSymbols[text];
@@ -129,6 +136,9 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.doubleCurlie:
                     tag = this.getDoubleCurly();
+                    break;
+                case RedPlaceholderType.privateUse:
+                    tag = this.getPrivateArea();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -235,6 +245,7 @@ class RedStringEscaper {
             regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
             regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
             regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/g;
+            regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
                     return this.storeSymbol(match);
@@ -883,8 +894,8 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             targetUrl: "https://translate.google.com/translate_a/single",
             description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
             batchDelay: 1,
-            innerDelay: 5000,
-            maximumBatchSize: 2000,
+            innerDelay: 10000,
+            maximumBatchSize: 1000,
             skipReferencePair: true,
             lineDelimiter: "<br>",
             mode: "rowByRow",
@@ -951,7 +962,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                     sl: sourceLanguage,
                     tl: destinationLanguage,
                     dt: 't',
-                    q: batch.join(rowSeparator)
+                    q: batch.join("\n" + rowSeparator)
                 }),
             }).then((data) => {
                 currentAction.nodeValue = "Reading response...";

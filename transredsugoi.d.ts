@@ -9,7 +9,8 @@ declare enum RedPlaceholderType {
     closedTagPlaceholder = "closedTagPlaceholder",
     fullTagPlaceholder = "fullTagPlaceholder",
     curlie = "curlie",
-    doubleCurlie = "doubleCurlie"
+    doubleCurlie = "doubleCurlie",
+    privateUse = "privateUse"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
@@ -20,7 +21,8 @@ declare enum RedPlaceholderTypeNames {
     closedTagPlaceholder = "Tag Placeholder Closed Tags (e.g. &lt;24/&gt;)",
     fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
     curlie = "Curlies (e.g. letter enclosed by curly brackets)",
-    doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)"
+    doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)",
+    privateUse = "Supplementary Private Use Area-A (\uD83D\uDC7D)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
 declare let escapingTitleMap: {
@@ -41,6 +43,7 @@ declare class RedStringEscaper {
     private currentText;
     private broken;
     private curlyCount;
+    private privateCounter;
     private preString;
     private postString;
     private isScript;
@@ -55,6 +58,7 @@ declare class RedStringEscaper {
     getCurly(): string;
     getDoubleCurly(): string;
     getClosedNines(): string;
+    getPrivateArea(): string;
     storeSymbol(text: string): string;
     getOriginalText(): string;
     getReplacedText(): string;
