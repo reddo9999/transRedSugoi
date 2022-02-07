@@ -71,7 +71,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                     sl: sourceLanguage,
                     tl: destinationLanguage,
                     dt:'t',
-                    q: batch.join(rowSeparator)
+                    q: batch.join("\n" + rowSeparator)
                 }),
                 //headers		: { 'Content-Type': 'application/json' },
             }).then((data) => {
