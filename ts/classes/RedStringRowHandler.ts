@@ -32,8 +32,17 @@ class RedStringRowHandler {
 
     public getTranslatedRow () {
         let lines : Array<string> = [];
+        let lastline : string = "";
         for (let i = 0; i < this.curatedLines.length; i++) {
-            lines.push(this.curatedLines[i].recoverSymbols());
+            let line = this.curatedLines[i].recoverSymbols();
+            line = line.trim();
+            // Keep empty lines so long as:
+            // It's not the first line
+            // The previous line wasn't also blank
+            if (line != "" || (i > 0 && lastline != "")) {
+                lines.push(line);
+            }
+            lastline = line;
         }
         return lines.join("\n");
     }
