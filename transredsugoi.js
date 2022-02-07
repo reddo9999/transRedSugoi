@@ -459,10 +459,10 @@ class RedTranslatorEngineWrapper {
         return result;
     }
     breakRow(text) {
-        let lines = text.split(/( *\r?\n(?:\r?\n)+ *)/);
+        let lines = text.split(/( *　*\r?\n(?:\r?\n)+ *　*)/);
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *\r?\n)/);
+            let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
@@ -471,7 +471,7 @@ class RedTranslatorEngineWrapper {
         }
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/((?:^|(?:\r?\n))+ *[｛（［【「『〝⟨「"'>\\\/]+)/);
+            let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
@@ -895,7 +895,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
             batchDelay: 1,
             innerDelay: 10000,
-            maximumBatchSize: 1000,
+            maximumBatchSize: 2000,
             skipReferencePair: true,
             lineDelimiter: "<br>",
             mode: "rowByRow",
