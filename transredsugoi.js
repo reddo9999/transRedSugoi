@@ -1078,8 +1078,14 @@ class RedStringRowHandler {
     }
     getTranslatedRow() {
         let lines = [];
+        let lastline = "";
         for (let i = 0; i < this.curatedLines.length; i++) {
-            lines.push(this.curatedLines[i].recoverSymbols());
+            let line = this.curatedLines[i].recoverSymbols();
+            line = line.trim();
+            if (line != "" || (i > 0 && lastline != "")) {
+                lines.push(line);
+            }
+            lastline = line;
         }
         return lines.join("\n");
     }
