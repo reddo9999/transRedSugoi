@@ -103,7 +103,8 @@ abstract class RedTranslatorEngineWrapper {
         // Second Step = "Break if a line ends with something that finishes a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
+            //let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
+            let split = line.split(/([〕〗〙〛〞｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
             // We need to give back the end of the sentence so that it translates correctly
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k+1];
@@ -115,7 +116,8 @@ abstract class RedTranslatorEngineWrapper {
         // Third step = "Break if a line starts with something that initiates a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
+            //let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
+            let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
             // We need to give back the start of the sentence so that it translates correctly
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k+1];
