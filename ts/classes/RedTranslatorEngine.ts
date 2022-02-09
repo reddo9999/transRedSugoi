@@ -104,7 +104,7 @@ abstract class RedTranslatorEngineWrapper {
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
             //let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
-            let split = line.split(/([〕〗〙〛〞｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
+            let split = line.split(/([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
             // We need to give back the end of the sentence so that it translates correctly
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k+1];
