@@ -12,7 +12,11 @@ var RedPlaceholderType;
     RedPlaceholderType["doubleCurlie"] = "doubleCurlie";
     RedPlaceholderType["privateUse"] = "privateUse";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
+// I wonder if we could initiate this through calling the above...
+// I'd rather not have to change both
 var RedPlaceholderTypeNames;
+// I wonder if we could initiate this through calling the above...
+// I'd rather not have to change both
 (function (RedPlaceholderTypeNames) {
     RedPlaceholderTypeNames["poleposition"] = "Poleposition (e.g. #24)";
     RedPlaceholderTypeNames["hexPlaceholder"] = "Hex Placeholder (e.g. 0xffffff)";
@@ -47,12 +51,12 @@ class RedStringEscaper {
         this.symbolAffix = 1;
         this.currentSymbol = 4;
         this.hexCounter = 983041;
-        this.closedNinesLength = 7;
+        this.closedNinesLength = 7; // plus two boundaries
         this.storedSymbols = {};
         this.reverseSymbols = {};
         this.broken = false;
-        this.curlyCount = 65;
-        this.privateCounter = 983041;
+        this.curlyCount = 65; //A
+        this.privateCounter = 983041; // 👽
         this.preString = "";
         this.postString = "";
         this.isScript = false;
@@ -104,7 +108,11 @@ class RedStringEscaper {
         return String.fromCodePoint(this.privateCounter++);
     }
     storeSymbol(text) {
+        // Originally was using tags, hence the name. Then I tried parenthesis.
+        // I think the AI might get used to any tags we use and just start. ... killing them
+        // So far this seems to work the best
         if (this.reverseSymbols[text] != undefined) {
+            // if we reuse the same symbol it might help the AI understand the sentence
             return this.reverseSymbols[text];
         }
         else {
@@ -162,9 +170,15 @@ class RedStringEscaper {
         if (this.broken) {
             return "";
         }
+        // DEBUG
+        //console.log(this.currentText, this.storedSymbols);
+        // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
+        // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
+        // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
         let found = true;
         while (found) {
+            //console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
                 let idx = this.currentText.indexOf(key);
@@ -177,46 +191,73 @@ class RedStringEscaper {
                 }
             }
         }
+        // Sugoi fails and adds <unk> where it doesn't understand something
+        // It turns people into pigs! Pigs!
+        // let's remove those
         if (this.removeUnks) {
             this.currentText = this.currentText.replaceAll("<unk>", "");
         }
         if (this.isScript) {
             this.currentText = JSON.stringify(this.currentText);
             if (this.currentText.charAt(0) != this.quoteType) {
+                // escape the quotes
                 this.currentText = this.currentText.replaceAll(this.quoteType, `\\${this.quoteType}`);
                 this.currentText = this.quoteType + this.currentText.substring(1, this.currentText.length - 1) + this.quoteType;
             }
         }
+        // DEBUG
+        // console.log(finalString, this.storedSymbols);
         return this.currentText;
     }
+    /**
+     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
+     * So I'll just make something that's hopefully similar enough to live through updates!
+     */
     escape() {
+        // Are we escaping?
         if (this.type == RedPlaceholderType.noEscape) {
             this.currentText = this.text;
             return this.text;
         }
         let formulas = RedStringEscaper.getActiveFormulas();
         let text = this.currentText || this.text;
+        //console.log("Formulas : ", formulas);
         for (var i = 0; i < formulas.length; i++) {
             if (!Boolean(formulas[i]))
                 continue;
+            /**
+             * Function should return a string or Array of strings
+             */
             if (typeof formulas[i] == 'function') {
+                //console.log(`formula ${i} is a function`);
                 var arrayStrings = formulas[i].call(this, text);
+                //console.log(`result`, arrayStrings);
                 if (typeof arrayStrings == 'string')
                     arrayStrings = [arrayStrings];
                 if (Array.isArray(arrayStrings) == false)
                     continue;
                 for (var x in arrayStrings) {
                     text = text.replaceAll(arrayStrings[x], (match) => {
+                        // Is this used for anything?
+                        //var lastIndex = this.placeHolders.push(match)-1;
                         return this.storeSymbol(match);
                     });
                 }
             }
             else {
+                //console.log("replacing....");
                 text = text.replaceAll(formulas[i], (match) => {
                     return this.storeSymbol(match);
                 });
             }
         }
+        // Just for fun, if we have symbols at the very start or the very end, don't even send them to the translator!
+        // We end up missing some contextual clues that may help 
+        //      (e.g. "\c[2] is annoying" would at least give them the context of "[symbol] is annoying", which could improve translations)
+        //      without context information it'd probably translate to an end result of "[symbol] It is annoying" since it had no subject.
+        // Safety vs Quality?
+        // Results are VERY good when the symbols aren't actually part of the sentence, which escaped symbols at start or end most likely are.
+        // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
         this.currentText = this.currentText.trim();
         let found = true;
         while (found && this.splitEnds) {
@@ -225,16 +266,20 @@ class RedStringEscaper {
                 let idx = text.indexOf(tag);
                 if (idx == 0) {
                     this.preString += this.storedSymbols[tag];
-                    text = text.substring(tag.length);
+                    text = text.substring(tag.length); // replace was dangerous, so we do it old school
                     found = true;
                 }
                 else if (idx != -1 && (idx + tag.length) == text.length) {
+                    // Everything we find after the first one will be coming before it, not after
                     this.postString = this.storedSymbols[tag] + this.postString;
                     text = text.substring(0, idx);
                     found = true;
                 }
             }
         }
+        // Replace sequential occurrences of Symbols with a single symbol!
+        // TESTING THIS IS HELL ON EARTH SOMEONE PLEASE TEST THIS I DON'T HAVE GOOD SENTENCES TO TEST IT
+        // Theoretically, this should result in less mangling of symbols as the translator is fed less of them to begin with
         if (this.mergeSymbols) {
             let regExpObj = {};
             regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
@@ -253,28 +298,37 @@ class RedStringEscaper {
             }
         }
         this.currentText = text;
+        //console.log("%cEscaped text", 'background: #222; color: #bada55');
+        //console.log(text);
         return text;
     }
     static getActiveFormulas() {
         sys.config.escaperPatterns = sys.config.escaperPatterns || [];
+        // Is our cache valid?
         if (RedStringEscaper.cachedFormulaString == JSON.stringify(sys.config.escaperPatterns)) {
             return RedStringEscaper.cachedFormulas;
         }
+        // Update cache
         let formulas = [];
         for (var i in sys.config.escaperPatterns) {
+            //console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
             if (typeof sys.config.escaperPatterns[i] !== "object")
                 continue;
             if (!sys.config.escaperPatterns[i].value)
                 continue;
             try {
                 var newReg;
+                //console.log(sys.config.escaperPatterns[i].value);
                 if (common.isRegExp(sys.config.escaperPatterns[i].value)) {
+                    //console.log("is regex");
                     newReg = common.evalRegExpStr(sys.config.escaperPatterns[i].value);
                 }
                 else if (common.isStringFunction(sys.config.escaperPatterns[i].value)) {
+                    //console.log("pattern ", i, "is function");
                     newReg = RedStringEscaper.renderFunction(sys.config.escaperPatterns[i].value);
                 }
                 else {
+                    //console.log("Is string");
                     newReg = JSON.parse(sys.config.escaperPatterns[i].value);
                 }
                 if (newReg != undefined) {
@@ -285,6 +339,8 @@ class RedStringEscaper {
                 console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", sys.config.escaperPatterns[i], e);
             }
         }
+        // Since sugoi only translates japanese, might as well remove anything else
+        //formulas.push(/(^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf])/g);
         RedStringEscaper.cachedFormulaString = JSON.stringify(sys.config.escaperPatterns);
         RedStringEscaper.cachedFormulas = formulas;
         return formulas;
@@ -303,6 +359,10 @@ class RedStringEscaper {
 RedStringEscaper.cachedFormulaString = "";
 RedStringEscaper.cachedFormulas = [];
 window.RedStringEscaper = RedStringEscaper;
+/// <reference path="RedStringEscaper.ts" />
+/**
+ * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
+ */
 class RedTranslatorEngineWrapper {
     constructor(thisAddon, extraOptions, extraSchema, extraForm) {
         this.urls = [];
@@ -311,6 +371,12 @@ class RedTranslatorEngineWrapper {
         this.allowTranslation = true;
         this.paused = false;
         this.waiting = [];
+        // Cache Translations so we can save up time!
+        // In most scenarios this will not help, but if there is a consistent string reuse it might.
+        // e.g. CharacterName: at the start of every Dialogue.
+        // Plus not redoing the work is just good practice.
+        // Would it be worth it to save this to a file and keep updating it through multiple games?
+        // The bigger it gets the slower it should be to access, but wouldn't it still be faster than repeating the work?
         this.translationCache = {};
         this.cacheHits = 0;
         this.translatorEngine = new TranslatorEngine({
@@ -459,19 +525,30 @@ class RedTranslatorEngineWrapper {
         return result;
     }
     breakRow(text) {
+        // now we need to prepare the stuff we'll send over to Sugoi.
+        // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
+        // probably the best way to detect those is through blank lines.
+        // Might be a good idea to also split if new lines start with something that we're escaping
+        // First Step = "Break if you find one or more empty lines"
         let lines = text.split(/( *　*\r?\n(?:\r?\n)+ *　*)/);
+        // Second Step = "Break if a line ends with something that finishes a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
+            //let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
+            let split = line.split(/([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
+            // We need to give back the end of the sentence so that it translates correctly
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
             }
             lines.splice(i, 1, ...split);
         }
+        // Third step = "Break if a line starts with something that initiates a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
-            let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
+            //let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
+            let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
+            // We need to give back the start of the sentence so that it translates correctly
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
@@ -486,11 +563,14 @@ class RedTranslatorEngineWrapper {
             let trimmed = brokenRow[0].trim();
             if (["'", '"'].indexOf(trimmed.charAt(0)) != -1 &&
                 trimmed.charAt(0) == trimmed.charAt(trimmed.length - 1)) {
+                // sure looks like one, but is it?
                 try {
                     quoteType = trimmed.charAt(0);
                     if (quoteType == "'") {
+                        // These are actually invalid, so... extra work for us.
                         trimmed = trimmed.replaceAll('"', '\\"');
                         trimmed = '"' + trimmed.substring(1, trimmed.length - 1) + '"';
+                        // It's okay, we'll go back to the original quoteType later.
                     }
                     let innerString = JSON.parse(trimmed);
                     return {
@@ -509,7 +589,7 @@ class RedTranslatorEngineWrapper {
     curateRow(row) {
         let escapingType = this.getEngine().getOptions().escapeAlgorithm || RedPlaceholderType.poleposition;
         let splitEnds = this.getEngine().getOptions().splitEnds;
-        splitEnds = splitEnds == undefined ? true : splitEnds === true;
+        splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
         let mergeSymbols = this.isMergingSymbols();
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
@@ -529,27 +609,35 @@ class RedTranslatorEngineWrapper {
         if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
             ui.showBusyOverlay();
         }
+        // Unpause if paused
         this.resume(true);
         this.allowTranslation = true;
+        // Set up T++ result object
         let result = {
             'sourceText': rows.join(),
             'translationText': "",
             'source': rows,
             'translation': []
         };
+        // First step: curate every single line and keep track of it
         let rowHandlers = [];
         let toTranslate = [];
         for (let i = 0; i < rows.length; i++) {
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
+            // Second step: separate every line that will need to be translated
             toTranslate.push(...handler.getTranslatableLines());
         }
+        // Third step: send translatable lines to the translator handler
         let translation = this.doTranslate(toTranslate, options);
+        // After receiving...
         translation.then((translations) => {
+            // Fourth step: return translations to each object
             let curatedIndex = 0;
             let internalIndex = 0;
             let finalTranslations = [];
             let curated = rowHandlers[curatedIndex];
+            // Move through translations
             let moveRows = () => {
                 while (curated != undefined && curated.isDone(internalIndex)) {
                     curated.applyTranslation();
@@ -558,13 +646,18 @@ class RedTranslatorEngineWrapper {
                     curated = rowHandlers[++curatedIndex];
                 }
             };
+            // Check for empty rows
             moveRows();
+            // Move through translations
             for (let outerIndex = 0; outerIndex < translations.length; outerIndex++) {
                 let translation = translations[outerIndex];
                 curated = rowHandlers[curatedIndex];
+                // Move through lines
                 curated.insertTranslation(translation, internalIndex++);
+                // Move through rows
                 moveRows();
             }
+            // Final step: set up result object
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
             options.onAfterLoading.call(this.translatorEngine, result);
@@ -619,7 +712,13 @@ class RedTranslatorEngineWrapper {
         return url.protocol === "http:" || url.protocol === "https:";
     }
 }
+/// <reference path="RedTranslatorEngine.ts" />
+/// <reference path="RedStringEscaper.ts" />
 class RedSugoiEngine extends RedTranslatorEngineWrapper {
+    /**
+     * Updates URL array and picks the one with the least connections
+     * @returns string
+     */
     getUrl() {
         this.updateUrls();
         let idx = this.urlUsage.indexOf(Math.min(...this.urlUsage));
@@ -630,7 +729,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
     reduceScore(url) {
         let idx = this.urls.indexOf(url);
         if (idx != -1) {
-            this.urlScore[idx]--;
+            this.urlScore[idx]--; // shame on you little server.
         }
     }
     updateUrls() {
@@ -638,6 +737,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         let urls = thisEngine.targetUrl.replaceAll("\r", "").split("\n");
         if (this.urls.length != urls.length) {
             this.urls = [...urls];
+            // Some users might forget the final slash, let's fix that. Might as well make sure it's nice and trimmed while at it.
             for (let i = 0; i < this.urls.length; i++) {
                 this.urls[i] = this.urls[i].trim();
                 if (this.urls[i].charAt(this.urls[i].length - 1) != "/") {
@@ -660,12 +760,15 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
     resetScores() {
         this.urlScore = new Array(this.urls.length).fill(0);
     }
+    // Goals of refactor:
+    // Split rows evenly between servers in single requests that respect maximum simultaneous translations.
     doTranslate(toTranslate, options) {
         this.resetScores();
         console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
         let batchStart = new Date().getTime();
         let translating = 0;
         let translations = [];
+        // Set up progress
         let consoleWindow = $("#loadingOverlay .console")[0];
         let progressTotal = document.createTextNode("/" + toTranslate.length.toString());
         let pre = document.createElement("pre");
@@ -685,15 +788,19 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         }, 100);
         console.log("[RedSugoi] Translations to send:", toTranslate);
         let updateProgress = () => {
+            // A filthy hack for a filthy code
             progressNode.nodeValue = (translatedLines).toString();
             progressTotal.nodeValue = "/" + toTranslate.length.toString();
         };
         let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
         let threads = this.getEngine().getOptions().threads || 1;
         let completedThreads = 0;
+        // I don't know why we didn't do this
+        // Maybe I have brain damage
         this.updateUrls();
         let totalThreads = this.getUrlCount() * threads;
         let complete;
+        // Third step: perform translations
         let doTranslate = (onSuccess, onError) => {
             if (!this.allowTranslation || this.paused) {
                 return this.waiting.push(() => {
@@ -760,7 +867,9 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             if (++completedThreads == totalThreads) {
                 crashDetector.nodeValue = "";
                 clearInterval(spinnyInterval);
+                // return the object
                 onSuccess(translations);
+                // Update progress
                 let batchEnd = new Date().getTime();
                 let pre = document.createElement("pre");
                 pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
@@ -828,6 +937,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. No particular reason, it just seems to break the least.",
                 "default": RedPlaceholderType.poleposition,
                 "required": false,
+                // @ts-ignore shhh it's fine don't worry bb
                 "enum": RedPlaceholderTypeArray
             },
         }, [
@@ -866,6 +976,28 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     }
                 ]
             },
+            /*                 {
+                                "type": "actions",
+                                "title" : "Copy Sugoi Translator Target URL",
+                                "fieldHtmlClass": "actionButtonSet",
+                                "items": [
+                                  {
+                                    "type": "button",
+                                    "title": "Copy Sugoi Translator Target URL",
+                                    "onClick" : function(ev : any) {
+                                        try {
+                                            let headHoncho = (ev.target).parentNode.parentNode;
+                                            let $targetUrl = $(headHoncho).find('[name="targetUrl"]')
+                                            $targetUrl.val(trans.sugoitrans.targetUrl);
+                                            trans.redsugoi.update("targetUrl", trans.sugoiTrans.targetUrl);
+                                        } catch (e) {
+                                            alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                                        }
+                                    }
+                                  }
+                        
+                                ]
+                            }, */
             {
                 "key": "maxParallelJob",
                 "onChange": (evt) => {
@@ -883,6 +1015,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         ]);
     }
 }
+/// <reference path="RedTranslatorEngine.ts" />
 class RedGoogleEngine extends RedTranslatorEngineWrapper {
     constructor(thisAddon) {
         super(thisAddon, {
@@ -906,6 +1039,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 "description": "Escaping algorithm used for the Custom Escaper Patterns. For Google, it is recommended to use Tag placeholder, as Google tries to not break tags.",
                 "default": RedPlaceholderType.tagPlaceholder,
                 "required": false,
+                // @ts-ignore shhh it's fine don't worry bb
                 "enum": RedPlaceholderTypeArray
             },
         }, []);
@@ -920,7 +1054,9 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let translations = new Array(toTranslate.length);
         let maxBatchSize = this.getEngine().maximumBatchSize;
         let delay = this.getEngine().innerDelay;
+        //let rowSeparator = "<newrowmarker>";
         let rowSeparator = this.getEngine().lineSubstitute;
+        //let rowSeparator = String.fromCodePoint(983040); // Cool in theory, not that cool in practice
         let progressCurrent = document.createTextNode("0");
         let progressTotal = document.createTextNode("/" + toTranslate.length);
         let currentAction = document.createTextNode("Starting up...");
@@ -942,6 +1078,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             let calcBatchSize = (addition) => {
                 return addition.length + batchSize + (rowSeparator.length * batch.length);
             };
+            // If for some reason we get one huge ass translation, we send it alone
             while (translating < toTranslate.length && (batchSize == 0 || maxBatchSize > calcBatchSize(toTranslate[translating]))) {
                 batch.push(toTranslate[translating]);
                 batchSize += toTranslate[translating++].length;
@@ -964,21 +1101,29 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                     dt: 't',
                     q: batch.join("\n" + rowSeparator)
                 }),
+                //headers		: { 'Content-Type': 'application/json' },
             }).then((data) => {
                 currentAction.nodeValue = "Reading response...";
-                let googleTranslations = data[0];
+                let googleTranslations = data[0]; // Each line becomes a translation...
                 let uglyTranslations = [];
                 for (let i = 0; i < googleTranslations.length; i++) {
                     uglyTranslations.push(googleTranslations[i][0]);
                 }
                 let cleanTranslations = uglyTranslations.join("\n");
+                // Google doesn't destroy tags, but it adds spaces... "valid HTML" I guess.
                 cleanTranslations = cleanTranslations.replaceAll(/ *< */g, "<");
                 cleanTranslations = cleanTranslations.replaceAll(/ *> */g, ">");
+                // Fuck empty lines
                 cleanTranslations = cleanTranslations.replaceAll(/[\n]{2,}/g, "\n");
+                // Fuck spaces at the end of lines
                 cleanTranslations = cleanTranslations.replaceAll(/ *\n/g, "\n");
+                // Case consistency
                 cleanTranslations = cleanTranslations.replaceAll(new RegExp(rowSeparator, "gi"), rowSeparator);
+                // we want to ignore line breaks on the sides of the row separator
                 cleanTranslations = cleanTranslations.replaceAll("\n" + rowSeparator, rowSeparator);
                 cleanTranslations = cleanTranslations.replaceAll(rowSeparator + "\n", rowSeparator);
+                // Japanese loves repeating sentence enders !!!
+                // Google does not
                 cleanTranslations = cleanTranslations.replaceAll(/\n!/g, "!");
                 cleanTranslations = cleanTranslations.replaceAll(/\n\?/g, "?");
                 cleanTranslations = cleanTranslations.replaceAll(/\n\./g, ".");
@@ -995,7 +1140,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 }
                 else {
                     for (let i = 0; i < pristineTranslations.length; i++) {
-                        translations[batchStart + i] = pristineTranslations[i].trim();
+                        translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
                         this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
                     }
                     progressCurrent.nodeValue = (parseInt(progressCurrent.nodeValue) + pristineTranslations.length).toString();
@@ -1037,10 +1182,12 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         this.delayed = [];
     }
 }
+/// <reference path="classes/RedSugoiEngine.ts" />
+/// <reference path="classes/RedGoogleEngine.ts" />
 var thisAddon = this;
 let wrappers = [
     new RedSugoiEngine(thisAddon),
-    new RedGoogleEngine(thisAddon),
+    new RedGoogleEngine(thisAddon), // Totally not into making this work right now.
 ];
 wrappers.forEach(wrapper => {
     trans[wrapper.getEngine().id] = wrapper.getEngine();
@@ -1082,6 +1229,9 @@ class RedStringRowHandler {
         for (let i = 0; i < this.curatedLines.length; i++) {
             let line = this.curatedLines[i].recoverSymbols();
             line = line.trim();
+            // Keep empty lines so long as:
+            // It's not the first line
+            // The previous line wasn't also blank
             if (line != "" || (i > 0 && lastline != "")) {
                 lines.push(line);
             }
@@ -1097,6 +1247,8 @@ class RedStringRowHandler {
     }
     applyTranslation() {
         for (let i = 0; i < this.translatedLines.length; i++) {
+            // Some of them might be undefined
+            // Ideally we'd check outside, but we need to keep moving forward while translating.
             let translation = this.translatedLines[i];
             if (translation != undefined) {
                 this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);

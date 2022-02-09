@@ -64,6 +64,10 @@ declare class RedStringEscaper {
     getReplacedText(): string;
     setTranslatedText(text: string): void;
     recoverSymbols(): string;
+    /**
+     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
+     * So I'll just make something that's hopefully similar enough to live through updates!
+     */
     escape(): string;
     static cachedFormulaString: string;
     static cachedFormulas: Array<RegExp | Function>;
@@ -76,6 +80,9 @@ interface RedScriptCheckResponse {
     quoteType?: string;
     newLine?: string;
 }
+/**
+ * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
+ */
 declare abstract class RedTranslatorEngineWrapper {
     protected translatorEngine: TranslatorEngine;
     protected urls: Array<string>;
@@ -116,6 +123,10 @@ declare abstract class RedTranslatorEngineWrapper {
     }, extraForm: Array<TranslationEngineOptionFormUpdater>);
 }
 declare class RedSugoiEngine extends RedTranslatorEngineWrapper {
+    /**
+     * Updates URL array and picks the one with the least connections
+     * @returns string
+     */
     getUrl(): string;
     reduceScore(url: string): void;
     updateUrls(): void;
