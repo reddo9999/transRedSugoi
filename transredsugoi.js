@@ -484,9 +484,9 @@ class RedPersistentCacheHandler {
 }
 /// <reference path="RedStringEscaper.ts" />
 /// <reference path="RedPersistentCacheHandler.ts" />
-const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟\"'>\\/\\]+)";
-const defaultLineEnd = "([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；\"'.?!;:]+ *　*(?:$|\r*\n))";
-const defaultParagraphBreak = "( *　*\r?\n(?:\r?\n)+ *　*)";
+const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
+const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
+const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
