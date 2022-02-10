@@ -14,6 +14,9 @@ enum RedPlaceholderType {
     privateUse = "privateUse",
     hashtag = "hashtag",
     hashtagTriple = "hashtagTriple",
+    tournament = "tournament",
+    mvStyle = "mvStyle",
+    wolfStyle = "wolfStyle",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -31,6 +34,9 @@ enum RedPlaceholderTypeNames {
     privateUse = "Supplementary Private Use Area-A (👽)",
     hashtag = "Hashtag (#A)",
     hashtagTriple = "Triple Hashtag (#ABC)",
+    tournament = "Tournament (e.g. #1, #2, #3)",
+    mvStyle = "MV Message (e.g. %1, %2, %3)",
+    wolfStyle = "Wolf Message (e.g. @1, @2, @3)",
 }
 
 let RedPlaceholderTypeArray = [
@@ -46,7 +52,27 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.privateUse,
     RedPlaceholderType.hashtag,
     RedPlaceholderType.hashtagTriple,
+    RedPlaceholderType.tournament,
+    RedPlaceholderType.mvStyle,
+    RedPlaceholderType.wolfStyle,
 ];
+
+
+let regExpObj : any = {};
+regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.mvStyle] = /((?:%[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.wolfStyle] = /((?:@[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.tournament] = /((?:#[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
+regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
+regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
+regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{4,}9){2,})", "g");
+regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
+regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
+regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/gi;
+regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
+regExpObj[RedPlaceholderType.hashtag] = /((?:#[A-Z]){2,})/gi;
+regExpObj[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]){2,})/gi;
 
 let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
@@ -114,6 +140,14 @@ class RedStringEscaper {
         return `#${this.symbolAffix++}${this.currentSymbol++}`;
     }
 
+    public getMvStyle () {
+        return `%${this.symbolAffix++}`;
+    }
+
+    public getWolfStyle () {
+        return `@${this.symbolAffix++}`;
+    }
+
     public getHexPlaceholder () {
         return "0x" + (this.hexCounter++).toString(16);
     }
@@ -142,6 +176,10 @@ class RedStringEscaper {
 
     public getTripleHashtag () {
         return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
+    }
+
+    public getTournament () {
+        return `#${this.symbolAffix++}`;
     }
 
     public storeSymbol (text : string) : string {
@@ -189,6 +227,15 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.hashtagTriple:
                     tag = this.getTripleHashtag();
+                    break;
+                case RedPlaceholderType.tournament:
+                    tag = this.getTournament();
+                    break;
+                case RedPlaceholderType.mvStyle:
+                    tag = this.getMvStyle();
+                    break;
+                case RedPlaceholderType.wolfStyle:
+                    tag = this.getWolfStyle();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -332,19 +379,6 @@ class RedStringEscaper {
         // TESTING THIS IS HELL ON EARTH SOMEONE PLEASE TEST THIS I DON'T HAVE GOOD SENTENCES TO TEST IT
         // Theoretically, this should result in less mangling of symbols as the translator is fed less of them to begin with
         if (this.mergeSymbols) {
-            let regExpObj : any = {};
-            regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
-            regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
-            regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
-            regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
-            regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
-            regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
-            regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
-            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/gi;
-            regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
-            regExpObj[RedPlaceholderType.hashtag] = /((?:#[A-Z]){2,})/gi;
-            regExpObj[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]){2,})/gi;
-
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
                     return this.storeSymbol(match);
