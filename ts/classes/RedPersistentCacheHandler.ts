@@ -53,7 +53,7 @@ class RedPersistentCacheHandler {
         }
         
         try {
-            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache));
+            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache, null, 4));
         } catch (e) {
             console.error("[RedPersistentCacheHandler] Failed saving cache for " + this.transId + ".", e);
         }
