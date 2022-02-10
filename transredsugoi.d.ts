@@ -74,6 +74,19 @@ declare class RedStringEscaper {
     static getActiveFormulas(): (Function | RegExp)[];
     static renderFunction(string: string): any;
 }
+declare class RedPersistentCacheHandler {
+    private fs;
+    private transId;
+    private cache;
+    constructor(id: string);
+    addCache(key: string, translation: string): void;
+    hasCache(key: string): boolean;
+    getCache(key: string): string;
+    getFilename(): string;
+    loadCache(): void;
+    saveCache(): void;
+    getSize(cache: string): number;
+}
 declare var ui: any;
 interface RedScriptCheckResponse {
     isScript: boolean;
@@ -91,9 +104,7 @@ declare abstract class RedTranslatorEngineWrapper {
     protected allowTranslation: boolean;
     protected paused: boolean;
     protected waiting: Array<Function>;
-    protected translationCache: {
-        [text: string]: string;
-    };
+    protected cacheHandler: RedPersistentCacheHandler;
     getEngine(): TranslatorEngine;
     abort(): void;
     pause(): void;
@@ -101,6 +112,7 @@ declare abstract class RedTranslatorEngineWrapper {
     isCaching(): boolean;
     isKeepingScripts(): boolean;
     isMergingSymbols(): boolean;
+    isPersistentCaching(): boolean;
     private cacheHits;
     hasCache(text: string): boolean;
     getCache(text: string): string;

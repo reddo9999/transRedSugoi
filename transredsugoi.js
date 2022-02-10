@@ -359,7 +359,67 @@ class RedStringEscaper {
 RedStringEscaper.cachedFormulaString = "";
 RedStringEscaper.cachedFormulas = [];
 window.RedStringEscaper = RedStringEscaper;
+class RedPersistentCacheHandler {
+    constructor(id) {
+        this.fs = require("fs");
+        this.cache = {};
+        this.transId = id;
+    }
+    addCache(key, translation) {
+        this.cache[key] = translation;
+    }
+    hasCache(key) {
+        return typeof this.cache[key] != "undefined";
+    }
+    getCache(key) {
+        return this.cache[key];
+    }
+    getFilename() {
+        return `${__dirname}/data/RedCache${this.transId}.json`;
+    }
+    loadCache() {
+        if (this.fs.existsSync(this.getFilename())) {
+            try {
+                let rawdata = this.fs.readFileSync(this.getFilename());
+                this.cache = JSON.parse(rawdata);
+                if (typeof this.cache != "object") {
+                    this.cache = {};
+                }
+            }
+            catch (e) {
+                this.cache = {};
+                console.error("[RedPersistentCacheHandler] Load error for cache " + this.transId + ". Resetting.", e);
+            }
+        }
+        else {
+            console.warn("[RedPersistentCacheHandler] No cache found for " + this.transId + ".");
+        }
+    }
+    saveCache() {
+        let maxSize = trans[this.transId].getOptions().persistentCacheMaxSize * 1024 * 1024;
+        let size = this.getSize(JSON.stringify(this.cache));
+        for (let key in this.cache) {
+            if (size > maxSize) {
+                size -= this.getSize(`"${key}":"${this.cache[key]}"`); // good enough of an approximation, we're not going to mars here
+                delete (this.cache[key]);
+            }
+            else {
+                break;
+            }
+        }
+        try {
+            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache));
+        }
+        catch (e) {
+            console.error("[RedPersistentCacheHandler] Failed saving cache for " + this.transId + ".", e);
+        }
+    }
+    getSize(cache) {
+        return (new TextEncoder().encode(cache)).length;
+    }
+}
 /// <reference path="RedStringEscaper.ts" />
+/// <reference path="RedPersistentCacheHandler.ts" />
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -371,13 +431,6 @@ class RedTranslatorEngineWrapper {
         this.allowTranslation = true;
         this.paused = false;
         this.waiting = [];
-        // Cache Translations so we can save up time!
-        // In most scenarios this will not help, but if there is a consistent string reuse it might.
-        // e.g. CharacterName: at the start of every Dialogue.
-        // Plus not redoing the work is just good practice.
-        // Would it be worth it to save this to a file and keep updating it through multiple games?
-        // The bigger it gets the slower it should be to access, but wouldn't it still be faster than repeating the work?
-        this.translationCache = {};
         this.cacheHits = 0;
         this.translatorEngine = new TranslatorEngine({
             author: thisAddon.package.author.name,
@@ -386,6 +439,8 @@ class RedTranslatorEngineWrapper {
             escapeAlgorithm: RedPlaceholderType.poleposition,
             splitEnds: true,
             useCache: true,
+            usePersistentCache: true,
+            persistentCacheMaxSize: 10,
             detectStrings: true,
             mergeSymbols: true,
             optionsForm: {
@@ -401,6 +456,19 @@ class RedTranslatorEngineWrapper {
                         "title": "Use Cache",
                         "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. The cache only lasts until you close Translator++. Recommended is ON.",
                         "default": true
+                    },
+                    "usePersistentCache": {
+                        "type": "boolean",
+                        "title": "Use Persistent Cache",
+                        "description": "If this option is toggled, the cache will be saved to disk between translations. This can speed up future translations and/or help recover faster after a crash.",
+                        "default": true
+                    },
+                    "persistentCacheMaxSize": {
+                        "type": "number",
+                        "title": "Persistent Cache Maximum Size",
+                        "description": "The maximum size of the translation cache, in Megabytes. Because these are basic text, a few megabytes should be able to hold a large amount of translations. Ideal size is as much memory as you're willing to give to cache / as much bytes as you expect your disk to handle in a timely manner. The cache is saved to disk after each translation batch.",
+                        "default": 10,
+                        "required": true
                     },
                     "detectStrings": {
                         "type": "boolean",
@@ -442,6 +510,21 @@ class RedTranslatorEngineWrapper {
                         }
                     },
                     {
+                        "key": "usePersistentCache",
+                        "inlinetitle": "Use Persistent Cache",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).prop("checked");
+                            this.translatorEngine.update("usePersistentCache", value);
+                        }
+                    },
+                    {
+                        "key": "persistentCacheMaxSize",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("persistentCacheMaxSize", parseFloat(value));
+                        }
+                    },
+                    {
                         "key": "detectStrings",
                         "inlinetitle": "Literal String Detection",
                         "onChange": (evt) => {
@@ -473,6 +556,8 @@ class RedTranslatorEngineWrapper {
         this.translatorEngine.resume = () => {
             this.resume();
         };
+        this.cacheHandler = new RedPersistentCacheHandler(extraOptions.id);
+        this.cacheHandler.loadCache();
     }
     getEngine() {
         return this.translatorEngine;
@@ -509,15 +594,19 @@ class RedTranslatorEngineWrapper {
         let mergeSymbols = this.getEngine().getOptions().mergeSymbols;
         return mergeSymbols == undefined ? true : mergeSymbols == true;
     }
+    isPersistentCaching() {
+        let usePersistentCache = this.getEngine().getOptions().usePersistentCache;
+        return usePersistentCache == undefined ? true : usePersistentCache == true;
+    }
     hasCache(text) {
-        return this.translationCache[text] != undefined;
+        return this.cacheHandler.hasCache(text);
     }
     getCache(text) {
         this.cacheHits++;
-        return this.translationCache[text];
+        return this.cacheHandler.getCache(text);
     }
     setCache(text, translation) {
-        this.translationCache[text] = translation;
+        this.cacheHandler.addCache(text, translation);
     }
     getCacheHits() {
         let result = this.cacheHits;
@@ -666,6 +755,10 @@ class RedTranslatorEngineWrapper {
         }).finally(() => {
             if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
                 ui.hideBusyOverlay();
+            }
+            if (this.isPersistentCaching()) {
+                this.log("[RedTranslatorEngine] Saving translation cache to file.");
+                this.cacheHandler.saveCache();
             }
         });
     }
@@ -839,7 +932,9 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                         }
                         for (let i = 0; i < result.length; i++) {
                             translations[i + myStart] = result[i];
-                            this.setCache(myLines[i], result[i]);
+                            if (this.isCaching()) {
+                                this.setCache(myLines[i], result[i]);
+                            }
                         }
                         translatedLines += myLines.length;
                     }
@@ -1028,7 +1123,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
             batchDelay: 1,
             innerDelay: 10000,
-            maximumBatchSize: 2000,
+            maximumBatchSize: 1500,
             skipReferencePair: true,
             lineDelimiter: "<br>",
             mode: "rowByRow",
@@ -1141,7 +1236,9 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 else {
                     for (let i = 0; i < pristineTranslations.length; i++) {
                         translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
-                        this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                        if (this.isCaching()) {
+                            this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                        }
                     }
                     progressCurrent.nodeValue = (parseInt(progressCurrent.nodeValue) + pristineTranslations.length).toString();
                 }
