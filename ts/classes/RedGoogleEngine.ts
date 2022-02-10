@@ -120,7 +120,9 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 } else {
                     for (let i = 0; i < pristineTranslations.length; i++) {
                         translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
-                        this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                        if (this.isCaching()) {
+                            this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
+                        }
                     }
                     progressCurrent.nodeValue = (parseInt(<string> progressCurrent.nodeValue) + pristineTranslations.length).toString();
                 }
@@ -178,7 +180,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
                 batchDelay:1, // We'll handle these ourselves
                 innerDelay: 10000, // Maybe give an option for users? Protect them from themselves?
-                maximumBatchSize : 2000, // This should be limited by default T++, but we'll keep track on our side as well. 3000 gave errors some times!
+                maximumBatchSize : 1500, // This should be limited by default T++, but we'll keep track on our side as well. 3000 gave errors some times!
                 skipReferencePair:true,
                 lineDelimiter: "<br>",
                 mode: "rowByRow",

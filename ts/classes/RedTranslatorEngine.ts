@@ -1,4 +1,5 @@
 /// <reference path="RedStringEscaper.ts" />
+/// <reference path="RedPersistentCacheHandler.ts" />
 declare var ui : any;
 
 interface RedScriptCheckResponse {
@@ -18,13 +19,7 @@ abstract class RedTranslatorEngineWrapper {
     protected allowTranslation : boolean = true;
     protected paused : boolean = false;
     protected waiting : Array<Function> = [];
-    // Cache Translations so we can save up time!
-    // In most scenarios this will not help, but if there is a consistent string reuse it might.
-    // e.g. CharacterName: at the start of every Dialogue.
-    // Plus not redoing the work is just good practice.
-    // Would it be worth it to save this to a file and keep updating it through multiple games?
-    // The bigger it gets the slower it should be to access, but wouldn't it still be faster than repeating the work?
-    protected translationCache : {[text : string] : string} = {};
+    protected cacheHandler : RedPersistentCacheHandler;
 
     public getEngine () {
         return this.translatorEngine;
@@ -69,19 +64,24 @@ abstract class RedTranslatorEngineWrapper {
         return mergeSymbols == undefined ? true : mergeSymbols == true;
     }
 
+    public isPersistentCaching () : boolean {
+        let usePersistentCache = this.getEngine().getOptions().usePersistentCache;
+        return usePersistentCache == undefined ? true : usePersistentCache == true;
+    }
+
     private cacheHits = 0;
 
     public hasCache (text : string) {
-        return this.translationCache[text] != undefined;
+        return this.cacheHandler.hasCache(text);
     }
 
     public getCache (text : string) {
         this.cacheHits++;
-        return this.translationCache[text];
+        return this.cacheHandler.getCache(text);
     }
 
     public setCache (text : string, translation : string) {
-        this.translationCache[text] = translation;
+        this.cacheHandler.addCache(text, translation);
     }
 
     public getCacheHits () {
@@ -260,6 +260,11 @@ abstract class RedTranslatorEngineWrapper {
             if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
                 ui.hideBusyOverlay();
             }
+
+            if (this.isPersistentCaching()) {
+                this.log("[RedTranslatorEngine] Saving translation cache to file.");
+                this.cacheHandler.saveCache();
+            }
         });
     }
 
@@ -317,6 +322,8 @@ abstract class RedTranslatorEngineWrapper {
             escapeAlgorithm : RedPlaceholderType.poleposition,
             splitEnds : true,
             useCache : true,
+            usePersistentCache : true,
+            persistentCacheMaxSize : 10,
             detectStrings : true,
             mergeSymbols : true,
             optionsForm:{
@@ -332,6 +339,19 @@ abstract class RedTranslatorEngineWrapper {
                     "title": "Use Cache",
                     "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. The cache only lasts until you close Translator++. Recommended is ON.",
                     "default":true
+                },
+                "usePersistentCache": {
+                    "type": "boolean",
+                    "title": "Use Persistent Cache",
+                    "description": "If this option is toggled, the cache will be saved to disk between translations. This can speed up future translations and/or help recover faster after a crash.",
+                    "default":true
+                },
+                "persistentCacheMaxSize": {
+                    "type": "number",
+                    "title": "Persistent Cache Maximum Size",
+                    "description": "The maximum size of the translation cache, in Megabytes. Because these are basic text, a few megabytes should be able to hold a large amount of translations. Ideal size is as much memory as you're willing to give to cache / as much bytes as you expect your disk to handle in a timely manner. The cache is saved to disk after each translation batch.",
+                    "default":10,
+                    "required":true
                 },
                 "detectStrings": {
                     "type": "boolean",
@@ -373,6 +393,21 @@ abstract class RedTranslatorEngineWrapper {
                     }
                 },
                 {
+                    "key": "usePersistentCache",
+                    "inlinetitle": "Use Persistent Cache",
+                    "onChange": (evt : Event) => {
+                      var value = $(<HTMLInputElement> evt.target).prop("checked");
+                      this.translatorEngine.update("usePersistentCache", value);
+                    }
+                },
+                {
+                    "key": "persistentCacheMaxSize",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("persistentCacheMaxSize", parseFloat(value));
+                    }
+                },
+                {
                     "key": "detectStrings",
                     "inlinetitle": "Literal String Detection",
                     "onChange": (evt : Event) => {
@@ -408,5 +443,8 @@ abstract class RedTranslatorEngineWrapper {
         this.translatorEngine.resume = () => {
             this.resume();
         }
+
+        this.cacheHandler = new RedPersistentCacheHandler(extraOptions.id);
+        this.cacheHandler.loadCache();
     }
 }
