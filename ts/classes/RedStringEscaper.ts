@@ -12,6 +12,8 @@ enum RedPlaceholderType {
     curlie = "curlie",
     doubleCurlie = "doubleCurlie",
     privateUse = "privateUse",
+    hashtag = "hashtag",
+    hashtagTriple = "hashtagTriple",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -26,7 +28,9 @@ enum RedPlaceholderTypeNames {
     fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
     curlie = "Curlies (e.g. letter enclosed by curly brackets)",
     doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)",
-    privateUse = "Supplementary Private Use Area-A (👽)"
+    privateUse = "Supplementary Private Use Area-A (👽)",
+    hashtag = "Hashtag (#A)",
+    hashtagTriple = "Triple Hashtag (#ABC)",
 }
 
 let RedPlaceholderTypeArray = [
@@ -40,6 +44,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.curlie,
     RedPlaceholderType.doubleCurlie,
     RedPlaceholderType.privateUse,
+    RedPlaceholderType.hashtag,
+    RedPlaceholderType.hashtagTriple,
 ];
 
 let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
@@ -67,6 +73,10 @@ class RedStringEscaper {
 
     private isScript : boolean = false;
     private quoteType : string = "";
+
+    private hashtagOne = 65; //A
+    private hashtagTwo = 66; //B
+    private hashtagThree = 67; //C
 
 	constructor (text : string, scriptCheck : RedScriptCheckResponse, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
 		this.text = text;
@@ -126,6 +136,14 @@ class RedStringEscaper {
         return String.fromCodePoint(this.privateCounter++);
     }
 
+    public getHashtag () {
+        return `#${String.fromCharCode(this.hashtagOne++)}`;
+    }
+
+    public getTripleHashtag () {
+        return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
+    }
+
     public storeSymbol (text : string) : string {
         // Originally was using tags, hence the name. Then I tried parenthesis.
         // I think the AI might get used to any tags we use and just start. ... killing them
@@ -165,6 +183,12 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.privateUse:
                     tag = this.getPrivateArea();
+                    break;
+                case RedPlaceholderType.hashtag:
+                    tag = this.getHashtag();
+                    break;
+                case RedPlaceholderType.hashtagTriple:
+                    tag = this.getTripleHashtag();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -310,14 +334,16 @@ class RedStringEscaper {
         if (this.mergeSymbols) {
             let regExpObj : any = {};
             regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
-            regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
+            regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
             regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
             regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
             regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
             regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
             regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
-            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/g;
+            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/gi;
             regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
+            regExpObj[RedPlaceholderType.hashtag] = /((?:#[A-Z]){2,})/gi;
+            regExpObj[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]){2,})/gi;
 
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
