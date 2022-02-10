@@ -17,6 +17,7 @@ enum RedPlaceholderType {
     tournament = "tournament",
     mvStyle = "mvStyle",
     wolfStyle = "wolfStyle",
+    percentage = "percentage",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -37,6 +38,7 @@ enum RedPlaceholderTypeNames {
     tournament = "Tournament (e.g. #1, #2, #3)",
     mvStyle = "MV Message (e.g. %1, %2, %3)",
     wolfStyle = "Wolf Message (e.g. @1, @2, @3)",
+    percentage = "Actual Percentage (e.g. 1%, 2%)",
 }
 
 let RedPlaceholderTypeArray = [
@@ -55,12 +57,14 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.tournament,
     RedPlaceholderType.mvStyle,
     RedPlaceholderType.wolfStyle,
+    RedPlaceholderType.percentage,
 ];
 
 
 let regExpObj : any = {};
 regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
 regExpObj[RedPlaceholderType.mvStyle] = /((?:%[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.percentage] = /((?:[0-9]+%){2,})/g;
 regExpObj[RedPlaceholderType.wolfStyle] = /((?:@[0-9]+){2,})/g;
 regExpObj[RedPlaceholderType.tournament] = /((?:#[0-9]+){2,})/g;
 regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
@@ -182,6 +186,10 @@ class RedStringEscaper {
         return `#${this.symbolAffix++}`;
     }
 
+    public getPercentage () {
+        return `${this.symbolAffix++}%`;
+    }
+
     public storeSymbol (text : string) : string {
         // Originally was using tags, hence the name. Then I tried parenthesis.
         // I think the AI might get used to any tags we use and just start. ... killing them
@@ -236,6 +244,9 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.wolfStyle:
                     tag = this.getWolfStyle();
+                    break;
+                case RedPlaceholderType.percentage:
+                    tag = this.getPercentage();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
