@@ -8,8 +8,8 @@ interface RedScriptCheckResponse {
     newLine? : string;
 }
 
-const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟\"'>\/\\]+)";
-const defaultLineEnd = "([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；\"'.?!;:]+ *　*(?:$|\r*\n))";
+const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟\"'>\/\\]+)";
+const defaultLineEnd = "([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；\"'.?!;:]+ *　*(?:$|\r*\n))";
 const defaultParagraphBreak = "( *　*\r?\n(?:\r?\n)+ *　*)";
 
 /**
