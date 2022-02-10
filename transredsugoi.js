@@ -16,6 +16,7 @@ var RedPlaceholderType;
     RedPlaceholderType["tournament"] = "tournament";
     RedPlaceholderType["mvStyle"] = "mvStyle";
     RedPlaceholderType["wolfStyle"] = "wolfStyle";
+    RedPlaceholderType["percentage"] = "percentage";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 // I wonder if we could initiate this through calling the above...
 // I'd rather not have to change both
@@ -38,6 +39,7 @@ var RedPlaceholderTypeNames;
     RedPlaceholderTypeNames["tournament"] = "Tournament (e.g. #1, #2, #3)";
     RedPlaceholderTypeNames["mvStyle"] = "MV Message (e.g. %1, %2, %3)";
     RedPlaceholderTypeNames["wolfStyle"] = "Wolf Message (e.g. @1, @2, @3)";
+    RedPlaceholderTypeNames["percentage"] = "Actual Percentage (e.g. 1%, 2%)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
 let RedPlaceholderTypeArray = [
     RedPlaceholderType.poleposition,
@@ -55,10 +57,12 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.tournament,
     RedPlaceholderType.mvStyle,
     RedPlaceholderType.wolfStyle,
+    RedPlaceholderType.percentage,
 ];
 let regExpObj = {};
 regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
 regExpObj[RedPlaceholderType.mvStyle] = /((?:%[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.percentage] = /((?:[0-9]+%){2,})/g;
 regExpObj[RedPlaceholderType.wolfStyle] = /((?:@[0-9]+){2,})/g;
 regExpObj[RedPlaceholderType.tournament] = /((?:#[0-9]+){2,})/g;
 regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
@@ -155,6 +159,9 @@ class RedStringEscaper {
     getTournament() {
         return `#${this.symbolAffix++}`;
     }
+    getPercentage() {
+        return `${this.symbolAffix++}%`;
+    }
     storeSymbol(text) {
         // Originally was using tags, hence the name. Then I tried parenthesis.
         // I think the AI might get used to any tags we use and just start. ... killing them
@@ -210,6 +217,9 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.wolfStyle:
                     tag = this.getWolfStyle();
+                    break;
+                case RedPlaceholderType.percentage:
+                    tag = this.getPercentage();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -474,6 +484,9 @@ class RedPersistentCacheHandler {
 }
 /// <reference path="RedStringEscaper.ts" />
 /// <reference path="RedPersistentCacheHandler.ts" />
+const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟\"'>\/\\]+)";
+const defaultLineEnd = "([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；\"'.?!;:]+ *　*(?:$|\r*\n))";
+const defaultParagraphBreak = "( *　*\r?\n(?:\r?\n)+ *　*)";
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -497,6 +510,9 @@ class RedTranslatorEngineWrapper {
             persistentCacheMaxSize: 10,
             detectStrings: true,
             mergeSymbols: true,
+            skippedRows: "[]",
+            rowStart: defaultLineStart,
+            rowEnd: defaultLineEnd,
             optionsForm: {
                 "schema": {
                     "splitEnds": {
@@ -536,7 +552,28 @@ class RedTranslatorEngineWrapper {
                         "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
                         "default": true
                     },
-                    ...extraSchema
+                    ...extraSchema,
+                    "skippedRows": {
+                        "type": "string",
+                        "title": "Rows to Skip",
+                        "description": "Add a JSON array for which rows to skip. Rows that match any element of the array will not be translated.",
+                        "default": "[]",
+                        "required": true
+                    },
+                    "rowStart": {
+                        "type": "string",
+                        "title": "Line Start Detection",
+                        "description": "This Regular Expression is used by the text processor to detect new lines. It is not recommended to change this value.",
+                        "default": defaultLineStart,
+                        "required": true
+                    },
+                    "rowEnd": {
+                        "type": "string",
+                        "title": "Line End Detection",
+                        "description": "This Regular Expression is used by the text processor to detect where lines end. It is not recommended to change this value.",
+                        "default": defaultLineEnd,
+                        "required": true
+                    },
                 },
                 "form": [
                     {
@@ -594,7 +631,29 @@ class RedTranslatorEngineWrapper {
                             this.translatorEngine.update("detectStrings", value);
                         }
                     },
-                    ...extraForm
+                    ...extraForm,
+                    {
+                        "key": "skippedRows",
+                        "type": "textarea",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("skippedRows", value);
+                        }
+                    },
+                    {
+                        "key": "rowStart",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("rowStart", value);
+                        }
+                    },
+                    {
+                        "key": "rowEnd",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("rowEnd", value);
+                        }
+                    },
                 ]
             }
         });
@@ -652,6 +711,15 @@ class RedTranslatorEngineWrapper {
         let usePersistentCache = this.getEngine().getOptions().usePersistentCache;
         return usePersistentCache == undefined ? true : usePersistentCache == true;
     }
+    getSkippedRows() {
+        let option = this.getEngine().getOptions().skippedRows;
+        if (typeof option == "undefined") {
+            return "[]";
+        }
+        else {
+            return option;
+        }
+    }
     hasCache(text) {
         return this.cacheHandler.hasCache(text);
     }
@@ -667,18 +735,37 @@ class RedTranslatorEngineWrapper {
         this.cacheHits = 0;
         return result;
     }
+    getRowStart() {
+        let option = this.getEngine().getOptions().rowStart;
+        if (typeof option == "undefined") {
+            return this.getEngine().rowStart;
+        }
+        else {
+            return option;
+        }
+    }
+    getRowEnd() {
+        let option = this.getEngine().getOptions().rowEnd;
+        if (typeof option == "undefined") {
+            return this.getEngine().rowEnd;
+        }
+        else {
+            return option;
+        }
+    }
     breakRow(text) {
         // now we need to prepare the stuff we'll send over to Sugoi.
         // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
         // probably the best way to detect those is through blank lines.
         // Might be a good idea to also split if new lines start with something that we're escaping
         // First Step = "Break if you find one or more empty lines"
-        let lines = text.split(/( *　*\r?\n(?:\r?\n)+ *　*)/);
+        let lines = text.split(new RegExp(defaultParagraphBreak));
         // Second Step = "Break if a line ends with something that finishes a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
             //let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
-            let split = line.split(/([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
+            //let split = line.split(/([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
+            let split = line.split(new RegExp(this.getRowEnd()));
             // We need to give back the end of the sentence so that it translates correctly
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
@@ -690,11 +777,18 @@ class RedTranslatorEngineWrapper {
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
             //let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
-            let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
+            //let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
+            let split = line.split(new RegExp(this.getRowStart()));
             // We need to give back the start of the sentence so that it translates correctly
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k + 1];
                 split.splice(k + 1, 1);
+            }
+            // check for empty lines...
+            for (let k = split.length - 1; k >= 0; k--) {
+                if (split[k].trim() == "") {
+                    split.splice(k, 1);
+                }
             }
             lines.splice(i, 1, ...split);
         }
@@ -765,7 +859,11 @@ class RedTranslatorEngineWrapper {
         // First step: curate every single line and keep track of it
         let rowHandlers = [];
         let toTranslate = [];
+        let parsedSkips = JSON.parse(this.getSkippedRows());
         for (let i = 0; i < rows.length; i++) {
+            if (parsedSkips.indexOf(rows[i]) != -1) {
+                rows[i] = "";
+            }
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
             // Second step: separate every line that will need to be translated
@@ -1083,7 +1181,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             "escapeAlgorithm": {
                 "type": "string",
                 "title": "Code Escaping Algorithm",
-                "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. No particular reason, it just seems to break the least.",
+                "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. MV Style and Wolf Style also appear to be somewhat consistent (MV more than Wolf style). No particular reason, they just seems to break the least.",
                 "default": RedPlaceholderType.poleposition,
                 "required": false,
                 // @ts-ignore shhh it's fine don't worry bb

@@ -15,7 +15,8 @@ declare enum RedPlaceholderType {
     hashtagTriple = "hashtagTriple",
     tournament = "tournament",
     mvStyle = "mvStyle",
-    wolfStyle = "wolfStyle"
+    wolfStyle = "wolfStyle",
+    percentage = "percentage"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
@@ -32,7 +33,8 @@ declare enum RedPlaceholderTypeNames {
     hashtagTriple = "Triple Hashtag (#ABC)",
     tournament = "Tournament (e.g. #1, #2, #3)",
     mvStyle = "MV Message (e.g. %1, %2, %3)",
-    wolfStyle = "Wolf Message (e.g. @1, @2, @3)"
+    wolfStyle = "Wolf Message (e.g. @1, @2, @3)",
+    percentage = "Actual Percentage (e.g. 1%, 2%)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
 declare let regExpObj: any;
@@ -78,6 +80,7 @@ declare class RedStringEscaper {
     getHashtag(): string;
     getTripleHashtag(): string;
     getTournament(): string;
+    getPercentage(): string;
     storeSymbol(text: string): string;
     getOriginalText(): string;
     getReplacedText(): string;
@@ -112,6 +115,9 @@ interface RedScriptCheckResponse {
     quoteType?: string;
     newLine?: string;
 }
+declare const defaultLineStart = "((?:\r?\n|^) *\u3000*[\u25CE\u25B2\u25BC\u25BD\u25A0\u25A1\u25CF\u25CB\u2605\u2606\u2665\u2661\u266A\uFF3F\uFF0A\uFF0D\uFF1D\uFF0B\uFF03\uFF04\u2015\u203B\u3007\u3014\u3016\u3018\u301A\u301D\uFF62\u3008\u300A\u300C\u300E\u3010\uFF08\uFF3B\uFF1C\uFF5B\uFF5F\"'>/\\]+)";
+declare const defaultLineEnd = "([\u3015\u3017\u3019\u301B\u301E\u201D\uFF63\u3009\u300B\u300D\u300F\u3011\uFF09\uFF3D\uFF1E\uFF5D\uFF60\u301F\u27E9\uFF01\uFF1F\u3002\u30FB\u2026\u2025\uFF1A\uFF1B\"'.?!;:]+ *\u3000*(?:$|\r*\n))";
+declare const defaultParagraphBreak = "( *\u3000*\r?\n(?:\r?\n)+ *\u3000*)";
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -132,11 +138,14 @@ declare abstract class RedTranslatorEngineWrapper {
     isKeepingScripts(): boolean;
     isMergingSymbols(): boolean;
     isPersistentCaching(): boolean;
+    getSkippedRows(): string;
     private cacheHits;
     hasCache(text: string): boolean;
     getCache(text: string): string;
     setCache(text: string, translation: string): void;
     getCacheHits(): number;
+    getRowStart(): any;
+    getRowEnd(): any;
     breakRow(text: string): Array<string>;
     isScript(brokenRow: Array<string>): RedScriptCheckResponse;
     curateRow(row: string): Array<RedStringEscaper>;
