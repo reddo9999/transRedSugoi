@@ -8,6 +8,10 @@ interface RedScriptCheckResponse {
     newLine? : string;
 }
 
+const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟\"'>\/\\]+)";
+const defaultLineEnd = "([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；\"'.?!;:]+ *　*(?:$|\r*\n))";
+const defaultParagraphBreak = "( *　*\r?\n(?:\r?\n)+ *　*)";
+
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -69,6 +73,15 @@ abstract class RedTranslatorEngineWrapper {
         return usePersistentCache == undefined ? true : usePersistentCache == true;
     }
 
+    public getSkippedRows () : string {
+        let option = this.getEngine().getOptions().skippedRows;
+        if (typeof option == "undefined") {
+            return "[]";
+        } else {
+            return option;
+        }
+    }
+
     private cacheHits = 0;
 
     public hasCache (text : string) {
@@ -90,6 +103,24 @@ abstract class RedTranslatorEngineWrapper {
         return result;
     }
 
+    public getRowStart () {
+        let option = this.getEngine().getOptions().rowStart;
+        if (typeof option == "undefined") {
+            return (<any> this.getEngine()).rowStart;
+        } else {
+            return option;
+        }
+    }
+
+    public getRowEnd () {
+        let option = this.getEngine().getOptions().rowEnd;
+        if (typeof option == "undefined") {
+            return (<any> this.getEngine()).rowEnd;
+        } else {
+            return option;
+        }
+    }
+
     public breakRow (text : string) : Array<string> {
         // now we need to prepare the stuff we'll send over to Sugoi.
         // Some games might have rolling text which is far too big to translate at once. This kills the sugoi.
@@ -98,13 +129,14 @@ abstract class RedTranslatorEngineWrapper {
 
 
         // First Step = "Break if you find one or more empty lines"
-        let lines = text.split(/( *　*\r?\n(?:\r?\n)+ *　*)/);
+        let lines = text.split(new RegExp(defaultParagraphBreak));
 
         // Second Step = "Break if a line ends with something that finishes a sentence"
         for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
             //let split = line.split(/([｝）］】」』〟⟩！？。・…‥："'\.\?\!;:]+ *　*\r?\n)/);
-            let split = line.split(/([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
+            //let split = line.split(/([〕〗〙〛〞”｣〉》」』】）］＞｝｠〟⟩！？。・…‥：；"'\.\?\!;:]+ *　*\r?\n)/); //Fantom#9835's list, ty
+            let split = line.split(new RegExp(this.getRowEnd()));
             // We need to give back the end of the sentence so that it translates correctly
             for (let k = 0; k < split.length - 1; k++) {
                 split[k] += split[k+1];
@@ -114,14 +146,21 @@ abstract class RedTranslatorEngineWrapper {
         }
 
         // Third step = "Break if a line starts with something that initiates a sentence"
-        for (let i = lines.length - 1; i > 0; i--) {
+        for (let i = lines.length - 1; i >= 0; i--) {
             let line = lines[i];
             //let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
-            let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
+            //let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
+            let split = line.split(new RegExp(this.getRowStart()));
             // We need to give back the start of the sentence so that it translates correctly
             for (let k = 1; k < split.length - 1; k++) {
                 split[k] += split[k+1];
                 split.splice(k+1, 1);
+            }
+            // check for empty lines...
+            for (let k = split.length - 1; k >= 0; k--) {
+                if (split[k].trim() == "") {
+                    split.splice(k, 1);
+                }
             }
             lines.splice(i, 1, ...split);
         }
@@ -204,7 +243,11 @@ abstract class RedTranslatorEngineWrapper {
         // First step: curate every single line and keep track of it
         let rowHandlers : Array<RedStringRowHandler> = [];
         let toTranslate : Array<string> = [];
+        let parsedSkips : Array<string> = JSON.parse(this.getSkippedRows());
         for (let i = 0; i < rows.length; i++) {
+            if (parsedSkips.indexOf(rows[i]) != -1) {
+                rows[i] = "";
+            }
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
             
@@ -326,6 +369,9 @@ abstract class RedTranslatorEngineWrapper {
             persistentCacheMaxSize : 10,
             detectStrings : true,
             mergeSymbols : true,
+            skippedRows : "[]",
+            rowStart : defaultLineStart,
+            rowEnd : defaultLineEnd,
             optionsForm:{
               "schema": {
                 "splitEnds": {
@@ -365,7 +411,28 @@ abstract class RedTranslatorEngineWrapper {
                    "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
                    "default":true
                },
-               ...extraSchema
+               ...extraSchema,
+               "skippedRows": {
+                    "type": "string",
+                    "title": "Rows to Skip",
+                    "description": "Add a JSON array for which rows to skip. Rows that match any element of the array will not be translated.",
+                    "default":"[]",
+                    "required":true
+                },
+                "rowStart": {
+                     "type": "string",
+                     "title": "Line Start Detection",
+                     "description": "This Regular Expression is used by the text processor to detect new lines. It is not recommended to change this value.",
+                     "default": defaultLineStart,
+                     "required":true
+                 },
+                 "rowEnd": {
+                      "type": "string",
+                      "title": "Line End Detection",
+                      "description": "This Regular Expression is used by the text processor to detect where lines end. It is not recommended to change this value.",
+                      "default": defaultLineEnd,
+                      "required":true
+                  },
               },
               "form": [
                 {
@@ -423,7 +490,29 @@ abstract class RedTranslatorEngineWrapper {
                       this.translatorEngine.update("detectStrings", value);
                     }
                 },
-                ...extraForm
+                ...extraForm,
+                {
+                    "key": "skippedRows",
+                    "type": "textarea",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("skippedRows", value);
+                    }
+                },
+                {
+                    "key": "rowStart",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("rowStart", value);
+                    }
+                },
+                {
+                    "key": "rowEnd",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("rowEnd", value);
+                    }
+                },
               ]
             }
         });
