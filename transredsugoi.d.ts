@@ -12,7 +12,10 @@ declare enum RedPlaceholderType {
     doubleCurlie = "doubleCurlie",
     privateUse = "privateUse",
     hashtag = "hashtag",
-    hashtagTriple = "hashtagTriple"
+    hashtagTriple = "hashtagTriple",
+    tournament = "tournament",
+    mvStyle = "mvStyle",
+    wolfStyle = "wolfStyle"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
@@ -26,9 +29,13 @@ declare enum RedPlaceholderTypeNames {
     doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)",
     privateUse = "Supplementary Private Use Area-A (\uD83D\uDC7D)",
     hashtag = "Hashtag (#A)",
-    hashtagTriple = "Triple Hashtag (#ABC)"
+    hashtagTriple = "Triple Hashtag (#ABC)",
+    tournament = "Tournament (e.g. #1, #2, #3)",
+    mvStyle = "MV Message (e.g. %1, %2, %3)",
+    wolfStyle = "Wolf Message (e.g. @1, @2, @3)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
+declare let regExpObj: any;
 declare let escapingTitleMap: {
     [id: string]: string;
 };
@@ -61,6 +68,8 @@ declare class RedStringEscaper {
     getClosedTag(): string;
     getFullTag(): string;
     getPolePosition(): string;
+    getMvStyle(): string;
+    getWolfStyle(): string;
     getHexPlaceholder(): string;
     getCurly(): string;
     getDoubleCurly(): string;
@@ -68,6 +77,7 @@ declare class RedStringEscaper {
     getPrivateArea(): string;
     getHashtag(): string;
     getTripleHashtag(): string;
+    getTournament(): string;
     storeSymbol(text: string): string;
     getOriginalText(): string;
     getReplacedText(): string;
