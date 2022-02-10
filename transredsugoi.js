@@ -484,7 +484,7 @@ class RedPersistentCacheHandler {
 }
 /// <reference path="RedStringEscaper.ts" />
 /// <reference path="RedPersistentCacheHandler.ts" />
-const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟\"'>\/\\]+)";
+const defaultLineStart = "((?:\r?\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟\"'>\\/\\]+)";
 const defaultLineEnd = "([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；\"'.?!;:]+ *　*(?:$|\r*\n))";
 const defaultParagraphBreak = "( *　*\r?\n(?:\r?\n)+ *　*)";
 /**
