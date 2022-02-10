@@ -114,7 +114,7 @@ abstract class RedTranslatorEngineWrapper {
         }
 
         // Third step = "Break if a line starts with something that initiates a sentence"
-        for (let i = lines.length - 1; i >= 0; i--) {
+        for (let i = lines.length - 1; i > 0; i--) {
             let line = lines[i];
             //let split = line.split(/((?:^|(?:\r?\n))+ *　*[｛（［【「『〝⟨「"'>\\\/]+)/);
             let split = line.split(/((?:^|(?:\r?\n))+ *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［＜｛｟"'>\\\/]+)/); //Fantom#9835's list, ty
