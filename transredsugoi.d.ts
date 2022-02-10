@@ -10,7 +10,9 @@ declare enum RedPlaceholderType {
     fullTagPlaceholder = "fullTagPlaceholder",
     curlie = "curlie",
     doubleCurlie = "doubleCurlie",
-    privateUse = "privateUse"
+    privateUse = "privateUse",
+    hashtag = "hashtag",
+    hashtagTriple = "hashtagTriple"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
@@ -22,7 +24,9 @@ declare enum RedPlaceholderTypeNames {
     fullTagPlaceholder = "Tag Placeholder Full XML-style Tag (e.g. &lt;24&gt;&lt;/24&gt;)",
     curlie = "Curlies (e.g. letter enclosed by curly brackets)",
     doubleCurlie = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)",
-    privateUse = "Supplementary Private Use Area-A (\uD83D\uDC7D)"
+    privateUse = "Supplementary Private Use Area-A (\uD83D\uDC7D)",
+    hashtag = "Hashtag (#A)",
+    hashtagTriple = "Triple Hashtag (#ABC)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
 declare let escapingTitleMap: {
@@ -48,6 +52,9 @@ declare class RedStringEscaper {
     private postString;
     private isScript;
     private quoteType;
+    private hashtagOne;
+    private hashtagTwo;
+    private hashtagThree;
     constructor(text: string, scriptCheck: RedScriptCheckResponse, type?: RedPlaceholderType, splitEnds?: boolean, mergeSymbols?: boolean, noUnks?: boolean);
     break(): void;
     getTag(): string;
@@ -59,6 +66,8 @@ declare class RedStringEscaper {
     getDoubleCurly(): string;
     getClosedNines(): string;
     getPrivateArea(): string;
+    getHashtag(): string;
+    getTripleHashtag(): string;
     storeSymbol(text: string): string;
     getOriginalText(): string;
     getReplacedText(): string;

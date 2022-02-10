@@ -11,6 +11,8 @@ var RedPlaceholderType;
     RedPlaceholderType["curlie"] = "curlie";
     RedPlaceholderType["doubleCurlie"] = "doubleCurlie";
     RedPlaceholderType["privateUse"] = "privateUse";
+    RedPlaceholderType["hashtag"] = "hashtag";
+    RedPlaceholderType["hashtagTriple"] = "hashtagTriple";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 // I wonder if we could initiate this through calling the above...
 // I'd rather not have to change both
@@ -28,6 +30,8 @@ var RedPlaceholderTypeNames;
     RedPlaceholderTypeNames["curlie"] = "Curlies (e.g. letter enclosed by curly brackets)";
     RedPlaceholderTypeNames["doubleCurlie"] = "Double Curlies (e.g. letter enclosed by two curly brackets on each side)";
     RedPlaceholderTypeNames["privateUse"] = "Supplementary Private Use Area-A (\uD83D\uDC7D)";
+    RedPlaceholderTypeNames["hashtag"] = "Hashtag (#A)";
+    RedPlaceholderTypeNames["hashtagTriple"] = "Triple Hashtag (#ABC)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
 let RedPlaceholderTypeArray = [
     RedPlaceholderType.poleposition,
@@ -40,6 +44,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.curlie,
     RedPlaceholderType.doubleCurlie,
     RedPlaceholderType.privateUse,
+    RedPlaceholderType.hashtag,
+    RedPlaceholderType.hashtagTriple,
 ];
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
@@ -61,6 +67,9 @@ class RedStringEscaper {
         this.postString = "";
         this.isScript = false;
         this.quoteType = "";
+        this.hashtagOne = 65; //A
+        this.hashtagTwo = 66; //B
+        this.hashtagThree = 67; //C
         this.text = text;
         this.currentText = text;
         this.type = type || RedPlaceholderType.poleposition;
@@ -107,6 +116,12 @@ class RedStringEscaper {
     getPrivateArea() {
         return String.fromCodePoint(this.privateCounter++);
     }
+    getHashtag() {
+        return `#${String.fromCharCode(this.hashtagOne++)}`;
+    }
+    getTripleHashtag() {
+        return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
+    }
     storeSymbol(text) {
         // Originally was using tags, hence the name. Then I tried parenthesis.
         // I think the AI might get used to any tags we use and just start. ... killing them
@@ -147,6 +162,12 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.privateUse:
                     tag = this.getPrivateArea();
+                    break;
+                case RedPlaceholderType.hashtag:
+                    tag = this.getHashtag();
+                    break;
+                case RedPlaceholderType.hashtagTriple:
+                    tag = this.getTripleHashtag();
                     break;
             }
             this.storedSymbols[tag.trim()] = text;
@@ -283,14 +304,16 @@ class RedStringEscaper {
         if (this.mergeSymbols) {
             let regExpObj = {};
             regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
-            regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/g;
+            regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
             regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
             regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
             regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{" + this.closedNinesLength + ",}9){2,})", "g");
             regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
             regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
-            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/g;
+            regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/gi;
             regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
+            regExpObj[RedPlaceholderType.hashtag] = /((?:#[A-Z]){2,})/gi;
+            regExpObj[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]){2,})/gi;
             if (regExpObj[this.type] != undefined) {
                 text = text.replaceAll(regExpObj[this.type], (match) => {
                     return this.storeSymbol(match);
@@ -408,7 +431,7 @@ class RedPersistentCacheHandler {
             }
         }
         try {
-            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache));
+            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache, null, 4));
         }
         catch (e) {
             console.error("[RedPersistentCacheHandler] Failed saving cache for " + this.transId + ".", e);
