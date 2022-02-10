@@ -60,6 +60,7 @@ class RedPersistentCacheHandler {
     }
 
     public getSize (cache : string) {
-        return (new TextEncoder().encode(cache)).length;
+        //return (new TextEncoder().encode(cache)).length;
+        return cache.length * 2; // it was too slow, we will assume: HALF IS JAPANESE HALF IS ENGLISH SO 2 BYTES PER CHARACTER, probably still a bit pessimistic, which is good enough of an approximation
     }
 }
