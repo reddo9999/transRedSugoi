@@ -249,7 +249,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "escapeAlgorithm": {
                     "type": "string",
                     "title": "Code Escaping Algorithm",
-                    "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. No particular reason, it just seems to break the least.",
+                    "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. MV Style and Wolf Style also appear to be somewhat consistent (MV more than Wolf style). No particular reason, they just seems to break the least.",
                     "default": RedPlaceholderType.poleposition,
                     "required":false,
                     // @ts-ignore shhh it's fine don't worry bb
