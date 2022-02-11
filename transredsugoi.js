@@ -333,6 +333,7 @@ class RedStringEscaper {
         // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
         this.currentText = this.currentText.trim();
         let found = true;
+        let loops = 0;
         while (found && this.splitEnds) {
             found = false;
             for (let tag in this.storedSymbols) {
@@ -348,6 +349,11 @@ class RedStringEscaper {
                     text = text.substring(0, idx);
                     found = true;
                 }
+            }
+            // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
+            if (loops++ > 30) {
+                console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
+                break;
             }
         }
         // Replace sequential occurrences of Symbols with a single symbol!
@@ -883,7 +889,9 @@ class RedTranslatorEngineWrapper {
             // Final step: set up result object
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
-            options.onAfterLoading.call(this.translatorEngine, result);
+            setTimeout(() => {
+                options.onAfterLoading.call(this.translatorEngine, result);
+            }, 150);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
         }).finally(() => {
