@@ -426,10 +426,16 @@ class RedPersistentCacheHandler {
     constructor(id) {
         this.fs = require("fs");
         this.cache = {};
+        this.changed = false;
         this.transId = id;
     }
     addCache(key, translation) {
         this.cache[key] = translation;
+        this.changed = true;
+    }
+    resetCache() {
+        this.cache = {};
+        this.changed = true;
     }
     hasCache(key) {
         return typeof this.cache[key] != "undefined";
@@ -448,6 +454,7 @@ class RedPersistentCacheHandler {
                 if (typeof this.cache != "object") {
                     this.cache = {};
                 }
+                this.changed = false;
             }
             catch (e) {
                 this.cache = {};
@@ -459,6 +466,10 @@ class RedPersistentCacheHandler {
         }
     }
     saveCache() {
+        if (!this.changed) {
+            console.warn("[RedPersistentCacheHandler] Not saving cache as there have been no changes.");
+            return;
+        }
         let maxSize = trans[this.transId].getOptions().persistentCacheMaxSize * 1024 * 1024;
         let size = this.getSize(JSON.stringify(this.cache));
         for (let key in this.cache) {

@@ -100,8 +100,10 @@ declare class RedPersistentCacheHandler {
     private fs;
     private transId;
     private cache;
+    private changed;
     constructor(id: string);
     addCache(key: string, translation: string): void;
+    resetCache(): void;
     hasCache(key: string): boolean;
     getCache(key: string): string;
     getFilename(): string;
