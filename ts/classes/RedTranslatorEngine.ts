@@ -285,7 +285,7 @@ abstract class RedTranslatorEngineWrapper {
 
             setTimeout(() => {
                 options.onAfterLoading.call(this.translatorEngine, result);
-            }, 50);
+            }, 150);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
         }).finally(() => {
