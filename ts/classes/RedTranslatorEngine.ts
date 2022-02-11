@@ -73,15 +73,6 @@ abstract class RedTranslatorEngineWrapper {
         return usePersistentCache == undefined ? true : usePersistentCache == true;
     }
 
-    public getSkippedRows () : string {
-        let option = this.getEngine().getOptions().skippedRows;
-        if (typeof option == "undefined") {
-            return "[]";
-        } else {
-            return option;
-        }
-    }
-
     private cacheHits = 0;
 
     public hasCache (text : string) {
@@ -243,11 +234,7 @@ abstract class RedTranslatorEngineWrapper {
         // First step: curate every single line and keep track of it
         let rowHandlers : Array<RedStringRowHandler> = [];
         let toTranslate : Array<string> = [];
-        let parsedSkips : Array<string> = JSON.parse(this.getSkippedRows());
         for (let i = 0; i < rows.length; i++) {
-            if (parsedSkips.indexOf(rows[i]) != -1) {
-                rows[i] = "";
-            }
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
             
@@ -369,7 +356,6 @@ abstract class RedTranslatorEngineWrapper {
             persistentCacheMaxSize : 10,
             detectStrings : true,
             mergeSymbols : true,
-            skippedRows : "[]",
             rowStart : defaultLineStart,
             rowEnd : defaultLineEnd,
             optionsForm:{
@@ -412,13 +398,6 @@ abstract class RedTranslatorEngineWrapper {
                    "default":true
                },
                ...extraSchema,
-               "skippedRows": {
-                    "type": "string",
-                    "title": "Rows to Skip",
-                    "description": "Add a JSON array for which rows to skip. Rows that match any element of the array will not be translated.",
-                    "default":"[]",
-                    "required":true
-                },
                 "rowStart": {
                      "type": "string",
                      "title": "Line Start Detection",
@@ -491,14 +470,6 @@ abstract class RedTranslatorEngineWrapper {
                     }
                 },
                 ...extraForm,
-                {
-                    "key": "skippedRows",
-                    "type": "textarea",
-                    "onChange": (evt : Event) => {
-                      var value = <string> $(<HTMLInputElement> evt.target).val();
-                      this.translatorEngine.update("skippedRows", value);
-                    }
-                },
                 {
                     "key": "rowStart",
                     "onChange": (evt : Event) => {
