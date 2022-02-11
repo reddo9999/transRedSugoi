@@ -2,6 +2,7 @@ class RedPersistentCacheHandler {
     private fs = require("fs");
     private transId : string;
     private cache : {[key : string] : string} = {};
+    private changed = false;
 
     public constructor (id : string) {
         this.transId = id;
@@ -9,6 +10,12 @@ class RedPersistentCacheHandler {
 
     public addCache (key : string, translation : string) {
         this.cache[key] = translation;
+        this.changed = true;
+    }
+
+    public resetCache () {
+        this.cache = {};
+        this.changed = true;
     }
 
     public hasCache (key : string) {
@@ -31,6 +38,7 @@ class RedPersistentCacheHandler {
                 if (typeof this.cache != "object") {
                     this.cache = {};
                 }
+                this.changed = false;
             } catch (e) {
                 this.cache = {};
                 console.error("[RedPersistentCacheHandler] Load error for cache " + this.transId + ". Resetting.", e);
@@ -41,6 +49,10 @@ class RedPersistentCacheHandler {
     }
 
     public saveCache () {
+        if (!this.changed) {
+            console.warn("[RedPersistentCacheHandler] Not saving cache as there have been no changes.");
+            return;
+        }
         let maxSize = trans[this.transId].getOptions().persistentCacheMaxSize * 1024 * 1024;
         let size = this.getSize(JSON.stringify(this.cache));
         for (let key in this.cache) {
