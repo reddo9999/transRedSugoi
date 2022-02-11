@@ -510,7 +510,6 @@ class RedTranslatorEngineWrapper {
             persistentCacheMaxSize: 10,
             detectStrings: true,
             mergeSymbols: true,
-            skippedRows: "[]",
             rowStart: defaultLineStart,
             rowEnd: defaultLineEnd,
             optionsForm: {
@@ -553,13 +552,6 @@ class RedTranslatorEngineWrapper {
                         "default": true
                     },
                     ...extraSchema,
-                    "skippedRows": {
-                        "type": "string",
-                        "title": "Rows to Skip",
-                        "description": "Add a JSON array for which rows to skip. Rows that match any element of the array will not be translated.",
-                        "default": "[]",
-                        "required": true
-                    },
                     "rowStart": {
                         "type": "string",
                         "title": "Line Start Detection",
@@ -633,14 +625,6 @@ class RedTranslatorEngineWrapper {
                     },
                     ...extraForm,
                     {
-                        "key": "skippedRows",
-                        "type": "textarea",
-                        "onChange": (evt) => {
-                            var value = $(evt.target).val();
-                            this.translatorEngine.update("skippedRows", value);
-                        }
-                    },
-                    {
                         "key": "rowStart",
                         "onChange": (evt) => {
                             var value = $(evt.target).val();
@@ -710,15 +694,6 @@ class RedTranslatorEngineWrapper {
     isPersistentCaching() {
         let usePersistentCache = this.getEngine().getOptions().usePersistentCache;
         return usePersistentCache == undefined ? true : usePersistentCache == true;
-    }
-    getSkippedRows() {
-        let option = this.getEngine().getOptions().skippedRows;
-        if (typeof option == "undefined") {
-            return "[]";
-        }
-        else {
-            return option;
-        }
     }
     hasCache(text) {
         return this.cacheHandler.hasCache(text);
@@ -859,11 +834,7 @@ class RedTranslatorEngineWrapper {
         // First step: curate every single line and keep track of it
         let rowHandlers = [];
         let toTranslate = [];
-        let parsedSkips = JSON.parse(this.getSkippedRows());
         for (let i = 0; i < rows.length; i++) {
-            if (parsedSkips.indexOf(rows[i]) != -1) {
-                rows[i] = "";
-            }
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
             // Second step: separate every line that will need to be translated

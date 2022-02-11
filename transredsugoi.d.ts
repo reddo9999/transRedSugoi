@@ -138,7 +138,6 @@ declare abstract class RedTranslatorEngineWrapper {
     isKeepingScripts(): boolean;
     isMergingSymbols(): boolean;
     isPersistentCaching(): boolean;
-    getSkippedRows(): string;
     private cacheHits;
     hasCache(text: string): boolean;
     getCache(text: string): string;
