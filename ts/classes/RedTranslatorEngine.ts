@@ -283,7 +283,9 @@ abstract class RedTranslatorEngineWrapper {
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
 
-            options.onAfterLoading.call(this.translatorEngine, result);
+            setTimeout(() => {
+                options.onAfterLoading.call(this.translatorEngine, result);
+            }, 50);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
         }).finally(() => {
