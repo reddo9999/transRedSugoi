@@ -101,25 +101,17 @@ class RedStringEscaper {
     private preString : string = "";
     private postString : string = "";
 
-    private isScript : boolean = false;
-    private quoteType : string = "";
-
     private hashtagOne = 65; //A
     private hashtagTwo = 66; //B
     private hashtagThree = 67; //C
 
-	constructor (text : string, scriptCheck : RedScriptCheckResponse, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
-		this.text = text;
-		this.currentText = text;
-        this.type = type || RedPlaceholderType.poleposition;
-        this.splitEnds = splitEnds == true;
-        this.removeUnks = noUnks == true;
-        this.mergeSymbols = mergeSymbols == true;
-        this.isScript = scriptCheck.isScript;
-        if (this.isScript) {
-            this.quoteType = <string> scriptCheck.quoteType;
-            this.currentText = <string> scriptCheck.newLine;
-        }
+	constructor (options : {text : string, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean})  {
+		this.text = options.text;
+		this.currentText = options.text;
+        this.type = options.type || RedPlaceholderType.poleposition;
+        this.splitEnds = options.splitEnds == true;
+        this.removeUnks = options.noUnks == true;
+        this.mergeSymbols = options.mergeSymbols == true;
         this.escape();
 	}
 
@@ -302,15 +294,6 @@ class RedStringEscaper {
         // let's remove those
         if (this.removeUnks) {
             this.currentText = this.currentText.replaceAll("<unk>", "");
-        }
-
-        if (this.isScript) {
-            this.currentText = JSON.stringify(this.currentText);
-            if (this.currentText.charAt(0) != this.quoteType) {
-                // escape the quotes
-                this.currentText = this.currentText.replaceAll(this.quoteType, `\\${this.quoteType}`);
-                this.currentText = this.quoteType + this.currentText.substring(1, this.currentText.length - 1) + this.quoteType;
-            }
         }
         
         // DEBUG

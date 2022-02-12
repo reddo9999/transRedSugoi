@@ -189,7 +189,9 @@ abstract class RedTranslatorEngineWrapper {
         return {isScript : false}
     }
 
-    public curateRow (row : string) : Array<RedStringEscaper> {
+    public curateRow (row : string) : {
+        scriptCheck : RedScriptCheckResponse,
+        lines : Array<RedStringEscaper> } {
         let escapingType = this.getEngine().getOptions().escapeAlgorithm || RedPlaceholderType.poleposition;
         let splitEnds = this.getEngine().getOptions().splitEnds;
         splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
@@ -197,14 +199,25 @@ abstract class RedTranslatorEngineWrapper {
 
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
+
+        if (scriptCheck.isScript) {
+            lines = this.breakRow(<string> scriptCheck.newLine);
+        }
         
         let curated : Array<RedStringEscaper> = [];
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-            let escaped = new RedStringEscaper(line, scriptCheck, escapingType, splitEnds, mergeSymbols, true);
+            let escaped = new RedStringEscaper({
+                text : line, 
+                type : escapingType,
+                splitEnds: splitEnds,
+                mergeSymbols: mergeSymbols,
+                noUnks : true
+            });
             curated.push(escaped);
         }
-        return curated;
+        return {scriptCheck : scriptCheck,
+            lines : curated};
     }
 
     abstract doTranslate (toTranslate : Array<string>, options : TranslatorEngineOptions) : Promise<Array<string>>;

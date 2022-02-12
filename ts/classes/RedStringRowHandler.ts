@@ -4,11 +4,18 @@ class RedStringRowHandler {
     private translatableLines : Array<string> = [];
     private translatableLinesIndex : Array<number> = [];
     private translatedLines : Array<string> = [];
+    private isScript = false;
+    private quoteType = "'";
 
     constructor (row : string, wrapper : RedTranslatorEngineWrapper) {
         this.originalRow = row;
         
-        this.curatedLines = wrapper.curateRow(row);
+        let processed = wrapper.curateRow(row);
+
+        if (processed.scriptCheck.isScript) {
+            this.setScript(<string> processed.scriptCheck.quoteType);
+        }
+        this.curatedLines = processed.lines;
 
         for (let i = 0; i < this.curatedLines.length; i++) {
             let curated = this.curatedLines[i];
@@ -33,6 +40,7 @@ class RedStringRowHandler {
     public getTranslatedRow () {
         let lines : Array<string> = [];
         let lastline : string = "";
+
         for (let i = 0; i < this.curatedLines.length; i++) {
             let line = this.curatedLines[i].recoverSymbols();
             line = line.trim();
@@ -44,7 +52,23 @@ class RedStringRowHandler {
             }
             lastline = line;
         }
-        return lines.join("\n");
+        let result = lines.join("\n");
+
+        if (this.isScript) {
+            result = JSON.stringify(result);
+            if (result.charAt(0) != this.quoteType) {
+                // escape the quotes
+                result = result.replaceAll(this.quoteType, `\\${this.quoteType}`);
+                result = this.quoteType + result.substring(1, result.length - 1) + this.quoteType;
+            }
+        }
+
+        return result;
+    }
+
+    public setScript (quoteType : string) {
+        this.isScript = true;
+        this.quoteType = quoteType;
     }
 
     public getTranslatableLines () {
