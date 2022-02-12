@@ -101,6 +101,8 @@ declare class RedPersistentCacheHandler {
     private transId;
     private cache;
     private changed;
+    private busy;
+    private next;
     constructor(id: string);
     addCache(key: string, translation: string): void;
     resetCache(): void;

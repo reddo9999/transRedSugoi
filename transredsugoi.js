@@ -433,6 +433,7 @@ class RedPersistentCacheHandler {
         this.fs = require("fs");
         this.cache = {};
         this.changed = false;
+        this.busy = false;
         this.transId = id;
     }
     addCache(key, translation) {
@@ -488,7 +489,32 @@ class RedPersistentCacheHandler {
             }
         }
         try {
-            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache, null, 4));
+            let write = () => {
+                this.fs.writeFile(this.getFilename(), JSON.stringify(this.cache, null, 4), (err) => {
+                    this.busy = false;
+                    if (err) {
+                        console.error(err);
+                    }
+                    else {
+                        console.log("[RedPersistentCacheHandler] Successfully saved cache.");
+                    }
+                    let next = this.next;
+                    if (typeof next == "function") {
+                        this.next = undefined;
+                        next();
+                    }
+                    else {
+                        this.busy = false;
+                    }
+                });
+            };
+            if (this.busy) {
+                this.next = write;
+            }
+            else {
+                this.busy = true;
+                write();
+            }
         }
         catch (e) {
             console.error("[RedPersistentCacheHandler] Failed saving cache for " + this.transId + ".", e);
