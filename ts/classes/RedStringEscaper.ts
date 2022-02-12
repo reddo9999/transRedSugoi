@@ -82,6 +82,7 @@ let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
 class RedStringEscaper {
     private text : string;
+    private translated = false;
     private type : RedPlaceholderType = RedPlaceholderType.poleposition;
     private splitEnds : boolean = true;
     private removeUnks : boolean = true;
@@ -92,6 +93,9 @@ class RedStringEscaper {
     private closedNinesLength : number = 7; // plus two boundaries
     private storedSymbols : {[tag : string] : string} = {};
     private reverseSymbols : {[text : string] : string} = {};
+    private isolatedSymbols : Array<string> = [];
+    private isolatedTranslation = 0;
+    private isolateRegExp : RegExp;
     private currentText : string;
     private broken: boolean = false;
 
@@ -108,19 +112,38 @@ class RedStringEscaper {
     private hashtagTwo = 66; //B
     private hashtagThree = 67; //C
 
-	constructor (text : string, scriptCheck : RedScriptCheckResponse, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
-		this.text = text;
-		this.currentText = text;
-        this.type = type || RedPlaceholderType.poleposition;
-        this.splitEnds = splitEnds == true;
-        this.removeUnks = noUnks == true;
-        this.mergeSymbols = mergeSymbols == true;
-        this.isScript = scriptCheck.isScript;
+	constructor (options : {
+            text : string, 
+            scriptCheck : RedScriptCheckResponse,
+            type? : RedPlaceholderType,
+            splitEnds? : boolean,
+            mergeSymbols? : boolean,
+            noUnks? : boolean,
+            isolateSymbols? : boolean,
+            isolateRegExp? : RegExp,
+    })  {
+		this.text = options.text;
+		this.currentText = options.text;
+        this.type = options.type || RedPlaceholderType.poleposition;
+        this.splitEnds = options.splitEnds == true;
+        this.removeUnks = options.noUnks == true;
+        this.mergeSymbols = options.mergeSymbols == true;
+        this.isScript = options.scriptCheck.isScript;
         if (this.isScript) {
-            this.quoteType = <string> scriptCheck.quoteType;
-            this.currentText = <string> scriptCheck.newLine;
+            this.quoteType = <string> options.scriptCheck.quoteType;
+            this.currentText = <string> options.scriptCheck.newLine;
         }
-        this.escape();
+        this.isolateRegExp = <RegExp> options.isolateRegExp;
+        console.log("RedEscaper", options);
+        if (options.isolateSymbols) {
+            this.isolateSymbols();
+        }
+        
+        let escaped = this.escape(this.currentText);
+
+        for (let i = 0; i < this.isolatedSymbols.length; i++) {
+            this.storedSymbols[this.isolatedSymbols[i]] = this.escape(this.storedSymbols[this.isolatedSymbols[i]]);
+        }
 	}
 
     public break () {
@@ -266,16 +289,33 @@ class RedStringEscaper {
         return this.currentText;
     }
 
+    public getIsolatedSymbols () {
+        let isolatedTexts = [];
+        for (let i = 0; i < this.isolatedSymbols.length; i++) {
+            isolatedTexts.push(this.storedSymbols[this.isolatedSymbols[i]]);
+        }
+        return isolatedTexts;
+    }
+
     public setTranslatedText (text : string) {
-        this.currentText = text;
+        if (!this.translated) {
+            this.currentText = text;
+            this.translated = true;
+        } else {
+            // Translating isolated symbols...
+            let currentSymbol = this.isolatedSymbols[this.isolatedTranslation++];
+            this.storedSymbols[currentSymbol] = text;
+        }
+    }
+
+    public isDone () {
+        return this.translated && this.isolatedTranslation >= this.isolatedSymbols.length;
     }
 
     public recoverSymbols () {
         if (this.broken) {
             return "";
         }
-        // DEBUG
-        //console.log(this.currentText, this.storedSymbols);
 
         // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
@@ -318,15 +358,29 @@ class RedStringEscaper {
 
         return this.currentText;
     }
+
+    public isolateSymbols ()  {
+        let repeat = true;
+        while (repeat) {
+            repeat = false;
+            this.currentText = this.currentText.replaceAll(
+                this.isolateRegExp,
+                (match) => {
+                    let placeholder = this.storeSymbol(match);
+                    this.isolatedSymbols.push(placeholder);
+                    repeat = true;
+                    return placeholder;
+                }
+            );
+        }
+    }
     
-    public escape () {
+    public escape (text : string) {
         // Are we escaping?
         if (this.type == RedPlaceholderType.noEscape) {
-            this.currentText = this.text;
-            return this.text;
+            return text;
         }
         let formulas = RedStringEscaper.getActiveFormulas();
-        let text = this.currentText || this.text;
         //console.log("Formulas : ", formulas);
         for (var i=0; i<formulas.length; i++) {
             if (!Boolean(formulas[i])) continue;
@@ -363,28 +417,30 @@ class RedStringEscaper {
         // Safety vs Quality?
         // Results are VERY good when the symbols aren't actually part of the sentence, which escaped symbols at start or end most likely are.
         // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
-        this.currentText = this.currentText.trim();
-        let found = true;
-        let loops = 0;
-        while (found && this.splitEnds) {
-            found = false;
-            for (let tag in this.storedSymbols) {
-                let idx = text.indexOf(tag);
-                if (idx == 0) {
-                    this.preString += this.storedSymbols[tag];
-                    text = text.substring(tag.length); // replace was dangerous, so we do it old school
-                    found = true;
-                } else if (idx != -1 && (idx + tag.length) == text.length) {
-                    // Everything we find after the first one will be coming before it, not after
-                    this.postString = this.storedSymbols[tag] + this.postString;
-                    text = text.substring(0, idx);
-                    found = true;
+        if (this.splitEnds) {
+            text = text.trim();
+            let found = true;
+            let loops = 0;
+            while (found) {
+                found = false;
+                for (let tag in this.storedSymbols) {
+                    let idx = text.indexOf(tag);
+                    if (idx == 0) {
+                        this.preString += this.storedSymbols[tag];
+                        text = text.substring(tag.length); // replace was dangerous, so we do it old school
+                        found = true;
+                    } else if (idx != -1 && (idx + tag.length) == text.length) {
+                        // Everything we find after the first one will be coming before it, not after
+                        this.postString = this.storedSymbols[tag] + this.postString;
+                        text = text.substring(0, idx);
+                        found = true;
+                    }
                 }
-            }
-            // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
-            if (loops++ > 30) {
-                console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
-                break;
+                // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
+                if (loops++ > 30) {
+                    console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
+                    break;
+                }
             }
         }
 
@@ -399,7 +455,6 @@ class RedStringEscaper {
             }
         }
         
-        this.currentText = text;
         //console.log("%cEscaped text", 'background: #222; color: #bada55');
         //console.log(text);
         return text;

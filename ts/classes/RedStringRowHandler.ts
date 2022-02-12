@@ -17,6 +17,10 @@ class RedStringRowHandler {
                     curated.setTranslatedText(wrapper.getCache(line));
                 } else {
                     this.translatableLines.push(line);
+                    let isolatedSymbols = curated.getIsolatedSymbols();
+                    if (isolatedSymbols.length > 0) {
+                        this.translatableLines.push(...isolatedSymbols);
+                    }
                 }
             }
         }
@@ -54,14 +58,23 @@ class RedStringRowHandler {
     }
 
     public applyTranslation () {
-        for (let i = 0; i < this.translatedLines.length; i++) {
+        // "move through lines" similarly to the default implementation
+        let curatedIndex = 0;
+        for (let translationIndex = 0; translationIndex < this.translatedLines.length; translationIndex++) {
             // Some of them might be undefined
             // Ideally we'd check outside, but we need to keep moving forward while translating.
-            let translation = this.translatedLines[i];
-            if (translation != undefined) {
-                this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);
+            let translation = this.translatedLines[translationIndex];
+            let curated = this.curatedLines[curatedIndex];
+            if (translation == undefined) {
+                curated.break();
+                curated.setTranslatedText(""); // Sad. But not doing this would require changing too many things at this point.
             } else {
-                this.curatedLines[this.translatableLinesIndex[i]].break();
+                curated.setTranslatedText(translation);
+            }
+
+            // Will not error check this - we should be guaranteed a match of indexes.
+            while (curated != undefined && curated.isDone()) {
+                curated = this.curatedLines[++curatedIndex];
             }
         }
     }
