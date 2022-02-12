@@ -59,12 +59,16 @@ declare class RedStringEscaper {
     private privateCounter;
     private preString;
     private postString;
-    private isScript;
-    private quoteType;
     private hashtagOne;
     private hashtagTwo;
     private hashtagThree;
-    constructor(text: string, scriptCheck: RedScriptCheckResponse, type?: RedPlaceholderType, splitEnds?: boolean, mergeSymbols?: boolean, noUnks?: boolean);
+    constructor(options: {
+        text: string;
+        type?: RedPlaceholderType;
+        splitEnds?: boolean;
+        mergeSymbols?: boolean;
+        noUnks?: boolean;
+    });
     break(): void;
     getTag(): string;
     getClosedTag(): string;
@@ -151,7 +155,10 @@ declare abstract class RedTranslatorEngineWrapper {
     getRowEnd(): any;
     breakRow(text: string): Array<string>;
     isScript(brokenRow: Array<string>): RedScriptCheckResponse;
-    curateRow(row: string): Array<RedStringEscaper>;
+    curateRow(row: string): {
+        scriptCheck: RedScriptCheckResponse;
+        lines: Array<RedStringEscaper>;
+    };
     abstract doTranslate(toTranslate: Array<string>, options: TranslatorEngineOptions): Promise<Array<string>>;
     translate(rows: Array<string>, options: any): void;
     log(...texts: Array<string>): void;
@@ -196,9 +203,12 @@ declare class RedStringRowHandler {
     private translatableLines;
     private translatableLinesIndex;
     private translatedLines;
+    private isScript;
+    private quoteType;
     constructor(row: string, wrapper: RedTranslatorEngineWrapper);
     getOriginalRow(): string;
     getTranslatedRow(): string;
+    setScript(quoteType: string): void;
     getTranslatableLines(): string[];
     insertTranslation(text: string, index: number): void;
     applyTranslation(): void;

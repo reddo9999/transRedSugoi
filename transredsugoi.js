@@ -77,7 +77,7 @@ regExpObj[RedPlaceholderType.hashtag] = /((?: *　*#[A-Z] *　*){2,})/gi;
 regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*){2,})/gi;
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
-    constructor(text, scriptCheck, type, splitEnds, mergeSymbols, noUnks) {
+    constructor(options) {
         this.type = RedPlaceholderType.poleposition;
         this.splitEnds = true;
         this.removeUnks = true;
@@ -93,22 +93,15 @@ class RedStringEscaper {
         this.privateCounter = 983041; // 👽
         this.preString = "";
         this.postString = "";
-        this.isScript = false;
-        this.quoteType = "";
         this.hashtagOne = 65; //A
         this.hashtagTwo = 66; //B
         this.hashtagThree = 67; //C
-        this.text = text;
-        this.currentText = text;
-        this.type = type || RedPlaceholderType.poleposition;
-        this.splitEnds = splitEnds == true;
-        this.removeUnks = noUnks == true;
-        this.mergeSymbols = mergeSymbols == true;
-        this.isScript = scriptCheck.isScript;
-        if (this.isScript) {
-            this.quoteType = scriptCheck.quoteType;
-            this.currentText = scriptCheck.newLine;
-        }
+        this.text = options.text;
+        this.currentText = options.text;
+        this.type = options.type || RedPlaceholderType.poleposition;
+        this.splitEnds = options.splitEnds == true;
+        this.removeUnks = options.noUnks == true;
+        this.mergeSymbols = options.mergeSymbols == true;
         this.escape();
     }
     break() {
@@ -269,14 +262,6 @@ class RedStringEscaper {
         // let's remove those
         if (this.removeUnks) {
             this.currentText = this.currentText.replaceAll("<unk>", "");
-        }
-        if (this.isScript) {
-            this.currentText = JSON.stringify(this.currentText);
-            if (this.currentText.charAt(0) != this.quoteType) {
-                // escape the quotes
-                this.currentText = this.currentText.replaceAll(this.quoteType, `\\${this.quoteType}`);
-                this.currentText = this.quoteType + this.currentText.substring(1, this.currentText.length - 1) + this.quoteType;
-            }
         }
         // DEBUG
         // console.log(finalString, this.storedSymbols);
@@ -881,13 +866,23 @@ class RedTranslatorEngineWrapper {
         let mergeSymbols = this.isMergingSymbols();
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
+        if (scriptCheck.isScript) {
+            lines = this.breakRow(scriptCheck.newLine);
+        }
         let curated = [];
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-            let escaped = new RedStringEscaper(line, scriptCheck, escapingType, splitEnds, mergeSymbols, true);
+            let escaped = new RedStringEscaper({
+                text: line,
+                type: escapingType,
+                splitEnds: splitEnds,
+                mergeSymbols: mergeSymbols,
+                noUnks: true
+            });
             curated.push(escaped);
         }
-        return curated;
+        return { scriptCheck: scriptCheck,
+            lines: curated };
     }
     translate(rows, options) {
         options = options || {};
@@ -1495,8 +1490,14 @@ class RedStringRowHandler {
         this.translatableLines = [];
         this.translatableLinesIndex = [];
         this.translatedLines = [];
+        this.isScript = false;
+        this.quoteType = "'";
         this.originalRow = row;
-        this.curatedLines = wrapper.curateRow(row);
+        let processed = wrapper.curateRow(row);
+        if (processed.scriptCheck.isScript) {
+            this.setScript(processed.scriptCheck.quoteType);
+        }
+        this.curatedLines = processed.lines;
         for (let i = 0; i < this.curatedLines.length; i++) {
             let curated = this.curatedLines[i];
             let line = curated.getReplacedText();
@@ -1529,7 +1530,20 @@ class RedStringRowHandler {
             }
             lastline = line;
         }
-        return lines.join("\n");
+        let result = lines.join("\n");
+        if (this.isScript) {
+            result = JSON.stringify(result);
+            if (result.charAt(0) != this.quoteType) {
+                // escape the quotes
+                result = result.replaceAll(this.quoteType, `\\${this.quoteType}`);
+                result = this.quoteType + result.substring(1, result.length - 1) + this.quoteType;
+            }
+        }
+        return result;
+    }
+    setScript(quoteType) {
+        this.isScript = true;
+        this.quoteType = quoteType;
     }
     getTranslatableLines() {
         return [...this.translatableLines];
