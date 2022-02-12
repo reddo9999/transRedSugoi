@@ -3,6 +3,8 @@ class RedPersistentCacheHandler {
     private transId : string;
     private cache : {[key : string] : string} = {};
     private changed = false;
+    private busy = false;
+    private next : Function | undefined;
 
     public constructor (id : string) {
         this.transId = id;
@@ -65,7 +67,34 @@ class RedPersistentCacheHandler {
         }
         
         try {
-            this.fs.writeFileSync(this.getFilename(), JSON.stringify(this.cache, null, 4));
+            let write = () => {
+                this.fs.writeFile(
+                    this.getFilename(),
+                    JSON.stringify(this.cache, null, 4),
+                    (err : Error | undefined) => {
+                        this.busy = false;
+                        if (err) {
+                            console.error(err);
+                        } else {
+                            console.log("[RedPersistentCacheHandler] Successfully saved cache.");
+                        }
+                        let next = this.next;
+                        if (typeof next == "function") {
+                            this.next = undefined;
+                            next();
+                        } else {
+                            this.busy = false;
+                        }
+                    }
+                );
+            };
+            if (this.busy) {
+                this.next = write;
+            } else {
+                this.busy = true;
+                write();
+            }
+            
         } catch (e) {
             console.error("[RedPersistentCacheHandler] Failed saving cache for " + this.transId + ".", e);
         }
