@@ -277,42 +277,34 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     "title" : "Local Server Manager",
                     "fieldHtmlClass": "actionButtonSet",
                     "items": [
-                      {
-                        "type": "button",
-                        "title": "Open server manager",
-                        "onClick" : function() {
-                            try {
-                                trans.sugoitrans.openServerManager()
-                            } catch (e) {
-                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                        {
+                            "type": "button",
+                            "title": "Open server manager",
+                            "onClick" : function() {
+                                try {
+                                    trans.sugoitrans.openServerManager()
+                                } catch (e) {
+                                    alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                                }
+                            }
+                        },
+                        {
+                            "type": "button",
+                            "title": "Copy Sugoi Trans Server Values",
+                            "onClick" : (evt : any) => {
+                                try {
+                                    (<any> window).clicked = evt;
+                                    var optionWindow = $((evt.target).parentNode.parentNode);
+                                    let engine = <any> this.getEngine();
+                                    optionWindow.find(`[name="targetUrl"]`).val(trans.sugoitrans.targetUrl);
+                                    engine.update("targetUrl", trans.sugoitrans.targetUrl);
+                                } catch (e) {
+                                    alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                                }
                             }
                         }
-                      }
-            
                     ]
                 },
-/*                 {
-                    "type": "actions",
-                    "title" : "Copy Sugoi Translator Target URL",
-                    "fieldHtmlClass": "actionButtonSet",
-                    "items": [
-                      {
-                        "type": "button",
-                        "title": "Copy Sugoi Translator Target URL",
-                        "onClick" : function(ev : any) {
-                            try {
-                                let headHoncho = (ev.target).parentNode.parentNode;
-                                let $targetUrl = $(headHoncho).find('[name="targetUrl"]')
-                                $targetUrl.val(trans.sugoitrans.targetUrl);
-                                trans.redsugoi.update("targetUrl", trans.sugoiTrans.targetUrl);
-                            } catch (e) {
-                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                            }
-                        }
-                      }
-            
-                    ]
-                }, */
                 {
                     "key": "maxParallelJob",
                     "onChange": (evt : Event) => {

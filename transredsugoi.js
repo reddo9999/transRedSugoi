@@ -655,6 +655,39 @@ class RedTranslatorEngineWrapper {
                             this.translatorEngine.update("rowEnd", value);
                         }
                     },
+                    {
+                        "type": "actions",
+                        "title": "Reset RegExps",
+                        "fieldHtmlClass": "actionButtonSet",
+                        "items": [
+                            {
+                                "type": "button",
+                                "title": "Reset RegExps to their default values",
+                                "onClick": (evt) => {
+                                    try {
+                                        window.clicked = evt;
+                                        var optionWindow = $((evt.target).parentNode.parentNode);
+                                        let engine = this.getEngine();
+                                        optionWindow.find(`[name="rowStart"]`).val(defaultLineStart);
+                                        optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
+                                        engine.update("rowStart", defaultLineStart);
+                                        engine.update("rowEnd", defaultLineEnd);
+                                    }
+                                    catch (e) {
+                                        alert("Failed!" + e.message);
+                                    }
+                                }
+                            },
+                            {
+                                "type": "button",
+                                "title": "Empty Cache (use if the translator is updated with better translations)",
+                                "onClick": () => {
+                                    this.cacheHandler.resetCache();
+                                    this.cacheHandler.saveCache();
+                                }
+                            }
+                        ]
+                    },
                 ]
             }
         });
@@ -1210,31 +1243,25 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                                 alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
                             }
                         }
+                    },
+                    {
+                        "type": "button",
+                        "title": "Copy Sugoi Trans Server Values",
+                        "onClick": (evt) => {
+                            try {
+                                window.clicked = evt;
+                                var optionWindow = $((evt.target).parentNode.parentNode);
+                                let engine = this.getEngine();
+                                optionWindow.find(`[name="targetUrl"]`).val(trans.sugoitrans.targetUrl);
+                                engine.update("targetUrl", trans.sugoitrans.targetUrl);
+                            }
+                            catch (e) {
+                                alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
+                            }
+                        }
                     }
                 ]
             },
-            /*                 {
-                                "type": "actions",
-                                "title" : "Copy Sugoi Translator Target URL",
-                                "fieldHtmlClass": "actionButtonSet",
-                                "items": [
-                                  {
-                                    "type": "button",
-                                    "title": "Copy Sugoi Translator Target URL",
-                                    "onClick" : function(ev : any) {
-                                        try {
-                                            let headHoncho = (ev.target).parentNode.parentNode;
-                                            let $targetUrl = $(headHoncho).find('[name="targetUrl"]')
-                                            $targetUrl.val(trans.sugoitrans.targetUrl);
-                                            trans.redsugoi.update("targetUrl", trans.sugoiTrans.targetUrl);
-                                        } catch (e) {
-                                            alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                                        }
-                                    }
-                                  }
-                        
-                                ]
-                            }, */
             {
                 "key": "maxParallelJob",
                 "onChange": (evt) => {

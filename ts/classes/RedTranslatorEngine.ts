@@ -486,6 +486,38 @@ abstract class RedTranslatorEngineWrapper {
                       this.translatorEngine.update("rowEnd", value);
                     }
                 },
+                {
+                    "type": "actions",
+                    "title" : "Reset RegExps",
+                    "fieldHtmlClass": "actionButtonSet",
+                    "items": [
+                        {
+                          "type": "button",
+                          "title": "Reset RegExps to their default values",
+                          "onClick" : (evt : any) => {
+                              try {
+                                  (<any> window).clicked = evt;
+                                  var optionWindow = $((evt.target).parentNode.parentNode);
+                                  let engine = <any> this.getEngine();
+                                  optionWindow.find(`[name="rowStart"]`).val(defaultLineStart);
+                                  optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
+                                  engine.update("rowStart", defaultLineStart);
+                                  engine.update("rowEnd", defaultLineEnd);
+                              } catch (e) {
+                                  alert("Failed!" + (<Error> e).message);
+                              }
+                          }
+                        },
+                        {
+                          "type": "button",
+                          "title": "Empty Cache (use if the translator is updated with better translations)",
+                          "onClick" : () => {
+                              this.cacheHandler.resetCache();
+                              this.cacheHandler.saveCache();
+                          }
+                        }
+                    ]
+                },
               ]
             }
         });
