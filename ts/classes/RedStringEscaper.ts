@@ -318,11 +318,7 @@ class RedStringEscaper {
 
         return this.currentText;
     }
-
-    /**
-     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
-     * So I'll just make something that's hopefully similar enough to live through updates!
-     */
+    
     public escape () {
         // Are we escaping?
         if (this.type == RedPlaceholderType.noEscape) {
