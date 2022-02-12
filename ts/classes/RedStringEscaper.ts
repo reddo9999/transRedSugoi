@@ -62,27 +62,26 @@ let RedPlaceholderTypeArray = [
 
 
 let regExpObj : any = {};
-regExpObj[RedPlaceholderType.poleposition] = /((?: *　*#[0-9]+ *　*){2,})/g;
-regExpObj[RedPlaceholderType.mvStyle] = /((?: *　*%[0-9]+ *　*){2,})/g;
-regExpObj[RedPlaceholderType.percentage] = /((?: *　*[0-9]+% *　*){2,})/g;
-regExpObj[RedPlaceholderType.wolfStyle] = /((?: *　*@[0-9]+ *　*){2,})/g;
-regExpObj[RedPlaceholderType.tournament] = /((?: *　*#[0-9]+ *　*){2,})/g;
-regExpObj[RedPlaceholderType.hexPlaceholder] = /((?: *　*0x[0-9a-fA-F]+ *　*){2,})/gi;
-regExpObj[RedPlaceholderType.tagPlaceholder] = /((?: *　*<[0-9]{2,}> *　*){2,})/g;
-regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?: *　*<[0-9]{2,}\/> *　*){2,})/g;
-regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?: *　*9[0-9]{4,}9 *　*){2,})", "g");
-regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?: *　*<[0-9]{2,}><\/[0-9]{2,}> *　*){2,})/g;
-regExpObj[RedPlaceholderType.curlie] = /((?: *　*{[A-Z]+} *　*){2,})/g;
-regExpObj[RedPlaceholderType.doubleCurlie] = /((?: *　*{{[A-Z]+} *　*){2,}})/gi;
-regExpObj[RedPlaceholderType.privateUse] = /((?: *　*[\uF000-\uFFFF] *　*){2,}})/g;
-regExpObj[RedPlaceholderType.hashtag] = /((?: *　*#[A-Z] *　*){2,})/gi;
-regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*){2,})/gi;
+regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.mvStyle] = /((?:%[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.percentage] = /((?:[0-9]+%){2,})/g;
+regExpObj[RedPlaceholderType.wolfStyle] = /((?:@[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.tournament] = /((?:#[0-9]+){2,})/g;
+regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
+regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
+regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
+regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{4,}9){2,})", "g");
+regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
+regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
+regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/gi;
+regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
+regExpObj[RedPlaceholderType.hashtag] = /((?:#[A-Z]){2,})/gi;
+regExpObj[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]){2,})/gi;
 
 let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
 class RedStringEscaper {
     private text : string;
-    private translated = false;
     private type : RedPlaceholderType = RedPlaceholderType.poleposition;
     private splitEnds : boolean = true;
     private removeUnks : boolean = true;
@@ -93,9 +92,6 @@ class RedStringEscaper {
     private closedNinesLength : number = 7; // plus two boundaries
     private storedSymbols : {[tag : string] : string} = {};
     private reverseSymbols : {[text : string] : string} = {};
-    private isolatedSymbols : Array<string> = [];
-    private isolatedTranslation = 0;
-    private isolateRegExp : RegExp;
     private currentText : string;
     private broken: boolean = false;
 
@@ -112,38 +108,19 @@ class RedStringEscaper {
     private hashtagTwo = 66; //B
     private hashtagThree = 67; //C
 
-	constructor (options : {
-            text : string, 
-            scriptCheck : RedScriptCheckResponse,
-            type? : RedPlaceholderType,
-            splitEnds? : boolean,
-            mergeSymbols? : boolean,
-            noUnks? : boolean,
-            isolateSymbols? : boolean,
-            isolateRegExp? : RegExp,
-    })  {
-		this.text = options.text;
-		this.currentText = options.text;
-        this.type = options.type || RedPlaceholderType.poleposition;
-        this.splitEnds = options.splitEnds == true;
-        this.removeUnks = options.noUnks == true;
-        this.mergeSymbols = options.mergeSymbols == true;
-        this.isScript = options.scriptCheck.isScript;
+	constructor (text : string, scriptCheck : RedScriptCheckResponse, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean)  {
+		this.text = text;
+		this.currentText = text;
+        this.type = type || RedPlaceholderType.poleposition;
+        this.splitEnds = splitEnds == true;
+        this.removeUnks = noUnks == true;
+        this.mergeSymbols = mergeSymbols == true;
+        this.isScript = scriptCheck.isScript;
         if (this.isScript) {
-            this.quoteType = <string> options.scriptCheck.quoteType;
-            this.currentText = <string> options.scriptCheck.newLine;
+            this.quoteType = <string> scriptCheck.quoteType;
+            this.currentText = <string> scriptCheck.newLine;
         }
-        this.isolateRegExp = <RegExp> options.isolateRegExp;
-        console.log("RedEscaper", options);
-        if (options.isolateSymbols) {
-            this.isolateSymbols();
-        }
-        
-        let escaped = this.escape(this.currentText);
-
-        for (let i = 0; i < this.isolatedSymbols.length; i++) {
-            this.storedSymbols[this.isolatedSymbols[i]] = this.escape(this.storedSymbols[this.isolatedSymbols[i]]);
-        }
+        this.escape();
 	}
 
     public break () {
@@ -289,33 +266,16 @@ class RedStringEscaper {
         return this.currentText;
     }
 
-    public getIsolatedSymbols () {
-        let isolatedTexts = [];
-        for (let i = 0; i < this.isolatedSymbols.length; i++) {
-            isolatedTexts.push(this.storedSymbols[this.isolatedSymbols[i]]);
-        }
-        return isolatedTexts;
-    }
-
     public setTranslatedText (text : string) {
-        if (!this.translated) {
-            this.currentText = text;
-            this.translated = true;
-        } else {
-            // Translating isolated symbols...
-            let currentSymbol = this.isolatedSymbols[this.isolatedTranslation++];
-            this.storedSymbols[currentSymbol] = text;
-        }
-    }
-
-    public isDone () {
-        return this.translated && this.isolatedTranslation >= this.isolatedSymbols.length;
+        this.currentText = text;
     }
 
     public recoverSymbols () {
         if (this.broken) {
             return "";
         }
+        // DEBUG
+        //console.log(this.currentText, this.storedSymbols);
 
         // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
@@ -359,28 +319,18 @@ class RedStringEscaper {
         return this.currentText;
     }
 
-    public isolateSymbols ()  {
-        let repeat = true;
-        while (repeat) {
-            repeat = false;
-            this.currentText = this.currentText.replaceAll(
-                this.isolateRegExp,
-                (match) => {
-                    let placeholder = this.storeSymbol(match);
-                    this.isolatedSymbols.push(placeholder);
-                    repeat = true;
-                    return placeholder;
-                }
-            );
-        }
-    }
-    
-    public escape (text : string) {
+    /**
+     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
+     * So I'll just make something that's hopefully similar enough to live through updates!
+     */
+    public escape () {
         // Are we escaping?
         if (this.type == RedPlaceholderType.noEscape) {
-            return text;
+            this.currentText = this.text;
+            return this.text;
         }
         let formulas = RedStringEscaper.getActiveFormulas();
+        let text = this.currentText || this.text;
         //console.log("Formulas : ", formulas);
         for (var i=0; i<formulas.length; i++) {
             if (!Boolean(formulas[i])) continue;
@@ -417,30 +367,28 @@ class RedStringEscaper {
         // Safety vs Quality?
         // Results are VERY good when the symbols aren't actually part of the sentence, which escaped symbols at start or end most likely are.
         // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
-        if (this.splitEnds) {
-            text = text.trim();
-            let found = true;
-            let loops = 0;
-            while (found) {
-                found = false;
-                for (let tag in this.storedSymbols) {
-                    let idx = text.indexOf(tag);
-                    if (idx == 0) {
-                        this.preString += this.storedSymbols[tag];
-                        text = text.substring(tag.length); // replace was dangerous, so we do it old school
-                        found = true;
-                    } else if (idx != -1 && (idx + tag.length) == text.length) {
-                        // Everything we find after the first one will be coming before it, not after
-                        this.postString = this.storedSymbols[tag] + this.postString;
-                        text = text.substring(0, idx);
-                        found = true;
-                    }
+        this.currentText = this.currentText.trim();
+        let found = true;
+        let loops = 0;
+        while (found && this.splitEnds) {
+            found = false;
+            for (let tag in this.storedSymbols) {
+                let idx = text.indexOf(tag);
+                if (idx == 0) {
+                    this.preString += this.storedSymbols[tag];
+                    text = text.substring(tag.length); // replace was dangerous, so we do it old school
+                    found = true;
+                } else if (idx != -1 && (idx + tag.length) == text.length) {
+                    // Everything we find after the first one will be coming before it, not after
+                    this.postString = this.storedSymbols[tag] + this.postString;
+                    text = text.substring(0, idx);
+                    found = true;
                 }
-                // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
-                if (loops++ > 30) {
-                    console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
-                    break;
-                }
+            }
+            // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
+            if (loops++ > 30) {
+                console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
+                break;
             }
         }
 
@@ -455,6 +403,7 @@ class RedStringEscaper {
             }
         }
         
+        this.currentText = text;
         //console.log("%cEscaped text", 'background: #222; color: #bada55');
         //console.log(text);
         return text;

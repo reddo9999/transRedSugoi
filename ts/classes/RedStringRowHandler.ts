@@ -2,6 +2,7 @@ class RedStringRowHandler {
     private originalRow : string;
     private curatedLines : Array<RedStringEscaper> = [];
     private translatableLines : Array<string> = [];
+    private translatableLinesIndex : Array<number> = [];
     private translatedLines : Array<string> = [];
 
     constructor (row : string, wrapper : RedTranslatorEngineWrapper) {
@@ -17,10 +18,7 @@ class RedStringRowHandler {
                     curated.setTranslatedText(wrapper.getCache(line));
                 } else {
                     this.translatableLines.push(line);
-                    let isolatedSymbols = curated.getIsolatedSymbols();
-                    if (isolatedSymbols.length > 0) {
-                        this.translatableLines.push(...isolatedSymbols);
-                    }
+                    this.translatableLinesIndex.push(i);
                 }
             }
         }
@@ -58,23 +56,14 @@ class RedStringRowHandler {
     }
 
     public applyTranslation () {
-        // "move through lines" similarly to the default implementation
-        let curatedIndex = 0;
-        for (let translationIndex = 0; translationIndex < this.translatedLines.length; translationIndex++) {
+        for (let i = 0; i < this.translatedLines.length; i++) {
             // Some of them might be undefined
             // Ideally we'd check outside, but we need to keep moving forward while translating.
-            let translation = this.translatedLines[translationIndex];
-            let curated = this.curatedLines[curatedIndex];
-            if (translation == undefined) {
-                curated.break();
-                curated.setTranslatedText(""); // Sad. But not doing this would require changing too many things at this point.
+            let translation = this.translatedLines[i];
+            if (translation != undefined) {
+                this.curatedLines[this.translatableLinesIndex[i]].setTranslatedText(translation);
             } else {
-                curated.setTranslatedText(translation);
-            }
-
-            // Will not error check this - we should be guaranteed a match of indexes.
-            while (curated != undefined && curated.isDone()) {
-                curated = this.curatedLines[++curatedIndex];
+                this.curatedLines[this.translatableLinesIndex[i]].break();
             }
         }
     }
