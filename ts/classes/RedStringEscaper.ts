@@ -62,21 +62,21 @@ let RedPlaceholderTypeArray = [
 
 
 let regExpObj : any = {};
-regExpObj[RedPlaceholderType.poleposition] = /((?:#[0-9]+){2,})/g;
-regExpObj[RedPlaceholderType.mvStyle] = /((?:%[0-9]+){2,})/g;
-regExpObj[RedPlaceholderType.percentage] = /((?:[0-9]+%){2,})/g;
-regExpObj[RedPlaceholderType.wolfStyle] = /((?:@[0-9]+){2,})/g;
-regExpObj[RedPlaceholderType.tournament] = /((?:#[0-9]+){2,})/g;
-regExpObj[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+){2,})/gi;
-regExpObj[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]{2,}>){2,})/g;
-regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]{2,}\/>){2,})/g;
-regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{4,}9){2,})", "g");
-regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]{2,}><\/[0-9]{2,}>){2,})/g;
-regExpObj[RedPlaceholderType.curlie] = /((?:{[A-Z]+}){2,})/g;
-regExpObj[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+}){2,}})/gi;
-regExpObj[RedPlaceholderType.privateUse] = /([\uF000-\uFFFF]{2,}})/g;
-regExpObj[RedPlaceholderType.hashtag] = /((?:#[A-Z]){2,})/gi;
-regExpObj[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]){2,})/gi;
+regExpObj[RedPlaceholderType.poleposition] = /((?: *　*#[0-9]+ *　*){2,})/g;
+regExpObj[RedPlaceholderType.mvStyle] = /((?: *　*%[0-9]+ *　*){2,})/g;
+regExpObj[RedPlaceholderType.percentage] = /((?: *　*[0-9]+% *　*){2,})/g;
+regExpObj[RedPlaceholderType.wolfStyle] = /((?: *　*@[0-9]+ *　*){2,})/g;
+regExpObj[RedPlaceholderType.tournament] = /((?: *　*#[0-9]+ *　*){2,})/g;
+regExpObj[RedPlaceholderType.hexPlaceholder] = /((?: *　*0x[0-9a-fA-F]+ *　*){2,})/gi;
+regExpObj[RedPlaceholderType.tagPlaceholder] = /((?: *　*<[0-9]{2,}> *　*){2,})/g;
+regExpObj[RedPlaceholderType.closedTagPlaceholder] = /((?: *　*<[0-9]{2,}\/> *　*){2,})/g;
+regExpObj[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?: *　*9[0-9]{4,}9 *　*){2,})", "g");
+regExpObj[RedPlaceholderType.fullTagPlaceholder] = /((?: *　*<[0-9]{2,}><\/[0-9]{2,}> *　*){2,})/g;
+regExpObj[RedPlaceholderType.curlie] = /((?: *　*{[A-Z]+} *　*){2,})/g;
+regExpObj[RedPlaceholderType.doubleCurlie] = /((?: *　*{{[A-Z]+} *　*){2,}})/gi;
+regExpObj[RedPlaceholderType.privateUse] = /((?: *　*[\uF000-\uFFFF] *　*){2,}})/g;
+regExpObj[RedPlaceholderType.hashtag] = /((?: *　*#[A-Z] *　*){2,})/gi;
+regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*){2,})/gi;
 
 let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
