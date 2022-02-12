@@ -2,7 +2,6 @@ class RedStringRowHandler {
     private originalRow : string;
     private curatedLines : Array<RedStringEscaper> = [];
     private translatableLines : Array<string> = [];
-    private translatableLinesIndex : Array<number> = [];
     private translatedLines : Array<string> = [];
 
     constructor (row : string, wrapper : RedTranslatorEngineWrapper) {
@@ -18,7 +17,6 @@ class RedStringRowHandler {
                     curated.setTranslatedText(wrapper.getCache(line));
                 } else {
                     this.translatableLines.push(line);
-                    this.translatableLinesIndex.push(i);
                 }
             }
         }
