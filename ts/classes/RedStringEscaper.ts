@@ -290,6 +290,10 @@ class RedStringEscaper {
             //console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
+                if (this.storedSymbols[key] == key) {
+                    // User has escaped the placeholder itself...
+                    continue;
+                }
                 let idx = this.currentText.indexOf(key);
                 while (idx != -1) {
                     found = true;
