@@ -18,6 +18,7 @@ enum RedPlaceholderType {
     mvStyle = "mvStyle",
     wolfStyle = "wolfStyle",
     percentage = "percentage",
+    mvStyleLetter = "mvStyleLetter",
 }
 
 // I wonder if we could initiate this through calling the above...
@@ -37,6 +38,7 @@ enum RedPlaceholderTypeNames {
     hashtagTriple = "Triple Hashtag (#ABC)",
     tournament = "Tournament (e.g. #1, #2, #3)",
     mvStyle = "MV Message (e.g. %1, %2, %3)",
+    mvStyleLetter = "MV Message but with Letters (e.g. %A, %B, %C)",
     wolfStyle = "Wolf Message (e.g. @1, @2, @3)",
     percentage = "Actual Percentage (e.g. 1%, 2%)",
 }
@@ -56,6 +58,7 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.hashtagTriple,
     RedPlaceholderType.tournament,
     RedPlaceholderType.mvStyle,
+    RedPlaceholderType.mvStyleLetter,
     RedPlaceholderType.wolfStyle,
     RedPlaceholderType.percentage,
 ];
@@ -77,6 +80,7 @@ regExpObj[RedPlaceholderType.doubleCurlie] = /((?: *　*{{[A-Z]+} *　*){2,}})/g
 regExpObj[RedPlaceholderType.privateUse] = /((?: *　*[\uF000-\uFFFF] *　*){2,}})/g;
 regExpObj[RedPlaceholderType.hashtag] = /((?: *　*#[A-Z] *　*){2,})/gi;
 regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*){2,})/gi;
+regExpObj[RedPlaceholderType.mvStyleLetter] = /((?: *　*%[A-Z] *　*){2,})/gi;
 
 let escapingTitleMap : {[id : string] : string} = RedPlaceholderTypeNames;
 
@@ -138,6 +142,10 @@ class RedStringEscaper {
 
     public getMvStyle () {
         return `%${this.symbolAffix++}`;
+    }
+
+    public getMvStyleLetter () {
+        return `%${String.fromCharCode(this.curlyCount++)}`;
     }
 
     public getWolfStyle () {
@@ -233,6 +241,9 @@ class RedStringEscaper {
                     break;
                 case RedPlaceholderType.mvStyle:
                     tag = this.getMvStyle();
+                    break;
+                case RedPlaceholderType.mvStyleLetter:
+                    tag = this.getMvStyleLetter();
                     break;
                 case RedPlaceholderType.wolfStyle:
                     tag = this.getWolfStyle();
