@@ -1,6 +1,7 @@
 class RedStringRowHandler {
     private originalRow : string;
     private curatedLines : Array<RedStringEscaper> = [];
+    private extractedLines : Array<RedStringEscaper> = [];
     private translatableLines : Array<string> = [];
     private translatableLinesIndex : Array<number> = [];
     private translatedLines : Array<string> = [];
@@ -19,6 +20,7 @@ class RedStringRowHandler {
 
         for (let i = 0; i < this.curatedLines.length; i++) {
             let curated = this.curatedLines[i];
+            this.curatedLines.push(...curated.getExtractedStrings());
             let line = curated.getReplacedText();
             if (line.trim() != "") {
                 if (wrapper.hasCache(line)) {
@@ -42,7 +44,11 @@ class RedStringRowHandler {
         let lastline : string = "";
 
         for (let i = 0; i < this.curatedLines.length; i++) {
-            let line = this.curatedLines[i].recoverSymbols();
+            let curated = this.curatedLines[i];
+            if (curated.isExtracted()) {
+                continue; // we don't touch these
+            }
+            let line = curated.recoverSymbols();
             line = line.trim();
             // Keep empty lines so long as:
             // It's not the first line

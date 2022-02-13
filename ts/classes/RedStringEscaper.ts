@@ -109,15 +109,47 @@ class RedStringEscaper {
     private hashtagTwo = 66; //B
     private hashtagThree = 67; //C
 
-	constructor (options : {text : string, type? : RedPlaceholderType, splitEnds? : boolean, mergeSymbols? : boolean, noUnks? : boolean})  {
-		this.text = options.text;
-		this.currentText = options.text;
+    private extractedStrings : Array<RedStringEscaper> = [];
+    private extractedKeys : Array<string> = [];
+    private wasExtracted = false;
+
+	constructor (text : string, options : 
+                    {   type? : RedPlaceholderType,
+                        splitEnds? : boolean, 
+                        mergeSymbols? : boolean, 
+                        noUnks? : boolean,
+                        isolateSymbols? : boolean,
+                        isolateRegExp? : string,
+                        isExtracted? : boolean,
+                    }
+                )  {
+		this.text = text;
+		this.currentText = text;
         this.type = options.type || RedPlaceholderType.poleposition;
         this.splitEnds = options.splitEnds == true;
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
+        this.wasExtracted = options.isExtracted == true;
+
+        if (options.isolateSymbols == true) {
+            this.currentText = this.currentText.replaceAll(new RegExp(<string> options.isolateRegExp, "gim"), (match) => {
+                let placeholder = this.storeSymbol(match);
+                this.extractedKeys.push(placeholder);
+                this.extractedStrings.push(new RedStringEscaper(match, {...options, isExtracted : true}));
+                return placeholder;
+            });
+        }
+
         this.escape();
 	}
+
+    public isExtracted () {
+        return this.wasExtracted;
+    }
+
+    public getExtractedStrings () {
+        return this.extractedStrings;
+    }
 
     public break () {
         this.broken = true;
@@ -282,6 +314,11 @@ class RedStringEscaper {
 
         // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
+
+
+        for (let i = 0; i < this.extractedStrings.length; i++) {
+            this.storedSymbols[this.extractedKeys[i]] = this.extractedStrings[i].recoverSymbols();
+        }
 
         // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
         // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols

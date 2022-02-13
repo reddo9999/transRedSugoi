@@ -11,6 +11,15 @@ interface RedScriptCheckResponse {
 const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
 const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
+const openers = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
+const closers = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
+const mvScript = `\\*[A-Z]+[\\[{<][^\\]}>]`;
+// RegExp:  not lookbehind: mvScript
+//          lookbehind: opener
+//          match: anything that's not opener nor closer
+//          lookahead: closer
+// Result: look for anything that's not opener or closer that is inside opener or closer and not inside an MVScript
+const defaultIsolateRegexp = `(?<!(${mvScript}))(?<=[${openers}])([^${openers + closers}])+(?=[${closers}])`;
 
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
@@ -197,6 +206,13 @@ abstract class RedTranslatorEngineWrapper {
         splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
         let mergeSymbols = this.isMergingSymbols();
 
+        
+        let isolateSymbols = this.getEngine().getOptions().isolateSymbols;
+        isolateSymbols = isolateSymbols == undefined ? true : isolateSymbols === true; // set to true if undefined, check against true if not
+
+        let isolateRegExp = this.getEngine().getOptions().isolateRegExp;
+        isolateRegExp = isolateRegExp == undefined ? defaultIsolateRegexp : isolateRegExp;
+
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
 
@@ -207,12 +223,13 @@ abstract class RedTranslatorEngineWrapper {
         let curated : Array<RedStringEscaper> = [];
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-            let escaped = new RedStringEscaper({
-                text : line, 
+            let escaped = new RedStringEscaper(line, {
                 type : escapingType,
                 splitEnds: splitEnds,
                 mergeSymbols: mergeSymbols,
-                noUnks : true
+                noUnks : true,
+                isolateSymbols : isolateSymbols,
+                isolateRegExp : isolateRegExp,
             });
             curated.push(escaped);
         }
@@ -371,14 +388,22 @@ abstract class RedTranslatorEngineWrapper {
             persistentCacheMaxSize : 10,
             detectStrings : true,
             mergeSymbols : true,
+            isolateSymbols : true,
             rowStart : defaultLineStart,
             rowEnd : defaultLineEnd,
+            isolateRegExp : defaultIsolateRegexp,
             optionsForm:{
               "schema": {
                 "splitEnds": {
                     "type": "boolean",
                     "title": "Split Ends",
                     "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced. If the symbols at the corners are not actually part of the text this will actually improve translation accuracy while also increasing speed. Recommended is ON.",
+                    "default":true
+                },
+                "isolateSymbols": {
+                    "type": "boolean",
+                    "title": "Isolate Symbols",
+                    "description": "Detects and isolates symbols within strings so that they are translated separatedly. A symbol is any text inside brackets or quotes.",
                     "default":true
                 },
                 "useCache": {
@@ -427,6 +452,13 @@ abstract class RedTranslatorEngineWrapper {
                       "default": defaultLineEnd,
                       "required":true
                   },
+                  "isolateRegExp": {
+                       "type": "string",
+                       "title": "Isolate Symbols",
+                       "description": "This regular expression is used to detect Symbols and isolate them to translate separatedly. It is not recommended to change this value.",
+                       "default": defaultIsolateRegexp,
+                       "required":true
+                   },
               },
               "form": [
                 {
@@ -484,6 +516,14 @@ abstract class RedTranslatorEngineWrapper {
                       this.translatorEngine.update("detectStrings", value);
                     }
                 },
+                {
+                    "key": "isolateSymbols",
+                    "inlinetitle": "Isolate Symbols",
+                    "onChange": (evt : Event) => {
+                      var value = $(<HTMLInputElement> evt.target).prop("checked");
+                      this.translatorEngine.update("isolateSymbols", value);
+                    }
+                },
                 ...extraForm,
                 {
                     "key": "rowStart",
@@ -497,6 +537,13 @@ abstract class RedTranslatorEngineWrapper {
                     "onChange": (evt : Event) => {
                       var value = <string> $(<HTMLInputElement> evt.target).val();
                       this.translatorEngine.update("rowEnd", value);
+                    }
+                },
+                {
+                    "key": "isolateRegExp",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("isolateRegExp", value);
                     }
                 },
                 {
@@ -514,6 +561,8 @@ abstract class RedTranslatorEngineWrapper {
                                   let engine = <any> this.getEngine();
                                   optionWindow.find(`[name="rowStart"]`).val(defaultLineStart);
                                   optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
+                                  optionWindow.find(`[name="isolateRegExp"]`).val(defaultIsolateRegexp);
+                                  engine.update("isolateRegExp", defaultIsolateRegexp);
                                   engine.update("rowStart", defaultLineStart);
                                   engine.update("rowEnd", defaultLineEnd);
                               } catch (e) {
