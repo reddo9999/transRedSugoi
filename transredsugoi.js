@@ -81,7 +81,7 @@ regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*)
 regExpObj[RedPlaceholderType.mvStyleLetter] = /((?: *　*%[A-Z] *　*){2,})/gi;
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
-    constructor(options) {
+    constructor(text, options) {
         this.type = RedPlaceholderType.poleposition;
         this.splitEnds = true;
         this.removeUnks = true;
@@ -100,13 +100,31 @@ class RedStringEscaper {
         this.hashtagOne = 65; //A
         this.hashtagTwo = 66; //B
         this.hashtagThree = 67; //C
-        this.text = options.text;
-        this.currentText = options.text;
+        this.extractedStrings = [];
+        this.extractedKeys = [];
+        this.wasExtracted = false;
+        this.text = text;
+        this.currentText = text;
         this.type = options.type || RedPlaceholderType.poleposition;
         this.splitEnds = options.splitEnds == true;
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
+        this.wasExtracted = options.isExtracted == true;
+        if (options.isolateSymbols == true) {
+            this.currentText = this.currentText.replaceAll(new RegExp(options.isolateRegExp, "gim"), (match) => {
+                let placeholder = this.storeSymbol(match);
+                this.extractedKeys.push(placeholder);
+                this.extractedStrings.push(new RedStringEscaper(match, { ...options, isExtracted: true }));
+                return placeholder;
+            });
+        }
         this.escape();
+    }
+    isExtracted() {
+        return this.wasExtracted;
+    }
+    getExtractedStrings() {
+        return this.extractedStrings;
     }
     break() {
         this.broken = true;
@@ -250,6 +268,9 @@ class RedStringEscaper {
         //console.log(this.currentText, this.storedSymbols);
         // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
+        for (let i = 0; i < this.extractedStrings.length; i++) {
+            this.storedSymbols[this.extractedKeys[i]] = this.extractedStrings[i].recoverSymbols();
+        }
         // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
         // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
         let found = true;
@@ -529,6 +550,15 @@ class RedPersistentCacheHandler {
 const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
 const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
+const openers = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
+const closers = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
+const mvScript = `\\*[A-Z]+[\\[{<][^\\]}>]`;
+// RegExp:  not lookbehind: mvScript
+//          lookbehind: opener
+//          match: anything that's not opener nor closer
+//          lookahead: closer
+// Result: look for anything that's not opener or closer that is inside opener or closer and not inside an MVScript
+const defaultIsolateRegexp = `(?<!(${mvScript}))(?<=[${openers}])([^${openers + closers}])+(?=[${closers}])`;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -552,14 +582,22 @@ class RedTranslatorEngineWrapper {
             persistentCacheMaxSize: 10,
             detectStrings: true,
             mergeSymbols: true,
+            isolateSymbols: true,
             rowStart: defaultLineStart,
             rowEnd: defaultLineEnd,
+            isolateRegExp: defaultIsolateRegexp,
             optionsForm: {
                 "schema": {
                     "splitEnds": {
                         "type": "boolean",
                         "title": "Split Ends",
                         "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced. If the symbols at the corners are not actually part of the text this will actually improve translation accuracy while also increasing speed. Recommended is ON.",
+                        "default": true
+                    },
+                    "isolateSymbols": {
+                        "type": "boolean",
+                        "title": "Isolate Symbols",
+                        "description": "Detects and isolates symbols within strings so that they are translated separatedly. A symbol is any text inside brackets or quotes.",
                         "default": true
                     },
                     "useCache": {
@@ -606,6 +644,13 @@ class RedTranslatorEngineWrapper {
                         "title": "Line End Detection",
                         "description": "This Regular Expression is used by the text processor to detect where lines end. It is not recommended to change this value.",
                         "default": defaultLineEnd,
+                        "required": true
+                    },
+                    "isolateRegExp": {
+                        "type": "string",
+                        "title": "Isolate Symbols",
+                        "description": "This regular expression is used to detect Symbols and isolate them to translate separatedly. It is not recommended to change this value.",
+                        "default": defaultIsolateRegexp,
                         "required": true
                     },
                 },
@@ -665,6 +710,14 @@ class RedTranslatorEngineWrapper {
                             this.translatorEngine.update("detectStrings", value);
                         }
                     },
+                    {
+                        "key": "isolateSymbols",
+                        "inlinetitle": "Isolate Symbols",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).prop("checked");
+                            this.translatorEngine.update("isolateSymbols", value);
+                        }
+                    },
                     ...extraForm,
                     {
                         "key": "rowStart",
@@ -678,6 +731,13 @@ class RedTranslatorEngineWrapper {
                         "onChange": (evt) => {
                             var value = $(evt.target).val();
                             this.translatorEngine.update("rowEnd", value);
+                        }
+                    },
+                    {
+                        "key": "isolateRegExp",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("isolateRegExp", value);
                         }
                     },
                     {
@@ -695,6 +755,8 @@ class RedTranslatorEngineWrapper {
                                         let engine = this.getEngine();
                                         optionWindow.find(`[name="rowStart"]`).val(defaultLineStart);
                                         optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
+                                        optionWindow.find(`[name="isolateRegExp"]`).val(defaultIsolateRegexp);
+                                        engine.update("isolateRegExp", defaultIsolateRegexp);
                                         engine.update("rowStart", defaultLineStart);
                                         engine.update("rowEnd", defaultLineEnd);
                                     }
@@ -878,6 +940,10 @@ class RedTranslatorEngineWrapper {
         let splitEnds = this.getEngine().getOptions().splitEnds;
         splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
         let mergeSymbols = this.isMergingSymbols();
+        let isolateSymbols = this.getEngine().getOptions().isolateSymbols;
+        isolateSymbols = isolateSymbols == undefined ? true : isolateSymbols === true; // set to true if undefined, check against true if not
+        let isolateRegExp = this.getEngine().getOptions().isolateRegExp;
+        isolateRegExp = isolateRegExp == undefined ? defaultIsolateRegexp : isolateRegExp;
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
         if (scriptCheck.isScript) {
@@ -886,12 +952,13 @@ class RedTranslatorEngineWrapper {
         let curated = [];
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-            let escaped = new RedStringEscaper({
-                text: line,
+            let escaped = new RedStringEscaper(line, {
                 type: escapingType,
                 splitEnds: splitEnds,
                 mergeSymbols: mergeSymbols,
-                noUnks: true
+                noUnks: true,
+                isolateSymbols: isolateSymbols,
+                isolateRegExp: isolateRegExp,
             });
             curated.push(escaped);
         }
@@ -1501,6 +1568,7 @@ $(document).ready(() => {
 class RedStringRowHandler {
     constructor(row, wrapper) {
         this.curatedLines = [];
+        this.extractedLines = [];
         this.translatableLines = [];
         this.translatableLinesIndex = [];
         this.translatedLines = [];
@@ -1514,6 +1582,7 @@ class RedStringRowHandler {
         this.curatedLines = processed.lines;
         for (let i = 0; i < this.curatedLines.length; i++) {
             let curated = this.curatedLines[i];
+            this.curatedLines.push(...curated.getExtractedStrings());
             let line = curated.getReplacedText();
             if (line.trim() != "") {
                 if (wrapper.hasCache(line)) {
@@ -1534,7 +1603,11 @@ class RedStringRowHandler {
         let lines = [];
         let lastline = "";
         for (let i = 0; i < this.curatedLines.length; i++) {
-            let line = this.curatedLines[i].recoverSymbols();
+            let curated = this.curatedLines[i];
+            if (curated.isExtracted()) {
+                continue; // we don't touch these
+            }
+            let line = curated.recoverSymbols();
             line = line.trim();
             // Keep empty lines so long as:
             // It's not the first line
