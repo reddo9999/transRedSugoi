@@ -111,10 +111,11 @@ class RedStringEscaper {
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
         if (options.isolateSymbols == true) {
+            options.isExtracted = true;
             this.currentText = this.currentText.replaceAll(new RegExp(options.isolateRegExp, "gim"), (match) => {
                 let placeholder = this.storeSymbol(match);
                 this.extractedKeys.push(placeholder);
-                this.extractedStrings.push(new RedStringEscaper(match, { ...options, isExtracted: true }));
+                this.extractedStrings.push(new RedStringEscaper(match, options));
                 return placeholder;
             });
         }
@@ -359,7 +360,7 @@ class RedStringEscaper {
             for (let tag in this.storedSymbols) {
                 let idx = text.indexOf(tag);
                 if (idx == 0) {
-                    this.preString += this.storedSymbols[tag];
+                    this.preString += tag; // Instead of doing the work right away, let's leave this because we might have nested symbols.
                     text = text.substring(tag.length); // replace was dangerous, so we do it old school
                     found = true;
                 }
@@ -985,17 +986,41 @@ class RedTranslatorEngineWrapper {
         };
         // First step: curate every single line and keep track of it
         let rowHandlers = [];
+        let toTranslateOr = [];
         let toTranslate = [];
+        let toTranslateIndex = [];
         for (let i = 0; i < rows.length; i++) {
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
             // Second step: separate every line that will need to be translated
-            toTranslate.push(...handler.getTranslatableLines());
+            toTranslateOr.push(...handler.getTranslatableLines());
+        }
+        // Remove all duplicates
+        for (let i = 0; i < toTranslateOr.length; i++) {
+            let idx = toTranslate.indexOf(toTranslateOr[i]);
+            if (idx == -1) {
+                toTranslate.push(toTranslateOr[i]);
+                toTranslateIndex.push([i]);
+            }
+            else {
+                // We are already translating this line. Add this to the index.
+                toTranslateIndex[idx].push(i);
+            }
         }
         // Third step: send translatable lines to the translator handler
         let translation = this.doTranslate(toTranslate, options);
         // After receiving...
-        translation.then((translations) => {
+        translation.then((translationsNoDupes) => {
+            // Recreate translations with duplicates so our old indexes work
+            let translations = new Array(toTranslateOr.length);
+            for (let i = 0; i < translationsNoDupes.length; i++) {
+                for (let k = 0; k < toTranslateIndex[i].length; k++) {
+                    translations[toTranslateIndex[i][k]] = translationsNoDupes[i];
+                }
+            }
+            if (translationsNoDupes.length != translations.length) {
+                this.log(`[RedTranslatorEngine] We avoided translating ${translations.length - translationsNoDupes.length} duplicate strings.`);
+            }
             // Fourth step: return translations to each object
             let curatedIndex = 0;
             let internalIndex = 0;
