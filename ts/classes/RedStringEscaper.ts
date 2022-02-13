@@ -132,10 +132,11 @@ class RedStringEscaper {
         this.wasExtracted = options.isExtracted == true;
 
         if (options.isolateSymbols == true) {
+            options.isExtracted = true;
             this.currentText = this.currentText.replaceAll(new RegExp(<string> options.isolateRegExp, "gim"), (match) => {
                 let placeholder = this.storeSymbol(match);
                 this.extractedKeys.push(placeholder);
-                this.extractedStrings.push(new RedStringEscaper(match, {...options, isExtracted : true}));
+                this.extractedStrings.push(new RedStringEscaper(match, options));
                 return placeholder;
             });
         }
@@ -410,7 +411,7 @@ class RedStringEscaper {
             for (let tag in this.storedSymbols) {
                 let idx = text.indexOf(tag);
                 if (idx == 0) {
-                    this.preString += this.storedSymbols[tag];
+                    this.preString += tag; // Instead of doing the work right away, let's leave this because we might have nested symbols.
                     text = text.substring(tag.length); // replace was dangerous, so we do it old school
                     found = true;
                 } else if (idx != -1 && (idx + tag.length) == text.length) {
