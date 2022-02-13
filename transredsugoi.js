@@ -17,6 +17,7 @@ var RedPlaceholderType;
     RedPlaceholderType["mvStyle"] = "mvStyle";
     RedPlaceholderType["wolfStyle"] = "wolfStyle";
     RedPlaceholderType["percentage"] = "percentage";
+    RedPlaceholderType["mvStyleLetter"] = "mvStyleLetter";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 // I wonder if we could initiate this through calling the above...
 // I'd rather not have to change both
@@ -38,6 +39,7 @@ var RedPlaceholderTypeNames;
     RedPlaceholderTypeNames["hashtagTriple"] = "Triple Hashtag (#ABC)";
     RedPlaceholderTypeNames["tournament"] = "Tournament (e.g. #1, #2, #3)";
     RedPlaceholderTypeNames["mvStyle"] = "MV Message (e.g. %1, %2, %3)";
+    RedPlaceholderTypeNames["mvStyleLetter"] = "MV Message but with Letters (e.g. %A, %B, %C)";
     RedPlaceholderTypeNames["wolfStyle"] = "Wolf Message (e.g. @1, @2, @3)";
     RedPlaceholderTypeNames["percentage"] = "Actual Percentage (e.g. 1%, 2%)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
@@ -56,6 +58,7 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.hashtagTriple,
     RedPlaceholderType.tournament,
     RedPlaceholderType.mvStyle,
+    RedPlaceholderType.mvStyleLetter,
     RedPlaceholderType.wolfStyle,
     RedPlaceholderType.percentage,
 ];
@@ -75,6 +78,7 @@ regExpObj[RedPlaceholderType.doubleCurlie] = /((?: *　*{{[A-Z]+} *　*){2,}})/g
 regExpObj[RedPlaceholderType.privateUse] = /((?: *　*[\uF000-\uFFFF] *　*){2,}})/g;
 regExpObj[RedPlaceholderType.hashtag] = /((?: *　*#[A-Z] *　*){2,})/gi;
 regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*){2,})/gi;
+regExpObj[RedPlaceholderType.mvStyleLetter] = /((?: *　*%[A-Z] *　*){2,})/gi;
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
     constructor(options) {
@@ -122,6 +126,9 @@ class RedStringEscaper {
     }
     getMvStyle() {
         return `%${this.symbolAffix++}`;
+    }
+    getMvStyleLetter() {
+        return `%${String.fromCharCode(this.curlyCount++)}`;
     }
     getWolfStyle() {
         return `@${this.symbolAffix++}`;
@@ -208,6 +215,9 @@ class RedStringEscaper {
                 case RedPlaceholderType.mvStyle:
                     tag = this.getMvStyle();
                     break;
+                case RedPlaceholderType.mvStyleLetter:
+                    tag = this.getMvStyleLetter();
+                    break;
                 case RedPlaceholderType.wolfStyle:
                     tag = this.getWolfStyle();
                     break;
@@ -247,6 +257,10 @@ class RedStringEscaper {
             //console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
+                if (this.storedSymbols[key] == key) {
+                    // User has escaped the placeholder itself...
+                    continue;
+                }
                 let idx = this.currentText.indexOf(key);
                 while (idx != -1) {
                     found = true;

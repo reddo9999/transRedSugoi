@@ -16,7 +16,8 @@ declare enum RedPlaceholderType {
     tournament = "tournament",
     mvStyle = "mvStyle",
     wolfStyle = "wolfStyle",
-    percentage = "percentage"
+    percentage = "percentage",
+    mvStyleLetter = "mvStyleLetter"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
@@ -33,6 +34,7 @@ declare enum RedPlaceholderTypeNames {
     hashtagTriple = "Triple Hashtag (#ABC)",
     tournament = "Tournament (e.g. #1, #2, #3)",
     mvStyle = "MV Message (e.g. %1, %2, %3)",
+    mvStyleLetter = "MV Message but with Letters (e.g. %A, %B, %C)",
     wolfStyle = "Wolf Message (e.g. @1, @2, @3)",
     percentage = "Actual Percentage (e.g. 1%, 2%)"
 }
@@ -75,6 +77,7 @@ declare class RedStringEscaper {
     getFullTag(): string;
     getPolePosition(): string;
     getMvStyle(): string;
+    getMvStyleLetter(): string;
     getWolfStyle(): string;
     getHexPlaceholder(): string;
     getCurly(): string;
