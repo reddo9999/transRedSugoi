@@ -263,20 +263,46 @@ abstract class RedTranslatorEngineWrapper {
         
         // First step: curate every single line and keep track of it
         let rowHandlers : Array<RedStringRowHandler> = [];
+        let toTranslateOr : Array<string> = [];
         let toTranslate : Array<string> = [];
+        let toTranslateIndex : Array<Array<number>> = [];
         for (let i = 0; i < rows.length; i++) {
             let handler = new RedStringRowHandler(rows[i], this);
             rowHandlers.push(handler);
             
             // Second step: separate every line that will need to be translated
-            toTranslate.push(...handler.getTranslatableLines());
+            toTranslateOr.push(...handler.getTranslatableLines());
+        }
+
+        // Remove all duplicates
+        for (let i = 0; i < toTranslateOr.length; i++) {
+            let idx = toTranslate.indexOf(toTranslateOr[i]);
+            if (idx == -1) {
+                toTranslate.push(toTranslateOr[i]);
+                toTranslateIndex.push([i]);
+            } else {
+                // We are already translating this line. Add this to the index.
+                toTranslateIndex[idx].push(i);
+            }
         }
 
         // Third step: send translatable lines to the translator handler
         let translation = this.doTranslate(toTranslate, options);
 
         // After receiving...
-        translation.then((translations) => {
+        translation.then((translationsNoDupes) => {
+            // Recreate translations with duplicates so our old indexes work
+            let translations = new Array(toTranslateOr.length);
+            for (let i = 0; i < translationsNoDupes.length; i++) {
+                for (let k = 0; k < toTranslateIndex[i].length; k++) {
+                    translations[toTranslateIndex[i][k]] = translationsNoDupes[i];
+                }
+            }
+
+            if (translationsNoDupes.length != translations.length) {
+                this.log(`[RedTranslatorEngine] We avoided translating ${translations.length - translationsNoDupes.length} duplicate strings.`)
+            }
+
             // Fourth step: return translations to each object
             let curatedIndex = 0;
             let internalIndex = 0;
