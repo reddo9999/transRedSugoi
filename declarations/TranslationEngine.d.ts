@@ -23,9 +23,9 @@ declare interface TranslationEngineOptionForm {
 }
 
 declare interface TranslatorEngineOptions {
-    onAfterLoading : () => void | undefined;
-    onError : () => void | undefined;
-    always : () => void | undefined;
+    onAfterLoading : (result : any) => any | Promise<any>;
+    onError : (reason : any) => any | Promise<any>;
+    always : () => any | Promise<any>;
 }
 
 declare interface TranslatorEngineResults {
