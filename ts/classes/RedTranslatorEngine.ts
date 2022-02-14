@@ -13,7 +13,7 @@ const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>�
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
 const openers = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
 const closers = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
-const mvScript = `\\*[A-Z]+[\\[{<][^\\]}>]`;
+const mvScript = `\\\\*[A-Z]+[\\[{<][^\\]}>]`;
 // RegExp:  not lookbehind: mvScript
 //          lookbehind: opener
 //          match: anything that's not opener nor closer
