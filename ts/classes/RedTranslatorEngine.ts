@@ -98,9 +98,11 @@ abstract class RedTranslatorEngineWrapper {
     }
 
     public getCacheHits () {
-        let result = this.cacheHits;
+        return this.cacheHits;
+    }
+
+    public resetCacheHits () {
         this.cacheHits = 0;
-        return result;
     }
 
     public getRowStart () {
@@ -354,8 +356,8 @@ abstract class RedTranslatorEngineWrapper {
             this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds)/10} characters per second!`);
             this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds)/10} rows per second).`);
 
-            // Getting cache hits resets it to 0. Maybe we should separate those.
             let hits = this.getCacheHits();
+            this.resetCacheHits();
             if (hits > 0) {
                 this.log(`[RedTranslatorEngine] Skipped ${hits} translations through cache hits!`);
             }
