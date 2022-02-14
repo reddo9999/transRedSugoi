@@ -209,6 +209,10 @@ declare class RedGoogleEngine extends RedTranslatorEngineWrapper {
     abort(): void;
     constructor(thisAddon: any);
 }
+declare class RedPiggybackEngine extends RedTranslatorEngineWrapper {
+    doTranslate(toTranslate: Array<string>, options: TranslatorEngineOptions): Promise<Array<string>>;
+    constructor(thisAddon: any);
+}
 declare var thisAddon: any;
 declare let wrappers: (RedSugoiEngine | RedGoogleEngine)[];
 declare var trans: any;
