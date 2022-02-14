@@ -553,7 +553,7 @@ const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>�
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
 const openers = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
 const closers = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
-const mvScript = `\\*[A-Z]+[\\[{<][^\\]}>]`;
+const mvScript = `\\\\*[A-Z]+[\\[{<][^\\]}>]`;
 // RegExp:  not lookbehind: mvScript
 //          lookbehind: opener
 //          match: anything that's not opener nor closer
@@ -844,9 +844,10 @@ class RedTranslatorEngineWrapper {
         this.cacheHandler.addCache(text, translation);
     }
     getCacheHits() {
-        let result = this.cacheHits;
+        return this.cacheHits;
+    }
+    resetCacheHits() {
         this.cacheHits = 0;
-        return result;
     }
     getRowStart() {
         let option = this.getEngine().getOptions().rowStart;
@@ -1061,8 +1062,8 @@ class RedTranslatorEngineWrapper {
             let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
             this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds) / 10} characters per second!`);
             this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds) / 10} rows per second).`);
-            // Getting cache hits resets it to 0. Maybe we should separate those.
             let hits = this.getCacheHits();
+            this.resetCacheHits();
             if (hits > 0) {
                 this.log(`[RedTranslatorEngine] Skipped ${hits} translations through cache hits!`);
             }
