@@ -967,6 +967,7 @@ class RedTranslatorEngineWrapper {
             lines: curated };
     }
     translate(rows, options) {
+        let batchStart = new Date().getTime();
         options = options || {};
         options.onAfterLoading = options.onAfterLoading || function () { };
         options.onError = options.onError || function () { };
@@ -1019,7 +1020,7 @@ class RedTranslatorEngineWrapper {
                 }
             }
             if (translationsNoDupes.length != translations.length) {
-                this.log(`[RedTranslatorEngine] We avoided translating ${translations.length - translationsNoDupes.length} duplicate strings.`);
+                this.log(`[RedTranslatorEngine] Avoided translating ${translations.length - translationsNoDupes.length} duplicate strings.`);
             }
             // Fourth step: return translations to each object
             let curatedIndex = 0;
@@ -1054,7 +1055,17 @@ class RedTranslatorEngineWrapper {
             }, 150);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
+            this.error("[RedTranslatorEngine] Error: ", reason);
         }).finally(() => {
+            let batchEnd = new Date().getTime();
+            let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
+            this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds) / 10} characters per second!`);
+            this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds) / 10} rows per second).`);
+            // Getting cache hits resets it to 0. Maybe we should separate those.
+            let hits = this.getCacheHits();
+            if (hits > 0) {
+                this.log(`[RedTranslatorEngine] Skipped ${hits} translations through cache hits!`);
+            }
             if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
                 ui.hideBusyOverlay();
             }
@@ -1160,7 +1171,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
     doTranslate(toTranslate, options) {
         this.resetScores();
         console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
-        let batchStart = new Date().getTime();
         let translating = 0;
         let translations = [];
         // Set up progress
@@ -1267,7 +1277,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 // return the object
                 onSuccess(translations);
                 // Update progress
-                let batchEnd = new Date().getTime();
                 let pre = document.createElement("pre");
                 pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
                 let servers = [...this.urls];
@@ -1277,9 +1286,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 for (let i = 0; i < servers.length; i++) {
                     pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
                 }
-                let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds) / 10} characters per second!`));
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${this.getCacheHits()} translations through cache hits!`));
                 consoleWindow.appendChild(pre);
             }
         };
@@ -1438,7 +1444,6 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         this.delayed = [];
     }
     doTranslate(toTranslate, options) {
-        let batchStartTime = new Date().getTime();
         let sourceLanguage = trans.getSl();
         let destinationLanguage = trans.getTl();
         let translating = 0;
@@ -1456,10 +1461,6 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let translate = (onSuccess, onError) => {
             if (translating >= toTranslate.length) {
                 currentAction.nodeValue = "Done!";
-                let batchEnd = new Date().getTime();
-                let seconds = Math.round((batchEnd - batchStartTime) / 100) / 10;
-                this.log(`[RedGoogle] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds) / 10} characters per second!`);
-                this.log(`[RedGoogle] We skipped ${this.getCacheHits()} translations through cache hits!`);
                 return onSuccess(translations);
             }
             currentAction.nodeValue = "Gathering strings...";
