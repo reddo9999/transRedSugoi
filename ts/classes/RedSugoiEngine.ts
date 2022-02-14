@@ -59,7 +59,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
     public doTranslate (toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>> {
         this.resetScores();
         console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
-        let batchStart = new Date().getTime();
 
         let translating = 0;
         let translations : Array<string> = [];
@@ -177,7 +176,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 onSuccess(translations);
 
                 // Update progress
-                let batchEnd = new Date().getTime();
                 let pre = document.createElement("pre");
                 pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
                 let servers = [...this.urls];
@@ -187,11 +185,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 for (let i = 0; i < servers.length; i++) {
                     pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
                 }
-
-                let seconds = Math.round((batchEnd - batchStart)/100)/10;
-
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds)/10} characters per second!`));
-                pre.appendChild(document.createTextNode(`\n[RedSugoi] We skipped ${this.getCacheHits()} translations through cache hits!`));
+                
                 consoleWindow.appendChild(pre);
             }
         }

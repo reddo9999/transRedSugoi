@@ -240,6 +240,7 @@ abstract class RedTranslatorEngineWrapper {
     abstract doTranslate (toTranslate : Array<string>, options : TranslatorEngineOptions) : Promise<Array<string>>;
 
     public translate (rows : Array<string>, options : any) {
+        let batchStart = new Date().getTime();
         options = options||{};
         options.onAfterLoading = options.onAfterLoading||function() {};
         options.onError = options.onError||function() {};
@@ -300,7 +301,7 @@ abstract class RedTranslatorEngineWrapper {
             }
 
             if (translationsNoDupes.length != translations.length) {
-                this.log(`[RedTranslatorEngine] We avoided translating ${translations.length - translationsNoDupes.length} duplicate strings.`)
+                this.log(`[RedTranslatorEngine] Avoided translating ${translations.length - translationsNoDupes.length} duplicate strings.`)
             }
 
             // Fourth step: return translations to each object
@@ -344,7 +345,21 @@ abstract class RedTranslatorEngineWrapper {
             }, 150);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
+            this.error("[RedTranslatorEngine] Error: ", reason);
         }).finally(() => {
+            let batchEnd = new Date().getTime();
+            let seconds = Math.round((batchEnd - batchStart)/100)/10;
+
+
+            this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds)/10} characters per second!`);
+            this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds)/10} rows per second).`);
+
+            // Getting cache hits resets it to 0. Maybe we should separate those.
+            let hits = this.getCacheHits();
+            if (hits > 0) {
+                this.log(`[RedTranslatorEngine] Skipped ${hits} translations through cache hits!`);
+            }
+
             if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
                 ui.hideBusyOverlay();
             }

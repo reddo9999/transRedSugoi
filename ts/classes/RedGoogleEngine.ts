@@ -3,7 +3,6 @@
 class RedGoogleEngine extends RedTranslatorEngineWrapper {
     
     public doTranslate (toTranslate: string[], options: TranslatorEngineOptions): Promise<Array<string>> {
-        let batchStartTime = new Date().getTime();
         let sourceLanguage = trans.getSl();
         let destinationLanguage = trans.getTl();
 
@@ -32,10 +31,6 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
         let translate = (onSuccess : (translated : Array<string>) => void, onError : (reason : string) => void) => {
             if (translating >= toTranslate.length) {
                 currentAction.nodeValue = "Done!";
-                let batchEnd = new Date().getTime();
-                let seconds = Math.round((batchEnd - batchStartTime)/100)/10;
-                this.log(`[RedGoogle] Batch took: ${seconds} seconds, which was about ${Math.round(10 * toTranslate.join("").length / seconds)/10} characters per second!`);
-                this.log(`[RedGoogle] We skipped ${this.getCacheHits()} translations through cache hits!`);
                 return onSuccess(translations);
             }
             currentAction.nodeValue = "Gathering strings...";
