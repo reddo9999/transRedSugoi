@@ -4,6 +4,7 @@ declare interface TranslationEngineOptionSchema<Type> {
     description : string;
     default : Type;
     required? : boolean;
+    enum? : any;
 }
 
 declare interface TranslationEngineOptionFormUpdater {
