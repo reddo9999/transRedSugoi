@@ -174,8 +174,8 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 targetUrl:"https://translate.google.com/translate_a/single",
                 description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
                 batchDelay:1, // We'll handle these ourselves
-                innerDelay: 10000, // Maybe give an option for users? Protect them from themselves?
-                maximumBatchSize : 1500, // This should be limited by default T++, but we'll keep track on our side as well. 3000 gave errors some times!
+                innerDelay: 6000, // Maybe give an option for users? Protect them from themselves?
+                maximumBatchSize : 1800, // This should be limited by default T++, but we'll keep track on our side as well. 3000 gave errors some times!
                 skipReferencePair:true,
                 lineDelimiter: "<br>",
                 mode: "rowByRow",
