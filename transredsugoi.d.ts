@@ -209,12 +209,21 @@ declare class RedGoogleEngine extends RedTranslatorEngineWrapper {
     abort(): void;
     constructor(thisAddon: any);
 }
+declare function getCarryTitleMap(array?: boolean): Array<string> | {
+    [id: string]: string;
+};
 declare class RedPiggybackEngine extends RedTranslatorEngineWrapper {
+    private lastRequest;
+    private delayed;
+    delay(callback: Function, engineDelay: number): void;
+    abort(): void;
     doTranslate(toTranslate: Array<string>, options: TranslatorEngineOptions): Promise<Array<string>>;
+    resetForm(): void;
     constructor(thisAddon: any);
 }
 declare var thisAddon: any;
 declare let wrappers: (RedSugoiEngine | RedGoogleEngine)[];
+declare let piggy: RedPiggybackEngine;
 declare var trans: any;
 declare class RedStringRowHandler {
     private originalRow;

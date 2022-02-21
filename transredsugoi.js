@@ -917,9 +917,11 @@ class RedTranslatorEngineWrapper {
                 // sure looks like one, but is it?
                 try {
                     quoteType = trimmed.charAt(0);
+                    // RPG Maker has their own "escaped" symbols which are not valid in JSON
+                    trimmed = trimmed.replace(/\\(?=[^rn"'])/g, '\\\\');
                     if (quoteType == "'") {
                         // These are actually invalid, so... extra work for us.
-                        trimmed = trimmed.replaceAll('"', '\\"');
+                        trimmed = trimmed.replace(/"/g, '\\"');
                         trimmed = '"' + trimmed.substring(1, trimmed.length - 1) + '"';
                         // It's okay, we'll go back to the original quoteType later.
                     }
@@ -931,7 +933,7 @@ class RedTranslatorEngineWrapper {
                     };
                 }
                 catch (e) {
-                    console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", brokenRow[0], e);
+                    console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", brokenRow[0], trimmed, e);
                 }
             }
         }
@@ -1425,8 +1427,8 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             targetUrl: "https://translate.google.com/translate_a/single",
             description: "A Google Translator using the same Text Processor as Red Sugoi Translator",
             batchDelay: 1,
-            innerDelay: 10000,
-            maximumBatchSize: 1500,
+            innerDelay: 6000,
+            maximumBatchSize: 1800,
             skipReferencePair: true,
             lineDelimiter: "<br>",
             mode: "rowByRow",
@@ -1578,32 +1580,23 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
     }
 }
 /// <reference path="RedTranslatorEngine.ts" />
-class RedPiggybackEngine extends RedTranslatorEngineWrapper {
-    doTranslate(toTranslate, options) {
-        return new Promise((resolve, reject) => {
-            let targetTrans = trans[this.getEngine().carryId];
-            if (targetTrans == undefined) {
-                reject("The selected Translator Engine does not exist or is not available.");
-            }
-            else {
-                let newOptions = { ...options };
-                newOptions.onAfterLoading = (result) => {
-                    if (result.translation.length != toTranslate.length) {
-                        this.error("[RedPiggybackEngine] Received invalid response. Sent " + toTranslate.length.toString() + " sentences and got " + result.translation.length + " back. Skipping.");
-                        reject("Mismatched translations.");
-                    }
-                    else {
-                        resolve(result.translation);
-                    }
-                };
-                newOptions.onError = (reason) => {
-                    this.error("[RedPiggybackEngine] " + reason);
-                    reject(reason);
-                };
-                targetTrans.translate(toTranslate, newOptions);
-            }
-        });
+function getCarryTitleMap(array) {
+    if (array) {
+        return [...trans.translator];
     }
+    let titleMap = {};
+    for (let i = 0; i < trans.translator.length; i++) {
+        let id = trans.translator[i];
+        try {
+            if (trans[id] != undefined) {
+                titleMap[trans[id].id] = trans[id].name;
+            }
+        }
+        catch (e) { }
+    }
+    return titleMap;
+}
+class RedPiggybackEngine extends RedTranslatorEngineWrapper {
     constructor(thisAddon) {
         super(thisAddon, {
             id: "redpiggyback",
@@ -1611,20 +1604,18 @@ class RedPiggybackEngine extends RedTranslatorEngineWrapper {
             description: "Uses Red Text Processor on one of the default translators. Why write many code when few code do trick?",
             batchDelay: 1,
             skipReferencePair: true,
+            maxRequestLength: Number.MAX_VALUE,
             lineDelimiter: "<br>",
             mode: "rowByRow",
-            maxParallelJob: 5,
-            threads: 1,
             carryId: 'transredsugoi',
         }, {
             "carryId": {
                 "type": "string",
-                "title": "Code Escaping Algorithm",
-                "description": "Escaping algorithm used for the Custom Escaper Patterns. For Sugoi Translator, it is recommended to use Poleposition Placeholder, which replaces symbols with a hashtag followed by a short number. MV Style and Wolf Style also appear to be somewhat consistent (MV more than Wolf style). No particular reason, they just seems to break the least.",
+                "title": "Translator to Use",
+                "description": "Sets which translator will be used by Piggyback.",
                 "default": "redsugoi",
                 "required": false,
-                // @ts-ignore shhh it's fine don't worry bb
-                "enum": [...trans.translator].sort()
+                "enum": getCarryTitleMap(true)
             },
             "escapeAlgorithm": {
                 "type": "string",
@@ -1638,13 +1629,112 @@ class RedPiggybackEngine extends RedTranslatorEngineWrapper {
         }, [
             {
                 "key": "carryId",
-                "titleMap": escapingTitleMap,
+                "titleMap": getCarryTitleMap(false),
                 "onChange": (evt) => {
                     var value = $(evt.target).val();
                     this.translatorEngine.update("carryId", value);
                 }
             },
         ]);
+        this.lastRequest = 0;
+        this.delayed = [];
+    }
+    delay(callback, engineDelay) {
+        let now = (new Date()).getTime();
+        let timeDelta = now - this.lastRequest;
+        if (timeDelta >= engineDelay) {
+            this.lastRequest = now;
+            callback();
+        }
+        else {
+            this.delayed.push(callback);
+            setTimeout(() => {
+                let cb = this.delayed.shift();
+                if (cb != undefined) {
+                    this.lastRequest = (new Date()).getTime();
+                    cb();
+                }
+            }, engineDelay - timeDelta);
+        }
+    }
+    abort() {
+        this.allowTranslation = false;
+        this.waiting = [];
+        this.paused = false;
+        this.delayed = [];
+    }
+    doTranslate(toTranslate, options) {
+        let batchAction = document.createTextNode("Starting up");
+        let progressCurrent = document.createTextNode("0");
+        let progressTotal = document.createTextNode("/" + toTranslate.length.toString());
+        this.print(document.createTextNode("[RedPiggyBackEngine] Current Batch: "), progressCurrent, progressTotal, document.createTextNode(" - Current Action: "), batchAction);
+        return new Promise((resolve, reject) => {
+            let targetTrans = trans[this.getEngine().carryId];
+            if (targetTrans == undefined) {
+                batchAction.nodeValue = "Ended - No valid translator";
+                this.error("The selected translator (" + this.getEngine().carryId + ") is invalid or unavailable.");
+                reject("The selected Translator Engine does not exist or is not available.");
+            }
+            else {
+                let newOptions = { ...options };
+                newOptions.onAfterLoading = (result) => {
+                    batchAction.nodeValue = "Receiving Translations...";
+                    if (result.translation.length != toSend.length) {
+                        batchAction.nodeValue = "Ended - Translator returned invalid response";
+                        this.error("[RedPiggybackEngine] Received invalid response. Sent " + toTranslate.length.toString() + " sentences and got " + result.translation.length + " back. Skipping.");
+                        reject("Mismatched translations.");
+                    }
+                    else {
+                        for (let i = 0; i < result.translation; i++) {
+                            let idx = i + translating++;
+                            translations[idx] = result.translation[i];
+                            if (this.isCaching()) {
+                                this.setCache(toTranslate[idx], translations[idx]);
+                            }
+                        }
+                        progressCurrent.nodeValue = translating.toString();
+                        if (translating >= toTranslate.length) {
+                            batchAction.nodeValue = "Ended - Batch done";
+                            resolve(translations);
+                        }
+                        else {
+                            batchAction.nodeValue = "Awaiting internal delay...";
+                            this.delay(doAction, targetTrans.batchDelay);
+                        }
+                    }
+                };
+                newOptions.onError = (reason) => {
+                    this.error("[RedPiggybackEngine] " + reason);
+                    reject(reason);
+                };
+                let sending = 0;
+                let translating = 0;
+                let translations = new Array(toTranslate.length);
+                let toSend = [];
+                let maxLength = targetTrans.maxRequestLength;
+                let doAction = () => {
+                    let sentLength = 0;
+                    toSend = [];
+                    while (sending < toTranslate.length &&
+                        (sentLength + toTranslate[sending].length < maxLength || sentLength == 0)) {
+                        sentLength += toTranslate[sending].length;
+                        toSend.push(toTranslate[sending++]);
+                    }
+                    if (toSend.length > 0) {
+                        targetTrans.translate(toSend, newOptions);
+                    }
+                    else {
+                        resolve(translations);
+                    }
+                };
+                this.delay(doAction, targetTrans.batchDelay);
+            }
+        });
+    }
+    resetForm() {
+        this.getEngine().optionsForm.schema.carryId.enum = getCarryTitleMap(true);
+        this.getEngine().optionsForm.sechema.carryId.enum = getCarryTitleMap(true);
+        this.getEngine().optionsForm.form.carryId.enum = getCarryTitleMap(false);
     }
 }
 /// <reference path="classes/RedSugoiEngine.ts" />
@@ -1654,15 +1744,21 @@ var thisAddon = this;
 let wrappers = [
     new RedSugoiEngine(thisAddon),
     new RedGoogleEngine(thisAddon),
-    //new RedPiggybackEngine(thisAddon), // We're not ready for this.
 ];
+let piggy = new RedPiggybackEngine(thisAddon);
 wrappers.forEach(wrapper => {
     trans[wrapper.getEngine().id] = wrapper.getEngine();
 });
+//trans[piggy.getEngine().id] = piggy.getEngine();
 $(document).ready(() => {
     wrappers.forEach(wrapper => {
         wrapper.getEngine().init();
     });
+    /* piggy.getEngine().init();
+
+    setTimeout(() => {
+        piggy.resetForm();
+    }, 500); */
 });
 class RedStringRowHandler {
     constructor(row, wrapper) {
