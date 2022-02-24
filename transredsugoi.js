@@ -576,7 +576,6 @@ class RedTranslatorEngineWrapper {
             author: thisAddon.package.author.name,
             version: thisAddon.package.version,
             ...extraOptions,
-            escapeAlgorithm: RedPlaceholderType.poleposition,
             splitEnds: true,
             useCache: true,
             usePersistentCache: true,
@@ -1315,6 +1314,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             maxRequestLength: Number.MAX_VALUE,
             maxParallelJob: 5,
             threads: 1,
+            escapeAlgorithm: RedPlaceholderType.poleposition,
         }, {
             "targetUrl": {
                 "type": "string",
@@ -1432,12 +1432,13 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
             skipReferencePair: true,
             lineDelimiter: "<br>",
             mode: "rowByRow",
+            escapeAlgorithm: RedPlaceholderType.privateUse,
         }, {
             "escapeAlgorithm": {
                 "type": "string",
                 "title": "Code Escaping Algorithm",
                 "description": "Escaping algorithm used for the Custom Escaper Patterns. For Google, it is recommended to use Tag placeholder, as Google tries to not break tags.",
-                "default": RedPlaceholderType.tagPlaceholder,
+                "default": RedPlaceholderType.privateUse,
                 "required": false,
                 // @ts-ignore shhh it's fine don't worry bb
                 "enum": RedPlaceholderTypeArray
