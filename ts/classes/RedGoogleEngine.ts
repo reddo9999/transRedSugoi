@@ -179,6 +179,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 skipReferencePair:true,
                 lineDelimiter: "<br>",
                 mode: "rowByRow",
+                escapeAlgorithm : RedPlaceholderType.privateUse,
             }
             ,
             {
@@ -186,7 +187,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                     "type": "string",
                     "title": "Code Escaping Algorithm",
                     "description": "Escaping algorithm used for the Custom Escaper Patterns. For Google, it is recommended to use Tag placeholder, as Google tries to not break tags.",
-                    "default": RedPlaceholderType.tagPlaceholder,
+                    "default": RedPlaceholderType.privateUse,
                     "required":false,
                     // @ts-ignore shhh it's fine don't worry bb
                     "enum": RedPlaceholderTypeArray

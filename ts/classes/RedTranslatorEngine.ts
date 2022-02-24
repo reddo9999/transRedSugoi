@@ -428,7 +428,6 @@ abstract class RedTranslatorEngineWrapper {
             author:thisAddon.package.author.name,
             version:thisAddon.package.version,
             ...extraOptions,
-            escapeAlgorithm : RedPlaceholderType.poleposition,
             splitEnds : true,
             useCache : true,
             usePersistentCache : true,

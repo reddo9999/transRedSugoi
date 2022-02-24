@@ -216,6 +216,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 maxRequestLength : Number.MAX_VALUE,
                 maxParallelJob : 5,
                 threads : 1,
+                escapeAlgorithm : RedPlaceholderType.poleposition,
             }
             ,
             {
