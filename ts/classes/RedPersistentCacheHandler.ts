@@ -28,14 +28,14 @@ class RedPersistentCacheHandler {
         return this.cache[key];
     }
 
-    public getFilename () : string {
-        return `${__dirname}/data/RedCache${this.transId}.json`;
+    public getFilename (bak? : boolean) : string {
+        return `${__dirname}/data/RedCache${this.transId}.json${bak === true? ".bak" : ""}`;
     }
 
-    public loadCache () {
-        if (this.fs.existsSync(this.getFilename())) {
+    public loadCache (bak? : boolean) {
+        if (this.fs.existsSync(this.getFilename(bak === true))) {
             try {
-                let rawdata = this.fs.readFileSync(this.getFilename());
+                let rawdata = this.fs.readFileSync(this.getFilename(bak === true));
                 this.cache = JSON.parse(rawdata);
                 if (typeof this.cache != "object") {
                     this.cache = {};
@@ -44,9 +44,17 @@ class RedPersistentCacheHandler {
             } catch (e) {
                 this.cache = {};
                 console.error("[RedPersistentCacheHandler] Load error for cache " + this.transId + ". Resetting.", e);
+                if (bak !== true) {
+                    console.warn("[RedPersistentCacheHandler] Attempting to load backup cache for " + this.transId + ".");
+                    this.loadCache(true);
+                }
             }
         } else {
             console.warn("[RedPersistentCacheHandler] No cache found for " + this.transId + ".");
+            if (bak !== true) {
+                console.warn("[RedPersistentCacheHandler] Attempting to load backup cache for " + this.transId + ".");
+                this.loadCache(true);
+            }
         }
     }
 
@@ -68,6 +76,11 @@ class RedPersistentCacheHandler {
         
         try {
             let write = () => {
+                try {
+                    this.fs.renameSync(this.getFilename(), this.getFilename(true));
+                } catch (e) {
+                    console.warn("[RedPersistentCacheHandler] Could not create backup. Is the file not there?", e);
+                }
                 this.fs.writeFile(
                     this.getFilename(),
                     JSON.stringify(this.cache, null, 4),
