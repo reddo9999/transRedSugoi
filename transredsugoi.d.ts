@@ -122,8 +122,8 @@ declare class RedPersistentCacheHandler {
     resetCache(): void;
     hasCache(key: string): boolean;
     getCache(key: string): string;
-    getFilename(): string;
-    loadCache(): void;
+    getFilename(bak?: boolean): string;
+    loadCache(bak?: boolean): void;
     saveCache(): void;
     getSize(cache: string): number;
 }
