@@ -393,46 +393,32 @@ class RedStringEscaper {
         return text;
     }
     static getActiveFormulas() {
-        sys.config.escaperPatterns = sys.config.escaperPatterns || [];
         // Is our cache valid?
-        if (RedStringEscaper.cachedFormulaString == JSON.stringify(sys.config.escaperPatterns)) {
+        if (RedStringEscaper.cachedFormulaString == sys.config.escaperString) {
             return RedStringEscaper.cachedFormulas;
         }
         // Update cache
+        let escaperPatterns;
+        try {
+            escaperPatterns = eval("[" + sys.config.escaperString + "]");
+        }
+        catch (e) {
+            console.error("Unable to parse escaper patterns!", e);
+            escaperPatterns = [];
+        }
         let formulas = [];
-        for (var i in sys.config.escaperPatterns) {
-            //console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
-            if (typeof sys.config.escaperPatterns[i] !== "object")
-                continue;
-            if (!sys.config.escaperPatterns[i].value)
-                continue;
+        for (let i = 0; i < escaperPatterns.length; i++) {
             try {
-                var newReg;
-                //console.log(sys.config.escaperPatterns[i].value);
-                if (common.isRegExp(sys.config.escaperPatterns[i].value)) {
-                    //console.log("is regex");
-                    newReg = common.evalRegExpStr(sys.config.escaperPatterns[i].value);
-                }
-                else if (common.isStringFunction(sys.config.escaperPatterns[i].value)) {
-                    //console.log("pattern ", i, "is function");
-                    newReg = RedStringEscaper.renderFunction(sys.config.escaperPatterns[i].value);
-                }
-                else {
-                    //console.log("Is string");
-                    newReg = JSON.parse(sys.config.escaperPatterns[i].value);
-                }
-                if (newReg != undefined) {
-                    formulas.push(newReg);
+                if (typeof escaperPatterns[i] == "function" || escaperPatterns[i] instanceof RegExp) {
+                    formulas.push(escaperPatterns[i]);
                 }
             }
             catch (e) {
-                console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", sys.config.escaperPatterns[i], e);
+                console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", escaperPatterns[i], e);
             }
         }
-        // Since sugoi only translates japanese, might as well remove anything else
-        //formulas.push(/(^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf])/g);
-        RedStringEscaper.cachedFormulaString = JSON.stringify(sys.config.escaperPatterns);
         RedStringEscaper.cachedFormulas = formulas;
+        RedStringEscaper.cachedFormulaString = sys.config.escaperString;
         return formulas;
     }
     static renderFunction(string) {
