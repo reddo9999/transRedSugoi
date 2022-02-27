@@ -138,7 +138,7 @@ declare const defaultLineEnd = "([\\]\\)}\u3015\u3017\u3019\u301B\u301E\u201D\uF
 declare const defaultParagraphBreak = "( *\u3000*\\r?\\n(?:\\r?\\n)+ *\u3000*)";
 declare const openers = "\u3014\u3016\u3018\u301A\u301D\uFF62\u3008\u300A\u300C\u300E\u3010\uFF08\uFF3B\\[\\({\uFF1C<\uFF5B\uFF5F\"'";
 declare const closers = "\\]\\)}\u3015\u3017\u3019\u301B\u301E\u201D\uFF63\u3009\u300B\u300D\u300F\u3011\uFF09\uFF3D\uFF1E>\uFF5D\uFF60\u301F\u27E9\"'";
-declare const mvScript = "\\\\*[A-Z]+[\\[{<][^\\]}>]";
+declare const mvScript = "\\\\*[A-Z]+";
 declare const defaultIsolateRegexp: string;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
