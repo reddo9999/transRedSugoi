@@ -18,6 +18,8 @@ var RedPlaceholderType;
     RedPlaceholderType["wolfStyle"] = "wolfStyle";
     RedPlaceholderType["percentage"] = "percentage";
     RedPlaceholderType["mvStyleLetter"] = "mvStyleLetter";
+    RedPlaceholderType["sugoiTranslatorSpecial"] = "sugoiTranslatorSpecial";
+    RedPlaceholderType["sugoiTranslatorSpecial2"] = "sugoiTranslatorSpecial2";
 })(RedPlaceholderType || (RedPlaceholderType = {}));
 // I wonder if we could initiate this through calling the above...
 // I'd rather not have to change both
@@ -42,6 +44,8 @@ var RedPlaceholderTypeNames;
     RedPlaceholderTypeNames["mvStyleLetter"] = "MV Message but with Letters (e.g. %A, %B, %C)";
     RedPlaceholderTypeNames["wolfStyle"] = "Wolf Message (e.g. @1, @2, @3)";
     RedPlaceholderTypeNames["percentage"] = "Actual Percentage (e.g. 1%, 2%)";
+    RedPlaceholderTypeNames["sugoiTranslatorSpecial"] = "ivdos' Special (e.g. @#1, @#2)";
+    RedPlaceholderTypeNames["sugoiTranslatorSpecial2"] = "ivdos' Special with Letters (e.g. @#A, @#B)";
 })(RedPlaceholderTypeNames || (RedPlaceholderTypeNames = {}));
 let RedPlaceholderTypeArray = [
     RedPlaceholderType.poleposition,
@@ -61,6 +65,8 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.mvStyleLetter,
     RedPlaceholderType.wolfStyle,
     RedPlaceholderType.percentage,
+    RedPlaceholderType.sugoiTranslatorSpecial,
+    RedPlaceholderType.sugoiTranslatorSpecial2,
 ];
 let regExpObj = {};
 regExpObj[RedPlaceholderType.poleposition] = /((?: *　*#[0-9]+ *　*){2,})/g;
@@ -79,6 +85,8 @@ regExpObj[RedPlaceholderType.privateUse] = /((?: *　*[\uF000-\uFFFF] *　*){2,}
 regExpObj[RedPlaceholderType.hashtag] = /((?: *　*#[A-Z] *　*){2,})/gi;
 regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*){2,})/gi;
 regExpObj[RedPlaceholderType.mvStyleLetter] = /((?: *　*%[A-Z] *　*){2,})/gi;
+regExpObj[RedPlaceholderType.sugoiTranslatorSpecial] = /((?: *　*@#[0-9]+ *　*){2,})/gi;
+regExpObj[RedPlaceholderType.sugoiTranslatorSpecial2] = /((?: *　*@#[A-Z]+ *　*){2,})/gi;
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
     constructor(text, options) {
@@ -120,66 +128,6 @@ class RedStringEscaper {
             });
         }
         this.escape();
-    }
-    isExtracted() {
-        return this.wasExtracted;
-    }
-    getExtractedStrings() {
-        return this.extractedStrings;
-    }
-    break() {
-        this.broken = true;
-    }
-    getTag() {
-        return `<${this.symbolAffix++}${this.currentSymbol++}>`;
-    }
-    getClosedTag() {
-        return `<${this.symbolAffix++}${this.currentSymbol++}/>`;
-    }
-    getFullTag() {
-        let contents = `${this.symbolAffix++}${this.currentSymbol++}`;
-        return `<${contents}></${contents}>`;
-    }
-    getPolePosition() {
-        return `#${this.symbolAffix++}${this.currentSymbol++}`;
-    }
-    getMvStyle() {
-        return `%${this.symbolAffix++}`;
-    }
-    getMvStyleLetter() {
-        return `%${String.fromCharCode(this.curlyCount++)}`;
-    }
-    getWolfStyle() {
-        return `@${this.symbolAffix++}`;
-    }
-    getHexPlaceholder() {
-        return "0x" + (this.hexCounter++).toString(16);
-    }
-    getCurly() {
-        return "{" + String.fromCharCode(this.curlyCount++) + "}";
-    }
-    getDoubleCurly() {
-        return "{{" + String.fromCharCode(this.curlyCount++) + "}}";
-    }
-    getClosedNines() {
-        return "9" +
-            Array.from({ length: this.closedNinesLength }, () => Math.floor(Math.random() * 10).toString()).join("")
-            + "9";
-    }
-    getPrivateArea() {
-        return String.fromCodePoint(this.privateCounter++);
-    }
-    getHashtag() {
-        return `#${String.fromCharCode(this.hashtagOne++)}`;
-    }
-    getTripleHashtag() {
-        return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
-    }
-    getTournament() {
-        return `#${this.symbolAffix++}`;
-    }
-    getPercentage() {
-        return `${this.symbolAffix++}%`;
     }
     storeSymbol(text) {
         // Originally was using tags, hence the name. Then I tried parenthesis.
@@ -243,11 +191,83 @@ class RedStringEscaper {
                 case RedPlaceholderType.percentage:
                     tag = this.getPercentage();
                     break;
+                case RedPlaceholderType.sugoiTranslatorSpecial:
+                    tag = this.getSugoiSpecial();
+                    break;
+                case RedPlaceholderType.sugoiTranslatorSpecial2:
+                    tag = this.getSugoiSpecial2();
+                    break;
             }
             this.storedSymbols[tag.trim()] = text;
             this.reverseSymbols[text] = tag.trim();
             return tag;
         }
+    }
+    isExtracted() {
+        return this.wasExtracted;
+    }
+    getExtractedStrings() {
+        return this.extractedStrings;
+    }
+    break() {
+        this.broken = true;
+    }
+    getTag() {
+        return `<${this.symbolAffix++}${this.currentSymbol++}>`;
+    }
+    getClosedTag() {
+        return `<${this.symbolAffix++}${this.currentSymbol++}/>`;
+    }
+    getFullTag() {
+        let contents = `${this.symbolAffix++}${this.currentSymbol++}`;
+        return `<${contents}></${contents}>`;
+    }
+    getPolePosition() {
+        return `#${this.symbolAffix++}${this.currentSymbol++}`;
+    }
+    getMvStyle() {
+        return `%${this.symbolAffix++}`;
+    }
+    getMvStyleLetter() {
+        return `%${String.fromCharCode(this.curlyCount++)}`;
+    }
+    getWolfStyle() {
+        return `@${this.symbolAffix++}`;
+    }
+    getHexPlaceholder() {
+        return "0x" + (this.hexCounter++).toString(16);
+    }
+    getCurly() {
+        return "{" + String.fromCharCode(this.curlyCount++) + "}";
+    }
+    getDoubleCurly() {
+        return "{{" + String.fromCharCode(this.curlyCount++) + "}}";
+    }
+    getClosedNines() {
+        return "9" +
+            Array.from({ length: this.closedNinesLength }, () => Math.floor(Math.random() * 10).toString()).join("")
+            + "9";
+    }
+    getPrivateArea() {
+        return String.fromCodePoint(this.privateCounter++);
+    }
+    getHashtag() {
+        return `#${String.fromCharCode(this.hashtagOne++)}`;
+    }
+    getTripleHashtag() {
+        return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
+    }
+    getTournament() {
+        return `#${this.symbolAffix++}`;
+    }
+    getPercentage() {
+        return `${this.symbolAffix++}%`;
+    }
+    getSugoiSpecial() {
+        return `@#${this.symbolAffix++}`;
+    }
+    getSugoiSpecial2() {
+        return `@#${String.fromCharCode(this.hashtagOne++)}`;
     }
     getOriginalText() {
         return this.text;
@@ -269,6 +289,61 @@ class RedStringEscaper {
         //console.log(this.currentText, this.storedSymbols);
         // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
+        // Attempt to correct breaking of symbols
+        switch (this.type) {
+            case RedPlaceholderType.poleposition:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9]+)/gi, "");
+                break;
+            case RedPlaceholderType.tagPlaceholder:
+                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=>)/gi, "");
+                break;
+            case RedPlaceholderType.fullTagPlaceholder:
+                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=\/?>)/gi, "");
+                break;
+            case RedPlaceholderType.closedTagPlaceholder:
+                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=\/?>)/gi, "");
+                break;
+            case RedPlaceholderType.curlie:
+                this.currentText = this.currentText.replace(/(?<={) *(?=[0-9A-Z]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<={[0-9A-Z]+) *(?=})/gi, "");
+                break;
+            case RedPlaceholderType.doubleCurlie:
+                this.currentText = this.currentText.replace(/(?<={{) *(?=[0-9A-Z]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<={{[0-9A-Z]+) *(?=}})/gi, "");
+                break;
+            case RedPlaceholderType.hashtag:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.hashtagTriple:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.tournament:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9]+)/gi, "");
+                break;
+            case RedPlaceholderType.mvStyle:
+                this.currentText = this.currentText.replace(/(?<=%) *(?=[0-9]+)/gi, "");
+                break;
+            case RedPlaceholderType.mvStyleLetter:
+                this.currentText = this.currentText.replace(/(?<=%) *(?=[A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.wolfStyle:
+                this.currentText = this.currentText.replace(/(?<=@) *(?=[0-9A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.percentage:
+                this.currentText = this.currentText.replace(/(?<=[0-9A-Z]+) *(?=%)/gi, "");
+                break;
+            case RedPlaceholderType.sugoiTranslatorSpecial:
+                this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.sugoiTranslatorSpecial2:
+                this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
+                break;
+        }
         for (let i = 0; i < this.extractedStrings.length; i++) {
             this.storedSymbols[this.extractedKeys[i]] = this.extractedStrings[i].recoverSymbols();
         }
@@ -927,27 +1002,14 @@ class RedTranslatorEngineWrapper {
             let trimmed = brokenRow[0].trim();
             if (["'", '"'].indexOf(trimmed.charAt(0)) != -1 &&
                 trimmed.charAt(0) == trimmed.charAt(trimmed.length - 1)) {
-                // sure looks like one, but is it?
-                try {
-                    quoteType = trimmed.charAt(0);
-                    // RPG Maker has their own "escaped" symbols which are not valid in JSON
-                    trimmed = trimmed.replace(/\\(?=[^rn"'])/g, '\\\\');
-                    if (quoteType == "'") {
-                        // These are actually invalid, so... extra work for us.
-                        trimmed = trimmed.replace(/"/g, '\\"');
-                        trimmed = '"' + trimmed.substring(1, trimmed.length - 1) + '"';
-                        // It's okay, we'll go back to the original quoteType later.
-                    }
-                    let innerString = JSON.parse(trimmed);
-                    return {
-                        isScript: true,
-                        quoteType: quoteType,
-                        newLine: innerString
-                    };
-                }
-                catch (e) {
-                    console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", brokenRow[0], trimmed, e);
-                }
+                quoteType = trimmed.charAt(0);
+                trimmed = trimmed.substring(1, trimmed.length - 1);
+                let innerString = trimmed; // It's never valid JSON. never.
+                return {
+                    isScript: true,
+                    quoteType: quoteType,
+                    newLine: innerString
+                };
             }
         }
         return { isScript: false };
@@ -1829,12 +1891,9 @@ class RedStringRowHandler {
         }
         let result = lines.join("\n");
         if (this.isScript) {
-            result = JSON.stringify(result);
-            if (result.charAt(0) != this.quoteType) {
-                // escape the quotes
-                result = result.replaceAll(this.quoteType, `\\${this.quoteType}`);
-                result = this.quoteType + result.substring(1, result.length - 1) + this.quoteType;
-            }
+            result = result.replaceAll(this.quoteType, `\\${this.quoteType}`);
+            result = this.quoteType + result + this.quoteType;
+            // Parsing it always ruins it
         }
         return result;
     }

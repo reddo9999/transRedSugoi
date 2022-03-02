@@ -17,7 +17,9 @@ declare enum RedPlaceholderType {
     mvStyle = "mvStyle",
     wolfStyle = "wolfStyle",
     percentage = "percentage",
-    mvStyleLetter = "mvStyleLetter"
+    mvStyleLetter = "mvStyleLetter",
+    sugoiTranslatorSpecial = "sugoiTranslatorSpecial",
+    sugoiTranslatorSpecial2 = "sugoiTranslatorSpecial2"
 }
 declare enum RedPlaceholderTypeNames {
     poleposition = "Poleposition (e.g. #24)",
@@ -36,7 +38,9 @@ declare enum RedPlaceholderTypeNames {
     mvStyle = "MV Message (e.g. %1, %2, %3)",
     mvStyleLetter = "MV Message but with Letters (e.g. %A, %B, %C)",
     wolfStyle = "Wolf Message (e.g. @1, @2, @3)",
-    percentage = "Actual Percentage (e.g. 1%, 2%)"
+    percentage = "Actual Percentage (e.g. 1%, 2%)",
+    sugoiTranslatorSpecial = "ivdos' Special (e.g. @#1, @#2)",
+    sugoiTranslatorSpecial2 = "ivdos' Special with Letters (e.g. @#A, @#B)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
 declare let regExpObj: any;
@@ -67,6 +71,7 @@ declare class RedStringEscaper {
     private extractedStrings;
     private extractedKeys;
     private wasExtracted;
+    storeSymbol(text: string): string;
     constructor(text: string, options: {
         type?: RedPlaceholderType;
         splitEnds?: boolean;
@@ -95,7 +100,8 @@ declare class RedStringEscaper {
     getTripleHashtag(): string;
     getTournament(): string;
     getPercentage(): string;
-    storeSymbol(text: string): string;
+    getSugoiSpecial(): string;
+    getSugoiSpecial2(): string;
     getOriginalText(): string;
     getReplacedText(): string;
     setTranslatedText(text: string): void;
