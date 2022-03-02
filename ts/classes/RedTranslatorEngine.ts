@@ -177,27 +177,14 @@ abstract class RedTranslatorEngineWrapper {
             if (["'", '"'].indexOf(trimmed.charAt(0)) != -1 && 
                  trimmed.charAt(0) == trimmed.charAt(trimmed.length - 1)
                  ) {
-                // sure looks like one, but is it?
-                try {
-                    quoteType = trimmed.charAt(0);
+                quoteType = trimmed.charAt(0);
 
-                    // RPG Maker has their own "escaped" symbols which are not valid in JSON
-                    trimmed = trimmed.replace(/\\(?=[^rn"'])/g, '\\\\');
-
-                    if (quoteType == "'") {
-                        // These are actually invalid, so... extra work for us.
-                        trimmed = trimmed.replace(/"/g, '\\"');
-                        trimmed = '"' + trimmed.substring(1, trimmed.length - 1) + '"';
-                        // It's okay, we'll go back to the original quoteType later.
-                    }
-                    let innerString = JSON.parse(trimmed);
-                    return {
-                        isScript : true,
-                        quoteType : quoteType,
-                        newLine : innerString
-                    }
-                } catch (e) {
-                    console.warn("[REDSUGOI] I thought it was a script but it wasn't. Do check.", brokenRow[0], trimmed, e);
+                trimmed = trimmed.substring(1, trimmed.length - 1);
+                let innerString = trimmed; // It's never valid JSON. never.
+                return {
+                    isScript : true,
+                    quoteType : quoteType,
+                    newLine : innerString
                 }
             }
         }

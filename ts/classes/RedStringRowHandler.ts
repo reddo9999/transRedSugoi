@@ -61,12 +61,9 @@ class RedStringRowHandler {
         let result = lines.join("\n");
 
         if (this.isScript) {
-            result = JSON.stringify(result);
-            if (result.charAt(0) != this.quoteType) {
-                // escape the quotes
-                result = result.replaceAll(this.quoteType, `\\${this.quoteType}`);
-                result = this.quoteType + result.substring(1, result.length - 1) + this.quoteType;
-            }
+            result = result.replaceAll(this.quoteType, `\\${this.quoteType}`);
+            result = this.quoteType + result + this.quoteType;
+            // Parsing it always ruins it
         }
 
         return result;
