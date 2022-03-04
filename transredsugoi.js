@@ -663,9 +663,7 @@ const defaultIsolateRegexp = `(` +
     `)` +
     `[${openerRegExp}]([^${openerRegExp + closerRegExp}])+[${closerRegExp}]` +
     `)|(` +
-    `(?<=${rmColorRegExp})` +
-    `.+?` +
-    `(?=${rmColorRegExp})` +
+    `${rmColorRegExp}.+?${rmColorRegExp}` +
     `)`;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
