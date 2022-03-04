@@ -213,7 +213,7 @@ class RedStringEscaper {
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
 
-        if (options.isolateSymbols == true) {
+        if (options.isolateSymbols == true && this.type != RedPlaceholderType.noEscape) {
             options.isExtracted = true;
             this.currentText = this.currentText.replaceAll(new RegExp(<string> options.isolateRegExp, "gim"), (match) => {
                 let placeholder = this.storeSymbol(match);
