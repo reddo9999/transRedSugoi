@@ -27,9 +27,7 @@ const defaultIsolateRegexp =
     `)` +
     `[${openerRegExp}]([^${openerRegExp + closerRegExp}])+[${closerRegExp}]` +
 `)|(` +
-    `(?<=${rmColorRegExp})` +
-        `.+?` +
-    `(?=${rmColorRegExp})` +
+    `${rmColorRegExp}.+?${rmColorRegExp}` +
 `)`;
     
 
