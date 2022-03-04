@@ -215,12 +215,20 @@ class RedStringEscaper {
 
         if (options.isolateSymbols == true && this.type != RedPlaceholderType.noEscape) {
             options.isExtracted = true;
-            this.currentText = this.currentText.replaceAll(new RegExp(<string> options.isolateRegExp, "gim"), (match) => {
-                let placeholder = this.storeSymbol(match);
-                this.extractedKeys.push(placeholder);
-                this.extractedStrings.push(new RedStringEscaper(match, options));
-                return placeholder;
-            });
+            let found = true;
+            while (found) {
+                found = false;
+                this.currentText = this.currentText.replaceAll(new RegExp(<string> options.isolateRegExp, "gim"), (match) => {
+                    if (match == this.currentText) {
+                        return match;
+                    }
+                    found = true;
+                    let placeholder = this.storeSymbol(match);
+                    this.extractedKeys.push(placeholder);
+                    this.extractedStrings.push(new RedStringEscaper(match, options));
+                    return placeholder;
+                });
+            }
         }
 
         this.escape();
