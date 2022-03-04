@@ -219,7 +219,7 @@ class RedStringEscaper {
             while (found) {
                 found = false;
                 this.currentText = this.currentText.replaceAll(new RegExp(<string> options.isolateRegExp, "gim"), (match) => {
-                    if (match == this.currentText) {
+                    if (match == this.currentText || this.storedSymbols[match] != undefined) {
                         return match;
                     }
                     found = true;
