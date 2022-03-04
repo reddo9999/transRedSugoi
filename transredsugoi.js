@@ -118,14 +118,22 @@ class RedStringEscaper {
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
-        if (options.isolateSymbols == true) {
+        if (options.isolateSymbols == true && this.type != RedPlaceholderType.noEscape) {
             options.isExtracted = true;
-            this.currentText = this.currentText.replaceAll(new RegExp(options.isolateRegExp, "gim"), (match) => {
-                let placeholder = this.storeSymbol(match);
-                this.extractedKeys.push(placeholder);
-                this.extractedStrings.push(new RedStringEscaper(match, options));
-                return placeholder;
-            });
+            let found = true;
+            while (found) {
+                found = false;
+                this.currentText = this.currentText.replaceAll(new RegExp(options.isolateRegExp, "gim"), (match) => {
+                    if (match == this.currentText) {
+                        return match;
+                    }
+                    found = true;
+                    let placeholder = this.storeSymbol(match);
+                    this.extractedKeys.push(placeholder);
+                    this.extractedStrings.push(new RedStringEscaper(match, options));
+                    return placeholder;
+                });
+            }
         }
         this.escape();
     }
@@ -640,15 +648,25 @@ class RedPersistentCacheHandler {
 const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
 const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
-const openers = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
-const closers = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
-const mvScript = `\\\\*[A-Z]+`;
+const openerRegExp = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
+const closerRegExp = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
+const rmColorRegExp = `\\\\C\\[.+?\\]`;
+const mvScript = `\\\\*[V]+`;
 // RegExp:  not lookbehind: mvScript
-//          lookbehind: opener
+//          lookbehind: opener or rmColor
 //          match: anything that's not opener nor closer
-//          lookahead: closer
+//          lookahead: closer or rmColor
 // Result: look for anything that's not opener or closer that is inside opener or closer and not inside an MVScript
-const defaultIsolateRegexp = `(?<=(?<!(${mvScript}))[${openers}])([^${openers + closers}])+(?=[${closers}])`;
+const defaultIsolateRegexp = `(` +
+    `(?<!` +
+    `${mvScript}` +
+    `)` +
+    `[${openerRegExp}]([^${openerRegExp + closerRegExp}])+[${closerRegExp}]` +
+    `)|(` +
+    `(?<=${rmColorRegExp})` +
+    `.+?` +
+    `(?=${rmColorRegExp})` +
+    `)`;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
