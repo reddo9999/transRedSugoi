@@ -11,15 +11,27 @@ interface RedScriptCheckResponse {
 const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
 const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
-const openers = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
-const closers = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
-const mvScript = `\\\\*[A-Z]+`;
+const openerRegExp = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
+const closerRegExp = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
+const rmColorRegExp = `\\\\C\\[.+?\\]`;
+const mvScript = `\\\\*[V]+`;
 // RegExp:  not lookbehind: mvScript
-//          lookbehind: opener
+//          lookbehind: opener or rmColor
 //          match: anything that's not opener nor closer
-//          lookahead: closer
+//          lookahead: closer or rmColor
 // Result: look for anything that's not opener or closer that is inside opener or closer and not inside an MVScript
-const defaultIsolateRegexp = `(?<=(?<!(${mvScript}))[${openers}])([^${openers + closers}])+(?=[${closers}])`;
+const defaultIsolateRegexp = 
+`(`+ 
+    `(?<!` +
+        `${mvScript}` + 
+    `)` +
+    `[${openerRegExp}]([^${openerRegExp + closerRegExp}])+[${closerRegExp}]` +
+`)|(` +
+    `(?<=${rmColorRegExp})` +
+        `.+?` +
+    `(?=${rmColorRegExp})` +
+`)`;
+    
 
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
