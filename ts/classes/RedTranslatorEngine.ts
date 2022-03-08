@@ -440,44 +440,44 @@ abstract class RedTranslatorEngineWrapper {
                 "splitEnds": {
                     "type": "boolean",
                     "title": "Split Ends",
-                    "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced. If the symbols at the corners are not actually part of the text this will actually improve translation accuracy while also increasing speed. Recommended is ON.",
+                    "description": "Escaped symbols at the very corners of sentences will not be sent to the translator. This improves translation quality by a lot when these symbols have no meaning (e.g. escaped brackets, something outside the sentence). Recommended is ON for most messages, OFF for RPG Maker MV vocab.",
                     "default":true
                 },
                 "isolateSymbols": {
                     "type": "boolean",
                     "title": "Isolate Symbols",
-                    "description": "Detects and isolates symbols within strings so that they are translated separatedly. A symbol is any text inside brackets or quotes.",
+                    "description": "Escapes and isolates text contained inside brackets/quotes/etc. This is useful to maintain consistency of a recurring term. Recommended is ON, but do check if the RegExp escapes any variable calls your engine uses.",
                     "default":true
                 },
                 "useCache": {
                     "type": "boolean",
                     "title": "Use Cache",
-                    "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. The cache only lasts until you close Translator++. Recommended is ON.",
+                    "description": "Cache every translator response to memory so that the work doesn't get repeated. There are no downsides to this. Recommended is ON.",
                     "default":true
                 },
                 "usePersistentCache": {
                     "type": "boolean",
                     "title": "Use Persistent Cache",
-                    "description": "If this option is toggled, the cache will be saved to disk between translations. This can speed up future translations and/or help recover faster after a crash.",
+                    "description": "Saves the cache to disk between translations. There is no downside to this. Recommended is ON.",
                     "default":true
                 },
                 "persistentCacheMaxSize": {
                     "type": "number",
                     "title": "Persistent Cache Maximum Size",
-                    "description": "The maximum size of the translation cache, in Megabytes. Because these are basic text, a few megabytes should be able to hold a large amount of translations. Ideal size is as much memory as you're willing to give to cache / as much bytes as you expect your disk to handle in a timely manner. The cache is saved to disk after each translation batch.",
+                    "description": "The maximum size of the cache, both for in-memory and persistent, in Megabytes. A medium length game will take about 3MB. This can be as big as you'd like - just keep in mind disk/memory usage.",
                     "default":10,
                     "required":true
                 },
                 "detectStrings": {
                     "type": "boolean",
                     "title": "Literal String Detection",
-                    "description": "Attempts to detect literal strings and safeguards them so that they don't stop being strings after translation. Heavily recommended to be ON, particularly if translating scripts.",
+                    "description": "Attempts to detect and correct literal strings (text enclosed by quotes). Because most engines don't use valid JSON, this is very rudimentary and simply makes sure quotes are still where they should be and any inner quotes are properly escaped. Anything else is left for god to sort out.",
                     "default":true
                 },
                 "mergeSymbols": {
                    "type": "boolean",
                    "title": "Merge Escaped Symbols",
-                   "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
+                   "description": "If there are two sequential escaped symbols, they are escaped into a single symbol. There are no downsides to this. Recommended is ON.",
                    "default":true
                },
                ...extraSchema,
