@@ -371,6 +371,8 @@ abstract class RedTranslatorEngineWrapper {
                 this.log("[RedTranslatorEngine] Saving translation cache to file.");
                 this.cacheHandler.saveCache();
             }
+
+            options.always();
         });
     }
 
