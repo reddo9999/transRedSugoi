@@ -235,6 +235,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     "default":20,
                     "required":true
                 },
+                "maxRequestLength": {
+                    "type": "number",
+                    "title": "Batch Size",
+                    "description": "The length (in characters) of each batch when batch translating.",
+                    "default": 400 * 10,
+                    "required":true
+                },
                 "threads": {
                     "type": "number",
                     "title": "Threads",
@@ -306,6 +313,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     "onChange": (evt : Event) => {
                       var value = <string> $(<HTMLInputElement> evt.target).val();
                       this.translatorEngine.update("maxParallelJob", parseInt(value));
+                    }
+                },
+                {
+                    "key": "maxRequestLength",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("maxRequestLength", parseInt(value));
                     }
                 },
                 {
