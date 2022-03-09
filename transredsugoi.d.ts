@@ -266,6 +266,8 @@ declare class RedBatchTranslator {
         blacklist: Array<string>;
         whitelist: Array<string>;
         files: Array<string>;
+        strict: boolean;
+        saveOnEachBatch: boolean;
     }): void;
 }
 declare class RedStringRowHandler {

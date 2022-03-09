@@ -1188,6 +1188,7 @@ class RedTranslatorEngineWrapper {
     print(...elements) {
         let consoleWindow = $("#loadingOverlay .console")[0];
         let pre = document.createElement("pre");
+        pre.style.whiteSpace = "pre-wrap";
         elements.forEach(element => {
             pre.appendChild(element);
         });
@@ -1198,6 +1199,7 @@ class RedTranslatorEngineWrapper {
         let pre = document.createElement("pre");
         pre.style.color = "red";
         pre.style.fontWeight = "bold";
+        pre.style.whiteSpace = "pre-wrap";
         elements.forEach(element => {
             pre.appendChild(element);
         });
@@ -1406,9 +1408,9 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             skipReferencePair: true,
             lineDelimiter: "<br>",
             mode: "rowByRow",
-            maxRequestLength: Number.MAX_VALUE,
-            maxParallelJob: 5,
-            threads: 1,
+            maxRequestLength: 400 * 10,
+            maxParallelJob: 20,
+            threads: 10,
             escapeAlgorithm: RedPlaceholderType.poleposition,
         }, {
             "targetUrl": {
@@ -1421,15 +1423,22 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             "maxParallelJob": {
                 "type": "number",
                 "title": "Max Parallel job",
-                "description": "The amount of translations that are sent to the server per request. Sweet spot will vary with hardware. In general, the bigger the number, the faster it goes - provided you have enough RAM/VRAM. Lower numbers should be used with multiple servers for effective load balancing.",
-                "default": 5,
+                "description": "The higher this number is, the faster the translations will be, but the more RAM/VRAM will be required. The best number is the highest you can go without errors.",
+                "default": 20,
+                "required": true
+            },
+            "maxRequestLength": {
+                "type": "number",
+                "title": "Max Request Length",
+                "description": "The length (in characters) of each batch when batch translating.",
+                "default": 400 * 10,
                 "required": true
             },
             "threads": {
                 "type": "number",
                 "title": "Threads",
-                "description": "The amount of requests that are sent per server. This can be used to combat latency between Translator++ making a request and waiting on the answer, resulting in less idle time for the servers. This is a per-server setting, so if you have three servers and three threads, that's 3 requests per server for a total of 9 open requests.",
-                "default": 1,
+                "description": "The amount of simultaneous requests that are sent to the server. Increasing this number guarantees less idle time between batches. There appears to be no downside to having this number be very large - the server will not work on more than one request at a time, and memory consumption of text is tiny.",
+                "default": 10,
                 "required": true
             },
             "escapeAlgorithm": {
@@ -1498,6 +1507,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "onChange": (evt) => {
                     var value = $(evt.target).val();
                     this.translatorEngine.update("maxParallelJob", parseInt(value));
+                }
+            },
+            {
+                "key": "maxRequestLength",
+                "onChange": (evt) => {
+                    var value = $(evt.target).val();
+                    this.translatorEngine.update("maxRequestLength", parseInt(value));
                 }
             },
             {
@@ -1985,7 +2001,7 @@ class RedBatchTranslatorRow {
         let cells = trans.project.files[this.location[0]].data[this.location[1]];
         let dataLength = cells.length;
         for (let i = 1; i < dataLength; i++) {
-            if (cells[i] != "" && cells[i] != null && cells[i] != undefined) {
+            if (cells[i] != null && cells[i] != undefined && cells[i].trim() != "") {
                 return true;
             }
         }
@@ -1996,7 +2012,11 @@ class RedBatchTranslatorRow {
     }
     getTags() {
         // trans.project.files["data/Armors.json"].tags[i]
-        return trans.project.files[this.location[0]].tags[this.location[1]];
+        let tags = trans.project.files[this.location[0]].tags[this.location[1]];
+        if (tags == undefined) {
+            return [];
+        }
+        return tags;
     }
 }
 /// <reference path="RedBatchTranslator/RedBatchTranslatorButton.ts" />
@@ -2020,6 +2040,8 @@ class RedBatchTranslator {
             blacklist: ["red"],
             ignoreTranslated: true,
             whitelist: [],
+            strict: false,
+            saveOnEachBatch: true,
             files: files
         };
         this.translateProject(options);
@@ -2031,15 +2053,24 @@ class RedBatchTranslator {
         ui.showLoading();
         ui.loadingProgress(0, "Starting up...");
         ui.log(`[RedBatchTranslator] Beginning translation at ${new Date()}`);
+        let consoleWindow = $("#loadingOverlay .console")[0];
+        let pre = document.createElement("pre");
+        pre.style.whiteSpace = "pre-wrap";
+        pre.appendChild(document.createTextNode(JSON.stringify({
+            ...options,
+            files: options.files.join("; ")
+        }, undefined, 4)));
+        consoleWindow.appendChild(pre);
         let translatorEngine = trans[options.translator];
         let rows = [];
         ui.loadingProgress(0, "Finding translatable rows");
         // Iterate through rows and add them up
         for (let i = 0; i < options.files.length; i++) {
+            console.log(`[RedBatchTranslator] Working on ${options.files[i]}...`);
             let file = options.files[i];
             let data = trans.project.files[file].data;
-            for (let i = 0; i < data.length; i++) {
-                let row = new RedBatchTranslatorRow(file, i);
+            for (let k = 0; k < data.length; k++) {
+                let row = new RedBatchTranslatorRow(file, k);
                 // Repeating work?
                 if (options.ignoreTranslated && row.isTranslated()) {
                     continue;
@@ -2055,7 +2086,13 @@ class RedBatchTranslator {
                 else if (options.whitelist.length > 0) {
                     // Only if your name is on the list
                     let tags = row.getTags();
-                    if (tags != undefined) {
+                    if (tags.length == 0) {
+                        if (!options.strict) {
+                            // No tags, no strict, means we allow it through
+                            rows.push(row);
+                        }
+                    }
+                    else {
                         for (let t = 0; t < tags.length; t++) {
                             if (options.whitelist.indexOf(tags[t]) != -1) {
                                 rows.push(row);
@@ -2068,53 +2105,102 @@ class RedBatchTranslator {
                     // DISCRIMINATION ON
                     let tags = row.getTags();
                     let clear = true;
-                    if (tags != undefined) {
-                        for (let t = 0; t < tags.length; t++) {
-                            if (options.blacklist.indexOf(tags[t]) != -1) {
-                                clear = false;
-                                break;
-                            }
+                    for (let t = 0; t < tags.length; t++) {
+                        if (options.blacklist.indexOf(tags[t]) != -1) {
+                            clear = false;
+                            break;
                         }
                     }
-                    if (clear)
+                    if (clear) {
                         rows.push(row);
+                    }
                 }
             }
         }
         // rows = Array of rows that need translating
-        let toTranslate = [];
+        let batches = [];
+        let batchesRows = [];
+        let maxLength = translatorEngine.maxRequestLength;
+        let currentBatch = [];
+        let currentBatchRows = [];
+        let currentSize = 0;
+        let addToBatches = () => {
+            batches.push(currentBatch);
+            batchesRows.push(currentBatchRows);
+            currentBatchRows = [];
+            currentBatch = [];
+            currentSize = 0;
+        };
         for (let i = 0; i < rows.length; i++) {
-            toTranslate.push(rows[i].getValue());
-        }
-        /* options = options||{};
-        options.onAfterLoading = options.onAfterLoading||function() {};
-        options.onError = options.onError||function() {};
-        options.always = options.always||function() {}; */
-        ui.loadingProgress(0, "Translating");
-        translatorEngine.translate(toTranslate, {
-            onError: () => {
-                ui.error("[RedBatchTranslator] Failed to translate!");
-            },
-            onAfterLoading: (result) => {
-                ui.log(`[RedBatchTranslator] Finished translation at ${new Date()}`);
-                let batchStart = Date.now();
-                ui.log(`[RedBatchTranslator] Inserting into tables! `);
-                ui.loadingProgress(0, "Adding to tables...");
-                for (let i = 0; i < result.translation.length; i++) {
-                    rows[i].setValue(result.translation[i], options.destination);
-                }
-                ui.loadingProgress(100, "Finished!");
-                let batchEnd = Date.now();
-                ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart) / 1000) / 10} seconds.`);
-                ui.log(`[RedBatchTranslator] Finished.`);
-            },
-            always: () => {
-                ui.showCloseButton();
-            },
-            progress: (perc) => {
-                ui.loadingProgress(perc);
+            let text = rows[i].getValue();
+            if (currentSize > 0 && (currentSize + text.length) > maxLength) {
+                addToBatches();
             }
-        });
+            currentBatch.push(text);
+            currentBatchRows.push(rows[i]);
+            currentSize += text.length;
+        }
+        if (currentSize > 0) {
+            addToBatches();
+        }
+        let batchIndex = 0;
+        let batchStart = Date.now();
+        let translate = () => {
+            ui.loadingProgress(0, `Translating batch ${batchIndex + 1} of ${batches.length}`);
+            let myBatch = batchIndex++;
+            let always = () => {
+                let proceed = () => {
+                    if (batchIndex >= batches.length) {
+                        let batchEnd = Date.now();
+                        ui.log(`[RedBatchTranslator] Finished translation at ${new Date()}`);
+                        ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart) / 1000) / 10} seconds.`);
+                        ui.loadingProgress(100, "Finished!");
+                        ui.showCloseButton();
+                        setTimeout(() => {
+                            trans.refreshGrid();
+                            trans.evalTranslationProgress();
+                        }, 500);
+                    }
+                    else {
+                        try {
+                            translate();
+                        }
+                        catch (e) {
+                            ui.error(e.message);
+                            proceed();
+                        }
+                    }
+                };
+                if (options.saveOnEachBatch) {
+                    ui.log(`[RedBatchTranslator] Saving project...`);
+                    trans.save().finally(proceed);
+                }
+                else {
+                    proceed();
+                }
+            };
+            if (batches[myBatch] == undefined) {
+                always();
+            }
+            else {
+                translatorEngine.translate(batches[myBatch], {
+                    onError: () => {
+                        ui.error("[RedBatchTranslator] Failed to translate batch!");
+                    },
+                    onAfterLoading: (result) => {
+                        ui.log(`[RedBatchTranslator] Inserting into tables...`);
+                        for (let i = 0; i < result.translation.length; i++) {
+                            batchesRows[myBatch][i].setValue(result.translation[i], options.destination);
+                        }
+                    },
+                    always: always,
+                    progress: (perc) => {
+                        ui.loadingProgress(perc);
+                    }
+                });
+            }
+        };
+        translate();
     }
 }
 trans.RedBatchTranslatorInstance = new RedBatchTranslator();
