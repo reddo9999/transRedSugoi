@@ -214,9 +214,9 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 skipReferencePair:true,
                 lineDelimiter: "<br>",
                 mode: "rowByRow",
-                maxRequestLength : Number.MAX_VALUE,
-                maxParallelJob : 5,
-                threads : 1,
+                maxRequestLength : 400 * 10, // Assuming an average of 400 characters per second, we want batches to take no more than 10 seconds each
+                maxParallelJob : 20,
+                threads : 10,
                 escapeAlgorithm : RedPlaceholderType.poleposition,
             }
             ,
@@ -231,15 +231,15 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "maxParallelJob": {
                     "type": "number",
                     "title": "Max Parallel job",
-                    "description": "The amount of translations that are sent to the server per request. Sweet spot will vary with hardware. In general, the bigger the number, the faster it goes - provided you have enough RAM/VRAM. Lower numbers should be used with multiple servers for effective load balancing.",
-                    "default":5,
+                    "description": "The higher this number is, the faster the translations will be, but the more RAM/VRAM will be required. The best number is the highest you can go without errors.",
+                    "default":20,
                     "required":true
                 },
                 "threads": {
                     "type": "number",
                     "title": "Threads",
-                    "description": "The amount of requests that are sent per server. This can be used to combat latency between Translator++ making a request and waiting on the answer, resulting in less idle time for the servers. This is a per-server setting, so if you have three servers and three threads, that's 3 requests per server for a total of 9 open requests.",
-                    "default":1,
+                    "description": "The amount of simultaneous requests that are sent to the server. Increasing this number guarantees less idle time between batches. There appears to be no downside to having this number be very large - the server will not work on more than one request at a time, and memory consumption of text is tiny.",
+                    "default":10,
                     "required":true
                 },
                 "escapeAlgorithm": {
