@@ -1,7 +1,7 @@
 class RedPersistentCacheHandler {
     private fs = require("fs");
     private transId : string;
-    private cache : {[key : string] : string} = {};
+    private cache : {[key : string] : Array<string | number>} = {};
     private changed = false;
     private busy = false;
     private next : Function | undefined;
@@ -11,7 +11,7 @@ class RedPersistentCacheHandler {
     }
 
     public addCache (key : string, translation : string) {
-        this.cache[key] = translation;
+        this.cache[key] = [translation, 1];
         this.changed = true;
     }
 
@@ -24,8 +24,9 @@ class RedPersistentCacheHandler {
         return typeof this.cache[key] != "undefined";
     }
 
-    public getCache (key : string) {
-        return this.cache[key];
+    public getCache (key : string) : string {
+        (<number> this.cache[key][1]) += 1;
+        return <string> this.cache[key][0];
     }
 
     public getFilename (bak? : boolean) : string {
@@ -36,9 +37,17 @@ class RedPersistentCacheHandler {
         if (this.fs.existsSync(this.getFilename(bak === true))) {
             try {
                 let rawdata = this.fs.readFileSync(this.getFilename(bak === true));
-                this.cache = JSON.parse(rawdata);
-                if (typeof this.cache != "object") {
-                    this.cache = {};
+                this.cache = {};
+                let arr = JSON.parse(rawdata);
+                if (Array.isArray(arr)) {
+                    for (let i = 0; i < arr.length; i++) {
+                        this.cache[arr[i][0]] = [arr[i][1], arr[i][2]];
+                    }
+                } else if (typeof arr == "object") {
+                    // old version, code adapt
+                    for (let key in arr) {
+                        this.cache[key] = [arr[key], 1];
+                    }
                 }
                 this.changed = false;
             } catch (e) {
@@ -63,15 +72,21 @@ class RedPersistentCacheHandler {
             console.warn("[RedPersistentCacheHandler] Not saving cache as there have been no changes.");
             return;
         }
+        let arr : Array<any> = [];
         let maxSize = trans[this.transId].getOptions().persistentCacheMaxSize * 1024 * 1024;
-        let size = this.getSize(JSON.stringify(this.cache));
+        let size = 0;
         for (let key in this.cache) {
-            if (size > maxSize) {
-                size -= this.getSize(`"${key}":"${this.cache[key]}"`); // good enough of an approximation, we're not going to mars here
-                delete(this.cache[key]);
-            } else {
-                break;
-            }
+            arr.push([key, this.cache[key][0], this.cache[key][1]]);
+            size += this.getSize(`"${key}":["${this.cache[key][0]}", ${this.cache[key][1]}`);
+        }
+
+        arr.sort((a : Array<any>, b : Array<any>) => {
+            return b[2] - a[2];
+        });
+
+        while (size > maxSize && arr.length > 0) {
+            let pop = arr.pop()!;
+            size -= this.getSize(`"${pop[0]}":["${pop[1]}", ${pop[2]}`);
         }
         
         try {
@@ -83,7 +98,7 @@ class RedPersistentCacheHandler {
                 }
                 this.fs.writeFile(
                     this.getFilename(),
-                    JSON.stringify(this.cache, null, 4),
+                    JSON.stringify(arr, undefined, 4),
                     (err : Error | undefined) => {
                         this.busy = false;
                         if (err) {
