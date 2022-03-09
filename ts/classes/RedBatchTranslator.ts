@@ -124,27 +124,15 @@ class RedBatchTranslator {
                     ui.log(`[RedBatchTranslator] Finished translation at ${new Date()}`);
                     let batchStart = Date.now();
 
-                    let i = 0;
-                    let atOnce = 0;
-
-                    let process = () => {
-                        ui.log(`[RedBatchTranslator] Inserting into tables! ${i + 1}/${result.translation.length}`);
-                        for (; i < result.translation.length; i++) {
-                            rows[i].setValue(result.translation[i], options.destination);
-                            if (atOnce++ > 100) {
-                                setTimeout(process, 1);
-                                atOnce = 0;
-                                return;
-                            }
-                        }
-                        ui.log(`[RedBatchTranslator] Done!`);
-                    
-                        let batchEnd = Date.now();
-                        ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart)/1000)/10} seconds.`);
-                        ui.log(`[RedBatchTranslator] Finished.`);
-                    };
-
-                    process();
+                    ui.log(`[RedBatchTranslator] Inserting into tables! `);
+                    for (let i = 0; i < result.translation.length; i++) {
+                        rows[i].setValue(result.translation[i], options.destination);
+                    }
+                    ui.log(`[RedBatchTranslator] Done!`);
+                
+                    let batchEnd = Date.now();
+                    ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart)/1000)/10} seconds.`);
+                    ui.log(`[RedBatchTranslator] Finished.`);
                 },
                 always : () => {
                     ui.showCloseButton();
