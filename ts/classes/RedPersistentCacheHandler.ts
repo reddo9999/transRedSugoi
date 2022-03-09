@@ -99,7 +99,7 @@ class RedPersistentCacheHandler {
                 }
                 this.fs.writeFile(
                     this.getFilename(),
-                    JSON.stringify(arr, undefined, 4),
+                    JSON.stringify(arr, undefined, 1),
                     (err : Error | undefined) => {
                         this.busy = false;
                         if (err) {
