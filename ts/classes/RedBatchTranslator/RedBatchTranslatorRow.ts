@@ -13,7 +13,7 @@ class RedBatchTranslatorRow {
         let cells = trans.project.files[this.location[0]].data[this.location[1]];
         let dataLength = cells.length;
         for (let i = 1; i < dataLength; i++) {
-            if (cells[i] != "" && cells[i] != null && cells[i] != undefined) {
+            if (cells[i] != null && cells[i] != undefined && cells[i].trim() != "") {
                 return true;
             }
         }
@@ -26,6 +26,10 @@ class RedBatchTranslatorRow {
 
     public getTags () {
         // trans.project.files["data/Armors.json"].tags[i]
-        return trans.project.files[this.location[0]].tags[this.location[1]];
+        let tags = trans.project.files[this.location[0]].tags[this.location[1]];
+        if (tags == undefined) {
+            return [];
+        }
+        return tags;
     }
 }
