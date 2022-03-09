@@ -67,6 +67,7 @@ declare class TranslatorEngine {
     preProcessText (text : string, options : any);
     replacer (match, p1, p2, p3, offset, string) : string;
     replacerS (match, p1, p2, p3, offset, string) : string;
+    maxRequestLength : number;
 
     /**
      * Returns the string to it's original state line-break-wise
