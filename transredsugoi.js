@@ -1066,6 +1066,7 @@ class RedTranslatorEngineWrapper {
         options.onAfterLoading = options.onAfterLoading || function () { };
         options.onError = options.onError || function () { };
         options.always = options.always || function () { };
+        options.progress = options.progress || function (perc) { };
         if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
             ui.showBusyOverlay();
         }
@@ -1291,6 +1292,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             // A filthy hack for a filthy code
             progressNode.nodeValue = (translatedLines).toString();
             progressTotal.nodeValue = "/" + toTranslate.length.toString();
+            options.progress(Math.round(100 * translatedLines / toTranslate.length));
         };
         let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
         let threads = this.getEngine().getOptions().threads || 1;
@@ -2027,9 +2029,11 @@ class RedBatchTranslator {
     }
     translateProject(options) {
         ui.showLoading();
+        ui.loadingProgress(0, "Starting up...");
         ui.log(`[RedBatchTranslator] Beginning translation at ${new Date()}`);
         let translatorEngine = trans[options.translator];
         let rows = [];
+        ui.loadingProgress(0, "Finding translatable rows");
         // Iterate through rows and add them up
         for (let i = 0; i < options.files.length; i++) {
             let file = options.files[i];
@@ -2086,6 +2090,7 @@ class RedBatchTranslator {
         options.onAfterLoading = options.onAfterLoading||function() {};
         options.onError = options.onError||function() {};
         options.always = options.always||function() {}; */
+        ui.loadingProgress(0, "Translating");
         translatorEngine.translate(toTranslate, {
             onError: () => {
                 ui.error("[RedBatchTranslator] Failed to translate!");
@@ -2093,27 +2098,21 @@ class RedBatchTranslator {
             onAfterLoading: (result) => {
                 ui.log(`[RedBatchTranslator] Finished translation at ${new Date()}`);
                 let batchStart = Date.now();
-                let i = 0;
-                let atOnce = 0;
-                let process = () => {
-                    ui.log(`[RedBatchTranslator] Inserting into tables! ${i + 1}/${result.translation.length}`);
-                    for (; i < result.translation.length; i++) {
-                        rows[i].setValue(result.translation[i], options.destination);
-                        if (atOnce++ > 100) {
-                            setTimeout(process, 1);
-                            atOnce = 0;
-                            return;
-                        }
-                    }
-                    ui.log(`[RedBatchTranslator] Done!`);
-                    let batchEnd = Date.now();
-                    ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart) / 1000) / 10} seconds.`);
-                    ui.log(`[RedBatchTranslator] Finished.`);
-                };
-                process();
+                ui.log(`[RedBatchTranslator] Inserting into tables! `);
+                ui.loadingProgress(0, "Adding to tables...");
+                for (let i = 0; i < result.translation.length; i++) {
+                    rows[i].setValue(result.translation[i], options.destination);
+                }
+                ui.loadingProgress(100, "Finished!");
+                let batchEnd = Date.now();
+                ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart) / 1000) / 10} seconds.`);
+                ui.log(`[RedBatchTranslator] Finished.`);
             },
             always: () => {
                 ui.showCloseButton();
+            },
+            progress: (perc) => {
+                ui.loadingProgress(perc);
             }
         });
     }
