@@ -396,6 +396,7 @@ abstract class RedTranslatorEngineWrapper {
     public print (...elements : Array<Element | Text>) {
         let consoleWindow = $("#loadingOverlay .console")[0];
         let pre = document.createElement("pre");
+        pre.style.whiteSpace = "pre-wrap";
         elements.forEach(element => {
             pre.appendChild(element);
         });
@@ -407,6 +408,7 @@ abstract class RedTranslatorEngineWrapper {
         let pre = document.createElement("pre");
         pre.style.color = "red";
         pre.style.fontWeight = "bold";
+        pre.style.whiteSpace = "pre-wrap";
         elements.forEach(element => {
             pre.appendChild(element);
         });
