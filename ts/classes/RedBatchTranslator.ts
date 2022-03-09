@@ -167,11 +167,12 @@ class RedBatchTranslator {
                             trans.evalTranslationProgress();
                         }, 500);
                     } else {
-                        try {
+                        let batchDelay = translatorEngine.batchDelay;
+                        if (batchDelay == undefined || batchDelay <= 1) {
                             translate();
-                        } catch (e : any) {
-                            ui.error(e.message);
-                            proceed();
+                        } else {
+                            ui.log(`[RedBatchTranslator] Waiting ${batchDelay}ms.`);
+                            setTimeout(translate, batchDelay);
                         }
                     }
                 };
