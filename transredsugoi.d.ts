@@ -232,6 +232,42 @@ declare var thisAddon: any;
 declare let wrappers: (RedSugoiEngine | RedGoogleEngine)[];
 declare let piggy: RedPiggybackEngine;
 declare var trans: any;
+declare class RedBatchTranslatorButton {
+    private panel;
+    private button;
+    private parent;
+    constructor(parent: RedBatchTranslator);
+}
+declare class RedBatchTranslatorWindow {
+    private parent;
+    private container;
+    constructor(parent: RedBatchTranslator);
+    open(): void;
+    close(): void;
+}
+declare class RedBatchTranslatorRow {
+    private location;
+    constructor(file: string, index: number);
+    getValue(): any;
+    isTranslated(): boolean;
+    setValue(text: string, destination: number): void;
+    getTags(): any;
+}
+declare class RedBatchTranslator {
+    private button;
+    private window;
+    constructor();
+    open(): void;
+    close(): void;
+    translateProject(options: {
+        translator: string;
+        destination: number;
+        ignoreTranslated: boolean;
+        blacklist: Array<string>;
+        whitelist: Array<string>;
+        files: Array<string>;
+    }): void;
+}
 declare class RedStringRowHandler {
     private originalRow;
     private curatedLines;

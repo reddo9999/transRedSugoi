@@ -696,44 +696,44 @@ class RedTranslatorEngineWrapper {
                     "splitEnds": {
                         "type": "boolean",
                         "title": "Split Ends",
-                        "description": "For added compatibility, symbols that begin or end sentences will not be sent to the translator. This deprives the translator from contextual information, but guarantees the symbol will not be lost nor misplaced. If the symbols at the corners are not actually part of the text this will actually improve translation accuracy while also increasing speed. Recommended is ON.",
+                        "description": "Escaped symbols at the very corners of sentences will not be sent to the translator. This improves translation quality by a lot when these symbols have no meaning (e.g. escaped brackets, something outside the sentence). Recommended is ON for most messages, OFF for RPG Maker MV vocab.",
                         "default": true
                     },
                     "isolateSymbols": {
                         "type": "boolean",
                         "title": "Isolate Symbols",
-                        "description": "Detects and isolates symbols within strings so that they are translated separatedly. A symbol is any text inside brackets or quotes.",
+                        "description": "Escapes and isolates text contained inside brackets/quotes/etc. This is useful to maintain consistency of a recurring term. Recommended is ON, but do check if the RegExp escapes any variable calls your engine uses.",
                         "default": true
                     },
                     "useCache": {
                         "type": "boolean",
                         "title": "Use Cache",
-                        "description": "To improve speed, every translation sent to Sugoi Translator will be stored in case the same sentence appears again. Depending on the game, this can range from 0% gains to over 50%. There are no downsides, but in case you want to test the translator itself this is left as an option. The cache only lasts until you close Translator++. Recommended is ON.",
+                        "description": "Cache every translator response to memory so that the work doesn't get repeated. There are no downsides to this. Recommended is ON.",
                         "default": true
                     },
                     "usePersistentCache": {
                         "type": "boolean",
                         "title": "Use Persistent Cache",
-                        "description": "If this option is toggled, the cache will be saved to disk between translations. This can speed up future translations and/or help recover faster after a crash.",
+                        "description": "Saves the cache to disk between translations. There is no downside to this. Recommended is ON.",
                         "default": true
                     },
                     "persistentCacheMaxSize": {
                         "type": "number",
                         "title": "Persistent Cache Maximum Size",
-                        "description": "The maximum size of the translation cache, in Megabytes. Because these are basic text, a few megabytes should be able to hold a large amount of translations. Ideal size is as much memory as you're willing to give to cache / as much bytes as you expect your disk to handle in a timely manner. The cache is saved to disk after each translation batch.",
+                        "description": "The maximum size of the cache, both for in-memory and persistent, in Megabytes. A medium length game will take about 3MB. This can be as big as you'd like - just keep in mind disk/memory usage.",
                         "default": 10,
                         "required": true
                     },
                     "detectStrings": {
                         "type": "boolean",
                         "title": "Literal String Detection",
-                        "description": "Attempts to detect literal strings and safeguards them so that they don't stop being strings after translation. Heavily recommended to be ON, particularly if translating scripts.",
+                        "description": "Attempts to detect and correct literal strings (text enclosed by quotes). Because most engines don't use valid JSON, this is very rudimentary and simply makes sure quotes are still where they should be and any inner quotes are properly escaped. Anything else is left for god to sort out.",
                         "default": true
                     },
                     "mergeSymbols": {
                         "type": "boolean",
                         "title": "Merge Escaped Symbols",
-                        "description": "Essentially escapes sequential escaped symbols so that instead of sending multiple of them and hoping the translator doesn't ruin them all, we just send one and still hope the translator doesn't ruin it all. There should never be issues with this being ON.",
+                        "description": "If there are two sequential escaped symbols, they are escaped into a single symbol. There are no downsides to this. Recommended is ON.",
                         "default": true
                     },
                     ...extraSchema,
@@ -1167,6 +1167,7 @@ class RedTranslatorEngineWrapper {
                 this.log("[RedTranslatorEngine] Saving translation cache to file.");
                 this.cacheHandler.saveCache();
             }
+            options.always();
         });
     }
     log(...texts) {
@@ -1853,6 +1854,271 @@ $(document).ready(() => {
         piggy.resetForm();
     }, 500); */
 });
+class RedBatchTranslatorButton {
+    constructor(parent) {
+        this.panel = document.getElementsByClassName("toolbar-content toolbar3")[0];
+        this.parent = parent;
+        // <button class="menu-button batch-translate" data-tranattr="title" title="Batch translation">
+        //  <img src="img/translate_all.png" alt="translate">
+        // </button>
+        this.button = document.createElement("button");
+        this.button.classList.add("menu-button", "batch-translate");
+        this.button.title = "Red Batch Translation";
+        this.button.style.filter = "hue-rotate(260deg)"; // Green to red
+        this.button.title = "Red Batch Translation";
+        let img = document.createElement("img");
+        img.src = "img/translate_all.png";
+        img.alt = "red batch translation";
+        this.button.appendChild(img);
+        this.panel.appendChild(this.button);
+        this.button.addEventListener("click", () => {
+            this.parent.open();
+        });
+    }
+}
+class RedBatchTranslatorWindow {
+    constructor(parent) {
+        this.container = document.createElement("div");
+        this.parent = parent;
+        this.container.classList.add("ui-widget-overlay", "ui-front");
+        this.container.style.opacity = "1";
+        this.container.style.backgroundColor = "rgba(170, 170, 170, .3)";
+        this.container.style.display = "flex";
+        this.container.style.justifyContent = "center";
+        this.container.style.alignItems = "center";
+        document.addEventListener("keydown", (ev) => {
+            if (this.container.parentNode == document.body && ev.key == "Escape") {
+                this.parent.close();
+            }
+        });
+        let innerWindow = document.createElement("div");
+        innerWindow.style.backgroundColor = "white";
+        innerWindow.style.width = "600px";
+        innerWindow.style.height = "500px";
+        innerWindow.style.fontSize = "1.2ex";
+        this.container.appendChild(innerWindow);
+        let header = document.createElement("div");
+        header.style.backgroundColor = "black";
+        header.style.color = "white";
+        header.style.lineHeight = "30px";
+        header.style.paddingLeft = "10px";
+        header.innerHTML = "<h1 style='margin:0px'>Red Batch Translation</h1>";
+        innerWindow.appendChild(header);
+        let contents = document.createElement("div");
+        contents.style.padding = "10px";
+        innerWindow.appendChild(contents);
+        contents.appendChild($("<h2 style='margin: 0px;'>Select Translator</h2>")[0]);
+        contents.appendChild($("<hr></hr>")[0]);
+        contents.appendChild($(`<select><option value="redsugoi">Red Sugoi Translator</option><option value="redgoogles">Red Google Translator</option></select>`)[0]);
+    }
+    open() {
+        document.body.appendChild(this.container);
+    }
+    close() {
+        document.body.removeChild(this.container);
+    }
+}
+/* <div id="dialogTranslateAll" data-tranatrr="title" class="dialog dialogTranslateAll ui-dialog-content ui-widget-content initialized" style="width: auto; min-height: 0px; max-height: none; height: 285px;">
+    <h2 data-tran="">Select Translator</h2>
+    <div class="translatorSelection"><select class="translatorSelector"><option value="deepl">DeepL</option><option value="sugoitrans">Sugoi Translator</option><option value="papago">Papago</option><option value="redsugoi">Red Sugoi Translator</option><option value="redgoogles">Red Google Translator</option><option value="atlas">Atlas</option><option value="babylon">Babylon</option><option value="baidu">Baidu</option><option value="bing">Bing</option><option value="excite">Excite</option><option value="google">Google</option><option value="googleCloud">Google Cloud</option><option value="kakao">Kakao</option><option value="pragma6">Pragma6</option><option value="redGoogle">Red Google</option><option value="yandexpro">yandex Pro</option></select></div>
+    <div class="flex col-2">
+        <div class="fieldmember sourceCol">
+            <h2 data-tran="">Source column</h2>
+            <label class="columnSelector"><select><option value="0">Original Text</option><option value="1">Initial</option><option value="2">Machine translation</option><option value="3">Better translation</option><option value="4">Best translation</option></select></label>
+            <div class="smallInfo" data-tran="">Which column is the source text to translate for?<br>(default is key column / leftmost column).</div>
+        </div>
+        <div class="fieldmember">
+            <h2 data-tran="">Target column</h2>
+            <label class="targetCol"><select><option value="1">Initial</option><option value="2">Machine translation</option><option value="3">Better translation</option><option value="4">Best translation</option></select></label>
+            <div class="smallInfo" data-tran="">Which column is the translated text put into.<br>(Can not same with source column)</div>
+        </div>
+
+    </div>
+
+    <div class="options fieldgroup">
+        <h2 data-tran="">Options</h2>
+        <div class="fieldmember">
+            <label><input type="checkbox" name="translateOther" class="checkbox translateOther" value="1"><span data-tran="">Also try to translate other object</span></label>
+            <div class="smallInfo" data-tran="">If this option is checked then Translator++ will also try to translate other objects that you did not select that doesn't require machine translation. This is the default behavior in Translator++ version 2.3.23 or lower.</div>
+        </div>
+        <div class="fieldmember">
+            <label><input type="checkbox" name="untranslatedOnly" class="checkbox untranslatedOnly" value="1" checked="checked"><span data-tran="">Ignore if already translated</span></label>
+            <div class="smallInfo" data-tran="">If this option is checked then Translator++ will ignore any row that already has translations on its column</div>
+        </div>
+        <div class="fieldmember">
+            <label><input type="checkbox" name="overwrite" class="checkbox overwrite" value="1" checked="checked"><span data-tran="">Overwrite cells</span></label>
+            <div class="smallInfo" data-tran="">Overwrite target cells. If not checked, the cells will not be touched when not empty.</div>
+        </div>
+        <div class="fieldmember">
+            <label><input type="checkbox" name="saveOnEachBatch" class="checkbox saveOnEachBatch" value="1"><span data-tran="">Save project on each batch.</span></label>
+            <div class="smallInfo" data-tran="">Save your project on each batch completion.<br>This option is to avoid data loss when the application crashes due to running heavy tasks from the local translator application. You probably don't need this if you're running cloud based translator.</div>
+        </div>
+        <div class="fieldmember">
+            <label><input type="checkbox" name="playSoundOnComplete" class="checkbox playSoundOnComplete" value="1" checked="checked"><span data-tran="">Play sound when completed.</span></label>
+        </div>
+    </div>
+
+    <div class="options fieldgroup">
+        <div class="fieldmember">
+            <h2 data-tran="">Tags</h2>
+            <div class="colorTagSelector"><div class="uiTags uiTagsWrapper rendered" data-mark="unknown"><input type="checkbox" value="red" class="colorTagSelector tagSelector red" title="red" name="tagSelector" style="background-color: rgb(255, 0, 0);"><input type="checkbox" value="yellow" class="colorTagSelector tagSelector yellow" title="yellow" name="tagSelector" style="background-color: rgb(255, 255, 0);"><input type="checkbox" value="green" class="colorTagSelector tagSelector green" title="green" name="tagSelector" style="background-color: rgb(0, 128, 0);"><input type="checkbox" value="blue" class="colorTagSelector tagSelector blue" title="blue" name="tagSelector" style="background-color: rgb(0, 0, 255);"><input type="checkbox" value="gold" class="colorTagSelector tagSelector gold" title="gold" name="tagSelector" style="background-color: rgb(212, 175, 55);"><input type="checkbox" value="purple" class="colorTagSelector tagSelector purple" title="purple" name="tagSelector" style="background-color: rgb(128, 0, 128);"><input type="checkbox" value="black" class="colorTagSelector tagSelector black" title="black" name="tagSelector" style="background-color: rgb(0, 0, 0);"><input type="checkbox" value="gray" class="colorTagSelector tagSelector gray" title="gray" name="tagSelector" style="background-color: rgb(128, 128, 128);"><input type="checkbox" value="white" class="colorTagSelector tagSelector white" title="white" name="tagSelector" style="background-color: rgb(255, 255, 255);"><input type="checkbox" value="silver" class="colorTagSelector tagSelector silver" title="silver" name="tagSelector" style="background-color: rgb(192, 192, 192);"><input type="checkbox" value="pink" class="colorTagSelector tagSelector pink" title="pink" name="tagSelector" style="background-color: rgb(255, 192, 203);"><input type="checkbox" value="indigo" class="colorTagSelector tagSelector indigo" title="indigo" name="tagSelector" style="background-color: rgb(75, 0, 130);"><input type="checkbox" value="aqua" class="colorTagSelector tagSelector aqua" title="aqua" name="tagSelector" style="background-color: rgb(0, 255, 255);"><input type="checkbox" value="tan" class="colorTagSelector tagSelector tan" title="tan" name="tagSelector" style="background-color: rgb(210, 180, 140);"><input type="checkbox" value="darkred" class="colorTagSelector tagSelector darkred" title="darkred" name="tagSelector" style="background-color: rgb(139, 0, 0);"><div class="actionSet">
+                <label class="flex"><input type="radio" name="exportTagAction" data-mark="cross" class="actionBlacklist" value="blacklist"> <span>Do not process row with selected tag (blacklist)</span></label>
+                <label class="flex"><input type="radio" name="exportTagAction" data-mark="check" class="actionWhitelist" value="whitelist"> <span>Only process row with selected tag (whitelist)</span></label>
+                <label class="flex"><input type="radio" name="exportTagAction" data-mark="unknown" class="actionNone" value=""> <span>Ignore tag</span></label>
+            </div><div class="fieldgroup">
+        <button class="loadLastSelection">Load last selection</button>
+        <button class="resetField">Reset</button>
+    </div></div></div>
+        </div>
+    </div>
+</div> */ 
+class RedBatchTranslatorRow {
+    constructor(file, index) {
+        this.location = [file, index];
+    }
+    getValue() {
+        return trans.project.files[this.location[0]].data[this.location[1]][0];
+    }
+    isTranslated() {
+        let cells = trans.project.files[this.location[0]].data[this.location[1]];
+        let dataLength = cells.length;
+        for (let i = 1; i < dataLength; i++) {
+            if (cells[i] != "" && cells[i] != null && cells[i] != undefined) {
+                return true;
+            }
+        }
+        return false;
+    }
+    setValue(text, destination) {
+        trans.project.files[this.location[0]].data[this.location[1]][destination] = text;
+    }
+    getTags() {
+        // trans.project.files["data/Armors.json"].tags[i]
+        return trans.project.files[this.location[0]].tags[this.location[1]];
+    }
+}
+/// <reference path="RedBatchTranslator/RedBatchTranslatorButton.ts" />
+/// <reference path="RedBatchTranslator/RedBatchTranslatorWindow.ts" />
+/// <reference path="RedBatchTranslator/RedBatchTranslatorRow.ts" />
+class RedBatchTranslator {
+    constructor() {
+        this.button = new RedBatchTranslatorButton(this);
+        this.window = new RedBatchTranslatorWindow(this);
+    }
+    open() {
+        // TODO: Make options window when I feel like it
+        //this.window.open();
+        let files = trans.getCheckedFiles();
+        if (files.length == 0) {
+            files = trans.getAllFiles();
+        }
+        let options = {
+            translator: "redsugoi",
+            destination: 1,
+            blacklist: ["red"],
+            ignoreTranslated: true,
+            whitelist: [],
+            files: files
+        };
+        this.translateProject(options);
+    }
+    close() {
+        this.window.close();
+    }
+    translateProject(options) {
+        ui.showLoading();
+        ui.log(`[RedBatchTranslator] Beginning translation at ${new Date()}`);
+        let translatorEngine = trans[options.translator];
+        let rows = [];
+        // Iterate through rows and add them up
+        for (let i = 0; i < options.files.length; i++) {
+            let file = options.files[i];
+            let data = trans.project.files[file].data;
+            for (let i = 0; i < data.length; i++) {
+                let row = new RedBatchTranslatorRow(file, i);
+                // Repeating work?
+                if (options.ignoreTranslated && row.isTranslated()) {
+                    continue;
+                }
+                // Empty row?
+                if (row.getValue() == undefined || row.getValue() == null || row.getValue().trim() == "") {
+                    continue;
+                }
+                if (options.blacklist.length == 0 && options.whitelist.length == 0) {
+                    // Everyone is allowed
+                    rows.push(row);
+                }
+                else if (options.whitelist.length > 0) {
+                    // Only if your name is on the list
+                    let tags = row.getTags();
+                    if (tags != undefined) {
+                        for (let t = 0; t < tags.length; t++) {
+                            if (options.whitelist.indexOf(tags[t]) != -1) {
+                                rows.push(row);
+                                break;
+                            }
+                        }
+                    }
+                }
+                else {
+                    // DISCRIMINATION ON
+                    let tags = row.getTags();
+                    let clear = true;
+                    if (tags != undefined) {
+                        for (let t = 0; t < tags.length; t++) {
+                            if (options.blacklist.indexOf(tags[t]) != -1) {
+                                clear = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (clear)
+                        rows.push(row);
+                }
+            }
+        }
+        // rows = Array of rows that need translating
+        let toTranslate = [];
+        for (let i = 0; i < rows.length; i++) {
+            toTranslate.push(rows[i].getValue());
+        }
+        /* options = options||{};
+        options.onAfterLoading = options.onAfterLoading||function() {};
+        options.onError = options.onError||function() {};
+        options.always = options.always||function() {}; */
+        translatorEngine.translate(toTranslate, {
+            onError: () => {
+                ui.error("[RedBatchTranslator] Failed to translate!");
+            },
+            onAfterLoading: (result) => {
+                ui.log(`[RedBatchTranslator] Finished translation at ${new Date()}`);
+                let batchStart = Date.now();
+                let i = 0;
+                let atOnce = 0;
+                let process = () => {
+                    ui.log(`[RedBatchTranslator] Inserting into tables! ${i + 1}/${result.translation.length}`);
+                    for (; i < result.translation.length; i++) {
+                        rows[i].setValue(result.translation[i], options.destination);
+                        if (atOnce++ > 100) {
+                            setTimeout(process, 1);
+                            atOnce = 0;
+                            return;
+                        }
+                    }
+                    ui.log(`[RedBatchTranslator] Done!`);
+                    let batchEnd = Date.now();
+                    ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart) / 1000) / 10} seconds.`);
+                    ui.log(`[RedBatchTranslator] Finished.`);
+                };
+                process();
+            },
+            always: () => {
+                ui.showCloseButton();
+            }
+        });
+    }
+}
+trans.RedBatchTranslatorInstance = new RedBatchTranslator();
 class RedStringRowHandler {
     constructor(row, wrapper) {
         this.curatedLines = [];
