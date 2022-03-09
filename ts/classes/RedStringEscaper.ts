@@ -458,7 +458,7 @@ class RedStringEscaper {
         // It turns people into pigs! Pigs!
         // let's remove those
         if (this.removeUnks) {
-            this.currentText = this.currentText.replaceAll("<unk>", "");
+            this.currentText = this.currentText.replaceAll(/<unk>\\?"?/gi, "");
         }
         
         // DEBUG
