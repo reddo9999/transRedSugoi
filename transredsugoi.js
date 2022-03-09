@@ -68,7 +68,7 @@ let RedPlaceholderTypeArray = [
     RedPlaceholderType.sugoiTranslatorSpecial,
     RedPlaceholderType.sugoiTranslatorSpecial2,
 ];
-let regExpObj = {};
+const regExpObj = {};
 regExpObj[RedPlaceholderType.poleposition] = /((?: *　*#[0-9]+ *　*){2,})/g;
 regExpObj[RedPlaceholderType.mvStyle] = /((?: *　*%[0-9]+ *　*){2,})/g;
 regExpObj[RedPlaceholderType.percentage] = /((?: *　*[0-9]+% *　*){2,})/g;
@@ -87,6 +87,25 @@ regExpObj[RedPlaceholderType.hashtagTriple] = /((?: *　*#[A-Z][A-Z][A-Z] *　*)
 regExpObj[RedPlaceholderType.mvStyleLetter] = /((?: *　*%[A-Z] *　*){2,})/gi;
 regExpObj[RedPlaceholderType.sugoiTranslatorSpecial] = /((?: *　*@#[0-9]+ *　*){2,})/gi;
 regExpObj[RedPlaceholderType.sugoiTranslatorSpecial2] = /((?: *　*@#[A-Z]+ *　*){2,})/gi;
+const regExpExists = {};
+regExpExists[RedPlaceholderType.poleposition] = /((?:#[0-9]+))/g;
+regExpExists[RedPlaceholderType.mvStyle] = /((?:%[0-9]+))/g;
+regExpExists[RedPlaceholderType.percentage] = /((?:[0-9]+%))/g;
+regExpExists[RedPlaceholderType.wolfStyle] = /((?:@[0-9]+))/g;
+regExpExists[RedPlaceholderType.tournament] = /((?:#[0-9]+))/g;
+regExpExists[RedPlaceholderType.hexPlaceholder] = /((?:0x[0-9a-fA-F]+))/gi;
+regExpExists[RedPlaceholderType.tagPlaceholder] = /((?:<[0-9]>))/g;
+regExpExists[RedPlaceholderType.closedTagPlaceholder] = /((?:<[0-9]\/>))/g;
+regExpExists[RedPlaceholderType.ninesOfRandomness] = new RegExp("((?:9[0-9]{4,}9))", "g");
+regExpExists[RedPlaceholderType.fullTagPlaceholder] = /((?:<[0-9]><\/[0-9]>))/g;
+regExpExists[RedPlaceholderType.curlie] = /((?:{[A-Z]+}))/g;
+regExpExists[RedPlaceholderType.doubleCurlie] = /((?:{{[A-Z]+})})/gi;
+regExpExists[RedPlaceholderType.privateUse] = /((?:[\uF000-\uFFFF])})/g;
+regExpExists[RedPlaceholderType.hashtag] = /((?:#[A-Z]))/gi;
+regExpExists[RedPlaceholderType.hashtagTriple] = /((?:#[A-Z][A-Z][A-Z]))/gi;
+regExpExists[RedPlaceholderType.mvStyleLetter] = /((?:%[A-Z]))/gi;
+regExpExists[RedPlaceholderType.sugoiTranslatorSpecial] = /((?:@#[0-9]+))/gi;
+regExpExists[RedPlaceholderType.sugoiTranslatorSpecial2] = /((?:@#[A-Z]+))/gi;
 let escapingTitleMap = RedPlaceholderTypeNames;
 class RedStringEscaper {
     constructor(text, options) {
@@ -206,9 +225,15 @@ class RedStringEscaper {
                     tag = this.getSugoiSpecial2();
                     break;
             }
-            this.storedSymbols[tag.trim()] = text;
-            this.reverseSymbols[text] = tag.trim();
-            return tag;
+            // In case the symbol was already predefined, we cheat and generate another
+            if (this.storedSymbols[tag.trim()] != undefined) {
+                return this.storeSymbol(text);
+            }
+            else {
+                this.storedSymbols[tag.trim()] = text;
+                this.reverseSymbols[text] = tag.trim();
+                return tag;
+            }
         }
     }
     isExtracted() {
@@ -398,6 +423,15 @@ class RedStringEscaper {
         }
         let formulas = RedStringEscaper.getActiveFormulas();
         let text = this.currentText || this.text;
+        // If there's already something there we might end up in a loop...
+        // Let's escape every existing symbol as is.
+        if (regExpExists[this.type] != undefined) {
+            text = text.replaceAll(regExpExists[this.type], (match) => {
+                this.storedSymbols[match] = match;
+                this.reverseSymbols[match] = match;
+                return match;
+            });
+        }
         //console.log("Formulas : ", formulas);
         for (var i = 0; i < formulas.length; i++) {
             if (!Boolean(formulas[i]))

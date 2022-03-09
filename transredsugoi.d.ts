@@ -43,7 +43,8 @@ declare enum RedPlaceholderTypeNames {
     sugoiTranslatorSpecial2 = "ivdos' Special with Letters (e.g. @#A, @#B)"
 }
 declare let RedPlaceholderTypeArray: RedPlaceholderType[];
-declare let regExpObj: any;
+declare const regExpObj: any;
+declare const regExpExists: any;
 declare let escapingTitleMap: {
     [id: string]: string;
 };
