@@ -405,7 +405,7 @@ class RedStringEscaper {
         // It turns people into pigs! Pigs!
         // let's remove those
         if (this.removeUnks) {
-            this.currentText = this.currentText.replaceAll("<unk>", "");
+            this.currentText = this.currentText.replaceAll(/<unk>\\?"?/gi, "");
         }
         // DEBUG
         // console.log(finalString, this.storedSymbols);
@@ -572,10 +572,11 @@ class RedPersistentCacheHandler {
         this.cache = {};
         this.changed = false;
         this.busy = false;
+        this.maximumCacheHitsOnLoad = 10;
         this.transId = id;
     }
     addCache(key, translation) {
-        this.cache[key] = translation;
+        this.cache[key] = [translation, 1];
         this.changed = true;
     }
     resetCache() {
@@ -586,7 +587,8 @@ class RedPersistentCacheHandler {
         return typeof this.cache[key] != "undefined";
     }
     getCache(key) {
-        return this.cache[key];
+        this.cache[key][1] += 1;
+        return this.cache[key][0];
     }
     getFilename(bak) {
         return `${__dirname}/data/RedCache${this.transId}.json${bak === true ? ".bak" : ""}`;
@@ -595,9 +597,18 @@ class RedPersistentCacheHandler {
         if (this.fs.existsSync(this.getFilename(bak === true))) {
             try {
                 let rawdata = this.fs.readFileSync(this.getFilename(bak === true));
-                this.cache = JSON.parse(rawdata);
-                if (typeof this.cache != "object") {
-                    this.cache = {};
+                this.cache = {};
+                let arr = JSON.parse(rawdata);
+                if (Array.isArray(arr)) {
+                    for (let i = 0; i < arr.length; i++) {
+                        this.cache[arr[i][0]] = [arr[i][1], arr[i][2] > this.maximumCacheHitsOnLoad ? this.maximumCacheHitsOnLoad : arr[i][2]];
+                    }
+                }
+                else if (typeof arr == "object") {
+                    // old version, code adapt
+                    for (let key in arr) {
+                        this.cache[key] = [arr[key], 1];
+                    }
                 }
                 this.changed = false;
             }
@@ -623,16 +634,19 @@ class RedPersistentCacheHandler {
             console.warn("[RedPersistentCacheHandler] Not saving cache as there have been no changes.");
             return;
         }
+        let arr = [];
         let maxSize = trans[this.transId].getOptions().persistentCacheMaxSize * 1024 * 1024;
-        let size = this.getSize(JSON.stringify(this.cache));
+        let size = 0;
         for (let key in this.cache) {
-            if (size > maxSize) {
-                size -= this.getSize(`"${key}":"${this.cache[key]}"`); // good enough of an approximation, we're not going to mars here
-                delete (this.cache[key]);
-            }
-            else {
-                break;
-            }
+            arr.push([key, this.cache[key][0], this.cache[key][1]]);
+            size += this.getSize(`"${key}":["${this.cache[key][0]}", ${this.cache[key][1]}`);
+        }
+        arr.sort((a, b) => {
+            return b[2] - a[2];
+        });
+        while (size > maxSize && arr.length > 0) {
+            let pop = arr.pop();
+            size -= this.getSize(`"${pop[0]}":["${pop[1]}", ${pop[2]}`);
         }
         try {
             let write = () => {
@@ -642,7 +656,7 @@ class RedPersistentCacheHandler {
                 catch (e) {
                     console.warn("[RedPersistentCacheHandler] Could not create backup. Is the file not there?", e);
                 }
-                this.fs.writeFile(this.getFilename(), JSON.stringify(this.cache, null, 4), (err) => {
+                this.fs.writeFile(this.getFilename(), JSON.stringify(arr, undefined, 1), (err) => {
                     this.busy = false;
                     if (err) {
                         console.error(err);

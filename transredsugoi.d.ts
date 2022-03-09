@@ -124,6 +124,7 @@ declare class RedPersistentCacheHandler {
     private changed;
     private busy;
     private next;
+    private maximumCacheHitsOnLoad;
     constructor(id: string);
     addCache(key: string, translation: string): void;
     resetCache(): void;
