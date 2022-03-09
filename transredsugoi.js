@@ -1429,7 +1429,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             },
             "maxRequestLength": {
                 "type": "number",
-                "title": "Max Request Length",
+                "title": "Batch Size",
                 "description": "The length (in characters) of each batch when batch translating.",
                 "default": 400 * 10,
                 "required": true
@@ -2162,12 +2162,13 @@ class RedBatchTranslator {
                         }, 500);
                     }
                     else {
-                        try {
+                        let batchDelay = translatorEngine.batchDelay;
+                        if (batchDelay == undefined || batchDelay <= 1) {
                             translate();
                         }
-                        catch (e) {
-                            ui.error(e.message);
-                            proceed();
+                        else {
+                            ui.log(`[RedBatchTranslator] Waiting ${batchDelay}ms.`);
+                            setTimeout(translate, batchDelay);
                         }
                     }
                 };
