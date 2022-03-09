@@ -89,6 +89,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             // A filthy hack for a filthy code
             progressNode.nodeValue = (translatedLines).toString();
             progressTotal.nodeValue = "/" + toTranslate.length.toString();
+            options.progress(Math.round(100 * translatedLines / toTranslate.length));
         };
 
         

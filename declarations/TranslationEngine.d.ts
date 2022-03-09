@@ -27,6 +27,7 @@ declare interface TranslatorEngineOptions {
     onAfterLoading : (result : any) => any | Promise<any>;
     onError : (reason : any) => any | Promise<any>;
     always : () => any | Promise<any>;
+    progress : (perc : number) => void;
 }
 
 declare interface TranslatorEngineResults {

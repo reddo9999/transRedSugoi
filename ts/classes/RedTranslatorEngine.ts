@@ -248,6 +248,7 @@ abstract class RedTranslatorEngineWrapper {
         options.onAfterLoading = options.onAfterLoading||function() {};
         options.onError = options.onError||function() {};
         options.always = options.always||function() {};
+        options.progress = options.progress||function (perc : number) {};
 
         if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
             ui.showBusyOverlay();

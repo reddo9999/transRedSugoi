@@ -43,12 +43,14 @@ class RedBatchTranslator {
         files : Array<string>
     }) {
         ui.showLoading();
+        ui.loadingProgress(0, "Starting up...")
         ui.log(`[RedBatchTranslator] Beginning translation at ${new Date()}`)
 
 
         let translatorEngine : TranslatorEngine = trans[options.translator];
         let rows : Array<RedBatchTranslatorRow> = [];
 
+        ui.loadingProgress(0, "Finding translatable rows")
         // Iterate through rows and add them up
         for (let i = 0; i < options.files.length; i++) {
             let file = options.files[i];
@@ -109,6 +111,7 @@ class RedBatchTranslator {
         options.onError = options.onError||function() {};
         options.always = options.always||function() {}; */
 
+        ui.loadingProgress(0, "Translating");
         translatorEngine.translate(
             toTranslate,
             {
@@ -125,10 +128,11 @@ class RedBatchTranslator {
                     let batchStart = Date.now();
 
                     ui.log(`[RedBatchTranslator] Inserting into tables! `);
+                    ui.loadingProgress(0, "Adding to tables...")
                     for (let i = 0; i < result.translation.length; i++) {
                         rows[i].setValue(result.translation[i], options.destination);
                     }
-                    ui.log(`[RedBatchTranslator] Done!`);
+                    ui.loadingProgress(100, "Finished!")
                 
                     let batchEnd = Date.now();
                     ui.log(`[RedBatchTranslator] Took ${Math.round(10 * (batchEnd - batchStart)/1000)/10} seconds.`);
@@ -136,6 +140,9 @@ class RedBatchTranslator {
                 },
                 always : () => {
                     ui.showCloseButton();
+                },
+                progress : (perc : number) => {
+                    ui.loadingProgress(perc)
                 }
             }
         )
