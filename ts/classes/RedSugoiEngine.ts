@@ -143,9 +143,7 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                         }
                         for (let i = 0; i < result.length; i++) {
                             translations[i + myStart] = result[i];
-                            if (this.isCaching()) {
-                                this.setCache(myLines[i], result[i]);
-                            }
+                            this.setCache(myLines[i], result[i]);
                         }
                         translatedLines += myLines.length;
                     } else {

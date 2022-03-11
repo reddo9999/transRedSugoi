@@ -76,9 +76,7 @@ class RedPiggybackEngine extends RedTranslatorEngineWrapper {
                         for (let i = 0; i < result.translation; i++) {
                             let idx = i + translating++;
                             translations[idx] = result.translation[i];
-                            if (this.isCaching()) {
-                                this.setCache(toTranslate[idx], translations[idx]);
-                            }
+                            this.setCache(toTranslate[idx], translations[idx]);
                         }
                         progressCurrent.nodeValue = translating.toString();
                         if (translating >= toTranslate.length) {

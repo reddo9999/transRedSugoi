@@ -115,9 +115,7 @@ class RedGoogleEngine extends RedTranslatorEngineWrapper {
                 } else {
                     for (let i = 0; i < pristineTranslations.length; i++) {
                         translations[batchStart + i] = pristineTranslations[i].trim(); // Google loves spaces...
-                        if (this.isCaching()) {
-                            this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
-                        }
+                        this.setCache(toTranslate[batchStart + i], pristineTranslations[i]);
                     }
                     progressCurrent.nodeValue = (parseInt(<string> progressCurrent.nodeValue) + pristineTranslations.length).toString();
                 }
