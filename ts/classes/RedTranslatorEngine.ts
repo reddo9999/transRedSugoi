@@ -95,7 +95,11 @@ abstract class RedTranslatorEngineWrapper {
     private cacheHits = 0;
 
     public hasCache (text : string) {
-        return this.cacheHandler.hasCache(text);
+        if (this.isCaching()) {
+            return this.cacheHandler.hasCache(text);
+        } else {
+            return undefined;
+        }
     }
 
     public getCache (text : string) {
@@ -104,7 +108,9 @@ abstract class RedTranslatorEngineWrapper {
     }
 
     public setCache (text : string, translation : string) {
-        this.cacheHandler.addCache(text, translation);
+        if (this.isCaching()) {
+            this.cacheHandler.addCache(text, translation);
+        }
     }
 
     public getCacheHits () {
