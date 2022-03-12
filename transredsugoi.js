@@ -391,13 +391,13 @@ class RedStringEscaper {
                     // User has escaped the placeholder itself...
                     continue;
                 }
-                let idx = this.currentText.indexOf(key);
+                let idx = this.currentText.search(new RegExp(key, "gi"));
                 while (idx != -1) {
                     found = true;
                     this.currentText = this.currentText.substring(0, idx) +
                         this.storedSymbols[key] +
                         this.currentText.substring(idx + key.length);
-                    idx = this.currentText.indexOf(key);
+                    idx = this.currentText.search(new RegExp(key, "gi"));
                 }
             }
         }
