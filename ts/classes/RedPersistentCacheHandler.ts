@@ -6,6 +6,7 @@ class RedPersistentCacheHandler {
     private busy = false;
     private next : Function | undefined;
     private maximumCacheHitsOnLoad = 10;
+    private cacheDegradationLevel = 1;
 
     public constructor (id : string) {
         this.transId = id;
@@ -42,7 +43,17 @@ class RedPersistentCacheHandler {
                 let arr = JSON.parse(rawdata);
                 if (Array.isArray(arr)) {
                     for (let i = 0; i < arr.length; i++) {
-                        this.cache[arr[i][0]] = [arr[i][1], arr[i][2] > this.maximumCacheHitsOnLoad ? this.maximumCacheHitsOnLoad : arr[i][2] - 1];
+                        let aggregateHits = arr[i][2];
+                        if (aggregateHits > this.maximumCacheHitsOnLoad) {
+                            aggregateHits = this.maximumCacheHitsOnLoad;
+                        } else {
+                            aggregateHits -= this.cacheDegradationLevel;
+                            // We don't want to continually decrease it until it can no longer raise, we just want it to lose priority over time.
+                            if (aggregateHits < 0) {
+                                aggregateHits = 0;
+                            }
+                        }
+                        this.cache[arr[i][0]] = [arr[i][1], aggregateHits];
                     }
                 } else if (typeof arr == "object") {
                     // old version, code adapt
