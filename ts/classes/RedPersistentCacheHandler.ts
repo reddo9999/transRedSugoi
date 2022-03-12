@@ -42,7 +42,7 @@ class RedPersistentCacheHandler {
                 let arr = JSON.parse(rawdata);
                 if (Array.isArray(arr)) {
                     for (let i = 0; i < arr.length; i++) {
-                        this.cache[arr[i][0]] = [arr[i][1], arr[i][2] > this.maximumCacheHitsOnLoad ? this.maximumCacheHitsOnLoad : arr[i][2]];
+                        this.cache[arr[i][0]] = [arr[i][1], arr[i][2] > this.maximumCacheHitsOnLoad ? this.maximumCacheHitsOnLoad : arr[i][2] - 1];
                     }
                 } else if (typeof arr == "object") {
                     // old version, code adapt
