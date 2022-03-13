@@ -137,6 +137,22 @@ class RedStringEscaper {
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
+        // Aggressively split!!!!!!!!!!!!!
+        // Yeha!
+        if (options.aggressivelySplit != undefined) {
+            options.isExtracted = true;
+            let splits = [...this.currentText.matchAll(options.aggressivelySplit)].sort((a, b) => { return b.index - a.index; });
+            if (splits.length > 0) {
+                let i;
+                let lastIndex = undefined;
+                for (i = 0; i < splits.length; i++) {
+                    let match = splits[i];
+                    this.split(match[0], match.index, lastIndex, options);
+                    lastIndex = match.index;
+                }
+                this.split("", 0, lastIndex, options);
+            }
+        }
         if (options.isolateSymbols == true && this.type != RedPlaceholderType.noEscape) {
             options.isExtracted = true;
             let found = true;
@@ -235,6 +251,26 @@ class RedStringEscaper {
                 return tag;
             }
         }
+    }
+    split(splitContent, indexStart, indexEnd, options) {
+        // Store the split and add it's placeholder for future recovery
+        let placeholder = this.storeSymbol(splitContent);
+        // Save sentence that comes after the split but BEFORE the next split
+        let splitEnd = this.currentText.substring(indexStart + splitContent.length, indexEnd);
+        // Store the following sentence if exists
+        let nextSentence = indexEnd == undefined ? "" : this.currentText.substring(indexEnd);
+        // Add the placeholder to the first sentence
+        this.currentText = this.currentText.substring(0, indexStart) + placeholder;
+        // Store the next string as a new Escaper
+        if (indexStart < (this.currentText.length - splitContent.length)) {
+            placeholder = this.storeSymbol(splitEnd);
+            // Maybe this should be a function...
+            this.extractedKeys.push(placeholder);
+            this.extractedStrings.push(new RedStringEscaper(splitEnd, options));
+            this.currentText += placeholder;
+        }
+        // Give back the following sentence
+        this.currentText += nextSentence;
     }
     isExtracted() {
         return this.wasExtracted;
@@ -418,17 +454,18 @@ class RedStringEscaper {
     escape() {
         // Are we escaping?
         if (this.type == RedPlaceholderType.noEscape) {
-            this.currentText = this.text;
-            return this.text;
+            return this.currentText;
         }
         let formulas = RedStringEscaper.getActiveFormulas();
-        let text = this.currentText || this.text;
+        let text = this.currentText;
         // If there's already something there we might end up in a loop...
         // Let's escape every existing symbol as is.
         if (regExpExists[this.type] != undefined) {
             text = text.replaceAll(regExpExists[this.type], (match) => {
-                this.storedSymbols[match] = match;
-                this.reverseSymbols[match] = match;
+                if (this.storedSymbols[match] == undefined) {
+                    this.storedSymbols[match] = match;
+                    this.reverseSymbols[match] = match;
+                }
                 return match;
             });
         }
@@ -573,6 +610,7 @@ class RedPersistentCacheHandler {
         this.changed = false;
         this.busy = false;
         this.maximumCacheHitsOnLoad = 10;
+        this.cacheDegradationLevel = 1;
         this.transId = id;
     }
     addCache(key, translation) {
@@ -601,7 +639,18 @@ class RedPersistentCacheHandler {
                 let arr = JSON.parse(rawdata);
                 if (Array.isArray(arr)) {
                     for (let i = 0; i < arr.length; i++) {
-                        this.cache[arr[i][0]] = [arr[i][1], arr[i][2] > this.maximumCacheHitsOnLoad ? this.maximumCacheHitsOnLoad : arr[i][2]];
+                        let aggregateHits = arr[i][2];
+                        if (aggregateHits > this.maximumCacheHitsOnLoad) {
+                            aggregateHits = this.maximumCacheHitsOnLoad;
+                        }
+                        else {
+                            aggregateHits -= this.cacheDegradationLevel;
+                            // We don't want to continually decrease it until it can no longer raise, we just want it to lose priority over time.
+                            if (aggregateHits < 0) {
+                                aggregateHits = 0;
+                            }
+                        }
+                        this.cache[arr[i][0]] = [arr[i][1], aggregateHits];
                     }
                 }
                 else if (typeof arr == "object") {
@@ -713,6 +762,7 @@ const defaultIsolateRegexp = `(` +
     `)|(` +
     `${rmColorRegExp}.+?${rmColorRegExp}` +
     `)`;
+const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -739,6 +789,8 @@ class RedTranslatorEngineWrapper {
             rowStart: defaultLineStart,
             rowEnd: defaultLineEnd,
             isolateRegExp: defaultIsolateRegexp,
+            doSplit: true,
+            splitRegExp: defaultSplitRegExp,
             optionsForm: {
                 "schema": {
                     "splitEnds": {
@@ -803,6 +855,19 @@ class RedTranslatorEngineWrapper {
                         "type": "string",
                         "title": "Isolate Symbols",
                         "description": "This regular expression is used to detect Symbols and isolate them to translate separatedly. It is not recommended to change this value.",
+                        "default": defaultIsolateRegexp,
+                        "required": true
+                    },
+                    "doSplit": {
+                        "type": "boolean",
+                        "title": "Agressively Split",
+                        "description": "Enable agressive splitting. With the default RegExp, it is recommended to be on, otherwise, off.",
+                        "default": true
+                    },
+                    "splitRegExp": {
+                        "type": "string",
+                        "title": "Agressive Splitting",
+                        "description": "This Regular Expression will result in the sentence being split, with each result being sent to the translator separatedly. It works similarly to line end, it just doesn't generate multiple lines after it works.",
                         "default": defaultIsolateRegexp,
                         "required": true
                     },
@@ -894,6 +959,21 @@ class RedTranslatorEngineWrapper {
                         }
                     },
                     {
+                        "key": "doSplit",
+                        "inlinetitle": "Aggressive Splitting",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).prop("checked");
+                            this.translatorEngine.update("doSplit", value);
+                        }
+                    },
+                    {
+                        "key": "splitRegExp",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("splitRegExp", value);
+                        }
+                    },
+                    {
                         "type": "actions",
                         "title": "Reset RegExps",
                         "fieldHtmlClass": "actionButtonSet",
@@ -909,7 +989,9 @@ class RedTranslatorEngineWrapper {
                                         optionWindow.find(`[name="rowStart"]`).val(defaultLineStart);
                                         optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
                                         optionWindow.find(`[name="isolateRegExp"]`).val(defaultIsolateRegexp);
+                                        optionWindow.find(`[name="splitRegExp"]`).val(defaultSplitRegExp);
                                         engine.update("isolateRegExp", defaultIsolateRegexp);
+                                        engine.update("splitRegExp", defaultSplitRegExp);
                                         engine.update("rowStart", defaultLineStart);
                                         engine.update("rowEnd", defaultLineEnd);
                                     }
@@ -1094,6 +1176,11 @@ class RedTranslatorEngineWrapper {
         isolateSymbols = isolateSymbols == undefined ? true : isolateSymbols === true; // set to true if undefined, check against true if not
         let isolateRegExp = this.getEngine().getOptions().isolateRegExp;
         isolateRegExp = isolateRegExp == undefined ? defaultIsolateRegexp : isolateRegExp;
+        let doSplit = this.getEngine().getOptions().doSplit;
+        doSplit = doSplit == undefined ? true : doSplit === true;
+        let splitRegExp = this.getEngine().getOptions().splitRegExp;
+        splitRegExp = splitRegExp == undefined ? defaultSplitRegExp : splitRegExp;
+        splitRegExp = new RegExp(splitRegExp, "gim");
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
         if (scriptCheck.isScript) {
@@ -1109,6 +1196,7 @@ class RedTranslatorEngineWrapper {
                 noUnks: true,
                 isolateSymbols: isolateSymbols,
                 isolateRegExp: isolateRegExp,
+                aggressivelySplit: doSplit ? splitRegExp : undefined,
             });
             curated.push(escaped);
         }

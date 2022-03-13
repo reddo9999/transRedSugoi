@@ -81,7 +81,9 @@ declare class RedStringEscaper {
         isolateSymbols?: boolean;
         isolateRegExp?: string;
         isExtracted?: boolean;
+        aggressivelySplit?: RegExp;
     });
+    split(splitContent: string, indexStart: number, indexEnd: number | undefined, options: any): void;
     isExtracted(): boolean;
     getExtractedStrings(): RedStringEscaper[];
     break(): void;
@@ -125,6 +127,7 @@ declare class RedPersistentCacheHandler {
     private busy;
     private next;
     private maximumCacheHitsOnLoad;
+    private cacheDegradationLevel;
     constructor(id: string);
     addCache(key: string, translation: string): void;
     resetCache(): void;
@@ -149,6 +152,7 @@ declare const closerRegExp = "\\]\\)}\u3015\u3017\u3019\u301B\u301E\u201D\uFF63\
 declare const rmColorRegExp = "\\\\C\\[.+?\\]";
 declare const mvScript = "\\\\*[V]+";
 declare const defaultIsolateRegexp: string;
+declare const defaultSplitRegExp = "((?:\\\\?r?\\\\n)+)|(\\\\[.!])";
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
