@@ -247,10 +247,13 @@ class RedStringEscaper {
             let splits : Array<RegExpMatchArray> = [...this.currentText.matchAll(options.aggressivelySplit)].sort((a,b) => { return b.index! - a.index!; });
             if (splits.length > 0) {
                 let i : number;
+                let lastIndex : number | undefined = undefined;
                 for (i = 0; i < splits.length; i++) {
                     let match = splits[i];
-                    this.split(match[0], match.index!, options);
+                    this.split(match[0], match.index!, lastIndex, options);
+                    lastIndex = match.index;
                 }
+                this.split("", 0, lastIndex, options);
             }
         }
 
@@ -275,25 +278,29 @@ class RedStringEscaper {
         this.escape();
 	}
 
-    public split(splitContent : string, index : number, options : any) {
-        // Save sentence that comes after the split
-        let splitEnd = this.currentText.substring(index + splitContent.length);
-
-        // Remove the split sentence from the current sentence
-        this.currentText = this.currentText.substring(0, index);
-
+    public split(splitContent : string, indexStart : number, indexEnd : number | undefined, options : any) {
         // Store the split and add it's placeholder for future recovery
         let placeholder = this.storeSymbol(splitContent);
-        this.currentText += placeholder;
 
+        // Save sentence that comes after the split but BEFORE the next split
+        let splitEnd = this.currentText.substring(indexStart + splitContent.length, indexEnd);
+
+        // Store the following sentence if exists
+        let nextSentence = indexEnd == undefined ? "" : this.currentText.substring(indexEnd!);
+
+        // Add the placeholder to the first sentence
+        this.currentText = this.currentText.substring(0, indexStart) + placeholder;
         // Store the next string as a new Escaper
-        if (index < (this.currentText.length - splitContent.length)) {
+        if (indexStart < (this.currentText.length - splitContent.length)) {
             placeholder = this.storeSymbol(splitEnd);
             // Maybe this should be a function...
             this.extractedKeys.push(placeholder);
             this.extractedStrings.push(new RedStringEscaper(splitEnd, options));
             this.currentText += placeholder;
         }
+
+        // Give back the following sentence
+        this.currentText += nextSentence;
     }
 
     public isExtracted () {
