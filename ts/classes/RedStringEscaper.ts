@@ -483,8 +483,10 @@ class RedStringEscaper {
         // Let's escape every existing symbol as is.
         if (regExpExists[this.type] != undefined) {
             text = text.replaceAll(regExpExists[this.type], (match) => {
-                this.storedSymbols[match] = match;
-                this.reverseSymbols[match] = match;
+                if (this.storedSymbols[match] == undefined) {
+                    this.storedSymbols[match] = match;
+                    this.reverseSymbols[match] = match;
+                }
                 return match;
             });
         }
