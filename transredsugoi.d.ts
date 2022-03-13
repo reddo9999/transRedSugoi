@@ -72,6 +72,7 @@ declare class RedStringEscaper {
     private extractedStrings;
     private extractedKeys;
     private wasExtracted;
+    private splitArray;
     storeSymbol(text: string): string;
     constructor(text: string, options: {
         type?: RedPlaceholderType;
@@ -83,7 +84,8 @@ declare class RedStringEscaper {
         isExtracted?: boolean;
         aggressivelySplit?: RegExp;
     });
-    split(splitContent: string, indexStart: number, indexEnd: number | undefined, options: any): void;
+    addSplitTranslatable(text: string, options: any): void;
+    addSplitText(text: string, options: any): void;
     isExtracted(): boolean;
     getExtractedStrings(): RedStringEscaper[];
     break(): void;

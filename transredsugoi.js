@@ -130,6 +130,7 @@ class RedStringEscaper {
         this.extractedStrings = [];
         this.extractedKeys = [];
         this.wasExtracted = false;
+        this.splitArray = [];
         this.text = text;
         this.currentText = text;
         this.type = options.type || RedPlaceholderType.poleposition;
@@ -147,10 +148,16 @@ class RedStringEscaper {
                 let lastIndex = undefined;
                 for (i = 0; i < splits.length; i++) {
                     let match = splits[i];
-                    this.split(match[0], match.index, lastIndex, options);
+                    let splitEnd = this.currentText.substring(match.index + match[0].length, lastIndex);
+                    this.currentText = this.currentText.substring(0, match.index);
                     lastIndex = match.index;
+                    this.addSplitTranslatable(splitEnd, options);
+                    this.addSplitText(match[0], options);
                 }
-                this.split("", 0, lastIndex, options);
+                if (this.currentText.length > 0) {
+                    this.addSplitTranslatable(this.currentText, options);
+                }
+                return; // no escape or anything else
             }
         }
         if (options.isolateSymbols == true && this.type != RedPlaceholderType.noEscape) {
@@ -252,25 +259,13 @@ class RedStringEscaper {
             }
         }
     }
-    split(splitContent, indexStart, indexEnd, options) {
-        // Store the split and add it's placeholder for future recovery
-        let placeholder = this.storeSymbol(splitContent);
-        // Save sentence that comes after the split but BEFORE the next split
-        let splitEnd = this.currentText.substring(indexStart + splitContent.length, indexEnd);
-        // Store the following sentence if exists
-        let nextSentence = indexEnd == undefined ? "" : this.currentText.substring(indexEnd);
-        // Add the placeholder to the first sentence
-        this.currentText = this.currentText.substring(0, indexStart) + placeholder;
-        // Store the next string as a new Escaper
-        if (indexStart < (this.currentText.length - splitContent.length)) {
-            placeholder = this.storeSymbol(splitEnd);
-            // Maybe this should be a function...
-            this.extractedKeys.push(placeholder);
-            this.extractedStrings.push(new RedStringEscaper(splitEnd, options));
-            this.currentText += placeholder;
-        }
-        // Give back the following sentence
-        this.currentText += nextSentence;
+    addSplitTranslatable(text, options) {
+        let escaper = new RedStringEscaper(text, options);
+        this.extractedStrings.push(escaper);
+        this.splitArray.unshift(escaper);
+    }
+    addSplitText(text, options) {
+        this.splitArray.unshift(text);
     }
     isExtracted() {
         return this.wasExtracted;
@@ -342,7 +337,7 @@ class RedStringEscaper {
         return this.text;
     }
     getReplacedText() {
-        if (this.broken) {
+        if (this.broken || this.splitArray.length > 0) {
             return "";
         }
         return this.currentText;
@@ -353,6 +348,23 @@ class RedStringEscaper {
     recoverSymbols() {
         if (this.broken) {
             return "";
+        }
+        if (this.splitArray.length > 0) {
+            let text = "";
+            for (let i = 0; i < this.splitArray.length; i++) {
+                let split = this.splitArray[i];
+                if (typeof split == "string") {
+                    text += split;
+                }
+                else {
+                    // if any part of the chain is broken, break the entire thing
+                    if (split.broken) {
+                        return "";
+                    }
+                    text += split.recoverSymbols();
+                }
+            }
+            return text;
         }
         // DEBUG
         //console.log(this.currentText, this.storedSymbols);
