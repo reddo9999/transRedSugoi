@@ -474,8 +474,7 @@ class RedStringEscaper {
     public escape () {
         // Are we escaping?
         if (this.type == RedPlaceholderType.noEscape) {
-            this.currentText = this.text;
-            return this.text;
+            return this.currentText;
         }
         let formulas = RedStringEscaper.getActiveFormulas();
         let text = this.currentText || this.text;
