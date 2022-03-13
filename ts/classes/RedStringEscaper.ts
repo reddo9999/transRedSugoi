@@ -151,7 +151,7 @@ class RedStringEscaper {
             // if we reuse the same symbol it might help the AI understand the sentence
             return this.reverseSymbols[text];
         } else {
-            let tag : string = "Invalid Placeholder Style";
+            let tag : string;
             switch (this.type) {
                 case RedPlaceholderType.poleposition:
                     tag = this.getPolePosition();
@@ -210,6 +210,9 @@ class RedStringEscaper {
                 case RedPlaceholderType.sugoiTranslatorSpecial2:
                     tag = this.getSugoiSpecial2();
                     break;
+                default:
+                    console.error("[RedStringEscaper] Invalid Placeholder Style");
+                    return text;
             }
             // In case the symbol was already predefined, we cheat and generate another
             if (this.storedSymbols[tag.trim()] != undefined) {
