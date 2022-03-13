@@ -477,7 +477,7 @@ class RedStringEscaper {
             return this.currentText;
         }
         let formulas = RedStringEscaper.getActiveFormulas();
-        let text = this.currentText || this.text;
+        let text = this.currentText;
 
         // If there's already something there we might end up in a loop...
         // Let's escape every existing symbol as is.
