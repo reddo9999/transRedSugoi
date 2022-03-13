@@ -29,6 +29,8 @@ const defaultIsolateRegexp =
 `)|(` +
     `${rmColorRegExp}.+?${rmColorRegExp}` +
 `)`;
+
+const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`
     
 
 /**
@@ -222,6 +224,14 @@ abstract class RedTranslatorEngineWrapper {
         let isolateRegExp = this.getEngine().getOptions().isolateRegExp;
         isolateRegExp = isolateRegExp == undefined ? defaultIsolateRegexp : isolateRegExp;
 
+
+        let doSplit = this.getEngine().getOptions().doSplit;
+        doSplit = doSplit == undefined ? true : doSplit === true;
+
+        let splitRegExp = this.getEngine().getOptions().splitRegExp;
+        splitRegExp = splitRegExp == undefined ? defaultSplitRegExp : splitRegExp;
+        splitRegExp = new RegExp(splitRegExp, "gim");
+
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
 
@@ -239,6 +249,7 @@ abstract class RedTranslatorEngineWrapper {
                 noUnks : true,
                 isolateSymbols : isolateSymbols,
                 isolateRegExp : isolateRegExp,
+                aggressivelySplit : doSplit ? splitRegExp : undefined,
             });
             curated.push(escaped);
         }
@@ -446,6 +457,8 @@ abstract class RedTranslatorEngineWrapper {
             rowStart : defaultLineStart,
             rowEnd : defaultLineEnd,
             isolateRegExp : defaultIsolateRegexp,
+            doSplit : true,
+            splitRegExp : defaultSplitRegExp,
             optionsForm:{
               "schema": {
                 "splitEnds": {
@@ -513,6 +526,19 @@ abstract class RedTranslatorEngineWrapper {
                        "default": defaultIsolateRegexp,
                        "required":true
                    },
+                   "doSplit": {
+                       "type": "boolean",
+                       "title": "Agressively Split",
+                       "description": "Enable agressive splitting. With the default RegExp, it is recommended to be on, otherwise, off.",
+                       "default":true
+                   },
+                   "splitRegExp": {
+                        "type": "string",
+                        "title": "Agressive Splitting",
+                        "description": "This Regular Expression will result in the sentence being split, with each result being sent to the translator separatedly. It works similarly to line end, it just doesn't generate multiple lines after it works.",
+                        "default": defaultIsolateRegexp,
+                        "required":true
+                    },
               },
               "form": [
                 {
@@ -601,6 +627,21 @@ abstract class RedTranslatorEngineWrapper {
                     }
                 },
                 {
+                    "key": "doSplit",
+                    "inlinetitle": "Aggressive Splitting",
+                    "onChange": (evt : Event) => {
+                      var value = $(<HTMLInputElement> evt.target).prop("checked");
+                      this.translatorEngine.update("doSplit", value);
+                    }
+                },
+                {
+                    "key": "splitRegExp",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("splitRegExp", value);
+                    }
+                },
+                {
                     "type": "actions",
                     "title" : "Reset RegExps",
                     "fieldHtmlClass": "actionButtonSet",
@@ -616,7 +657,9 @@ abstract class RedTranslatorEngineWrapper {
                                   optionWindow.find(`[name="rowStart"]`).val(defaultLineStart);
                                   optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
                                   optionWindow.find(`[name="isolateRegExp"]`).val(defaultIsolateRegexp);
+                                  optionWindow.find(`[name="splitRegExp"]`).val(defaultSplitRegExp);
                                   engine.update("isolateRegExp", defaultIsolateRegexp);
+                                  engine.update("splitRegExp", defaultSplitRegExp);
                                   engine.update("rowStart", defaultLineStart);
                                   engine.update("rowEnd", defaultLineEnd);
                               } catch (e) {

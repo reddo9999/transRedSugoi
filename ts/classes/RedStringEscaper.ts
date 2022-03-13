@@ -229,6 +229,7 @@ class RedStringEscaper {
                         isolateSymbols? : boolean,
                         isolateRegExp? : string,
                         isExtracted? : boolean,
+                        aggressivelySplit? : RegExp,
                     }
                 )  {
 		this.text = text;
@@ -238,6 +239,20 @@ class RedStringEscaper {
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
+
+        // Aggressively split!!!!!!!!!!!!!
+        // Yeha!
+        if (options.aggressivelySplit != undefined) {
+            options.isExtracted = true;
+            let splits : Array<RegExpMatchArray> = [...this.currentText.matchAll(options.aggressivelySplit)].sort((a,b) => { return b.index! - a.index!; });
+            if (splits.length > 0) {
+                let i : number;
+                for (i = 0; i < splits.length; i++) {
+                    let match = splits[i];
+                    this.split(match[0], match.index!, options);
+                }
+            }
+        }
 
         if (options.isolateSymbols == true && this.type != RedPlaceholderType.noEscape) {
             options.isExtracted = true;
@@ -259,6 +274,27 @@ class RedStringEscaper {
 
         this.escape();
 	}
+
+    public split(splitContent : string, index : number, options : any) {
+        // Save sentence that comes after the split
+        let splitEnd = this.currentText.substring(index + splitContent.length);
+
+        // Remove the split sentence from the current sentence
+        this.currentText = this.currentText.substring(0, index);
+
+        // Store the split and add it's placeholder for future recovery
+        let placeholder = this.storeSymbol(splitContent);
+        this.currentText += placeholder;
+
+        // Store the next string as a new Escaper
+        if (index < (this.currentText.length - splitContent.length)) {
+            placeholder = this.storeSymbol(splitEnd);
+            // Maybe this should be a function...
+            this.extractedKeys.push(placeholder);
+            this.extractedStrings.push(new RedStringEscaper(splitEnd, options));
+            this.currentText += placeholder;
+        }
+    }
 
     public isExtracted () {
         return this.wasExtracted;
