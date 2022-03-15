@@ -119,24 +119,19 @@ class RedStringEscaper {
     private splitEnds : boolean = true;
     private removeUnks : boolean = true;
     private mergeSymbols : boolean = true;
-    private symbolAffix : number = 1;
-    private currentSymbol : number = 4;
-    private hexCounter : number = 983041;
     private closedNinesLength : number = 7; // plus two boundaries
     private storedSymbols : {[tag : string] : string} = {};
     private reverseSymbols : {[text : string] : string} = {};
     private currentText : string;
     private broken: boolean = false;
 
-    private curlyCount = 65; //A
-    private privateCounter = 983041; // 👽
 
     private preString : string = "";
     private postString : string = "";
 
-    private hashtagOne = 65; //A
-    private hashtagTwo = 66; //B
-    private hashtagThree = 67; //C
+    private counters = [1, 2, 3];
+    private letters = [65, 66, 67];
+    private privateArea = 983041;
 
     private extractedStrings : Array<RedStringEscaper> = [];
     private extractedKeys : Array<string> = [];
@@ -311,58 +306,58 @@ class RedStringEscaper {
     }
 
     public getTag () {
-        return `<${this.symbolAffix++}${this.currentSymbol++}>`;
+        return `<${this.counters[0]++}${this.counters[1]++}>`;
     }
 
     public getClosedTag () {
-        return `<${this.symbolAffix++}${this.currentSymbol++}/>`;
+        return `<${this.counters[0]++}${this.counters[1]++}/>`;
     }
 
     public getFullTag () {
-        let contents = `${this.symbolAffix++}${this.currentSymbol++}`
+        let contents = `${this.counters[0]++}${this.counters[1]++}`
         return `<${contents}></${contents}>`;
     }
 
     public getPolePosition () {
-        return `#${this.symbolAffix++}${this.currentSymbol++}`;
+        return `#${this.counters[0]++}${this.counters[1]++}`;
     }
 
     public getMvStyle () {
-        return `%${this.symbolAffix++}`;
+        return `%${this.counters[0]++}`;
     }
 
     public getMvStyleLetter () {
-        if (this.curlyCount > 90) {
-            let remaining = this.curlyCount++;
+        if (this.letters[0] > 90) {
+            let remaining = this.letters[0]++;
             let letters = "Z";
             while (remaining > 90) {
                 remaining -= 90;
                 if (remaining <= 90) {
-                    letters += String.fromCharCode(this.curlyCount++);
+                    letters += String.fromCharCode(remaining);
                 } else {
                     letters += "Z";
                 }
             }
             return "%" + letters;
         } else {
-            return `%${String.fromCharCode(this.curlyCount++)}`;
+            return `%${String.fromCharCode(this.letters[0]++)}`;
         }
     }
 
     public getWolfStyle () {
-        return `@${this.symbolAffix++}`;
+        return `@${this.counters[0]++}`;
     }
 
     public getHexPlaceholder () {
-        return "0x" + (this.hexCounter++).toString(16);
+        return "0x" + (this.privateArea++).toString(16);
     }
 
     public getCurly () {
-        return "{" + String.fromCharCode(this.curlyCount++) + "}";
+        return "{" + String.fromCharCode(this.letters[0]++) + "}";
     }
 
     public getDoubleCurly () {
-        return "{{" + String.fromCharCode(this.curlyCount++) + "}}";
+        return "{{" + String.fromCharCode(this.letters[0]++) + "}}";
     }
 
     public getClosedNines () {
@@ -372,31 +367,31 @@ class RedStringEscaper {
     }
 
     public getPrivateArea () {
-        return String.fromCodePoint(this.privateCounter++);
+        return String.fromCodePoint(this.privateArea++);
     }
 
     public getHashtag () {
-        return `#${String.fromCharCode(this.hashtagOne++)}`;
+        return `#${String.fromCharCode(this.letters[0]++)}`;
     }
 
     public getTripleHashtag () {
-        return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
+        return `#${String.fromCharCode(this.letters[0]++)}${String.fromCharCode(this.letters[1]++)}${String.fromCharCode(this.letters[2]++)}`;
     }
 
     public getTournament () {
-        return `#${this.symbolAffix++}`;
+        return `#${this.counters[0]++}`;
     }
 
     public getPercentage () {
-        return `${this.symbolAffix++}%`;
+        return `${this.counters[0]++}%`;
     }
 
     public getSugoiSpecial () {
-        return `@#${this.symbolAffix++}`;
+        return `@#${this.counters[0]++}`;
     }
 
     public getSugoiSpecial2 () {
-        return `@#${String.fromCharCode(this.hashtagOne++)}`;
+        return `@#${String.fromCharCode(this.letters[0]++)}`;
     }
 
     public getOriginalText () {
@@ -504,7 +499,16 @@ class RedStringEscaper {
         // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
         // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
         let found = true;
+        let foundCount = 0;
         while (found) {
+            if (foundCount++ > 20) {
+                ui.logError("[RedStringEscaper] Entered infinite loop while recovering symbols.");
+                ui.logError("Original Sentence: " + this.getOriginalText());
+                ui.logError("Current Sentence: " + this.currentText);
+                ui.logError("Symbols: " + JSON.stringify(this.storedSymbols));
+                console.error("[RedStringEscaper] Entered infinite loop while recovering symbols.", this.currentText, this);
+                break;
+            }
             //console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
@@ -520,7 +524,7 @@ class RedStringEscaper {
                     this.currentText =  this.currentText.substring(0, idx) +
                                         this.storedSymbols[key] +
                                         this.currentText.substring(idx + key.length);
-                    idx = this.currentText.search(new RegExp(key, "gi"));
+                    idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi")); // Forgot this one
                 }
             }
         }
