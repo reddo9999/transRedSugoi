@@ -113,20 +113,15 @@ class RedStringEscaper {
         this.splitEnds = true;
         this.removeUnks = true;
         this.mergeSymbols = true;
-        this.symbolAffix = 1;
-        this.currentSymbol = 4;
-        this.hexCounter = 983041;
         this.closedNinesLength = 7; // plus two boundaries
         this.storedSymbols = {};
         this.reverseSymbols = {};
         this.broken = false;
-        this.curlyCount = 65; //A
-        this.privateCounter = 983041; // 👽
         this.preString = "";
         this.postString = "";
-        this.hashtagOne = 65; //A
-        this.hashtagTwo = 66; //B
-        this.hashtagThree = 67; //C
+        this.counters = [1, 2, 3];
+        this.letters = [65, 66, 67];
+        this.privateArea = 983041;
         this.extractedStrings = [];
         this.extractedKeys = [];
         this.wasExtracted = false;
@@ -280,29 +275,29 @@ class RedStringEscaper {
         this.broken = true;
     }
     getTag() {
-        return `<${this.symbolAffix++}${this.currentSymbol++}>`;
+        return `<${this.counters[0]++}${this.counters[1]++}>`;
     }
     getClosedTag() {
-        return `<${this.symbolAffix++}${this.currentSymbol++}/>`;
+        return `<${this.counters[0]++}${this.counters[1]++}/>`;
     }
     getFullTag() {
-        let contents = `${this.symbolAffix++}${this.currentSymbol++}`;
+        let contents = `${this.counters[0]++}${this.counters[1]++}`;
         return `<${contents}></${contents}>`;
     }
     getPolePosition() {
-        return `#${this.symbolAffix++}${this.currentSymbol++}`;
+        return `#${this.counters[0]++}${this.counters[1]++}`;
     }
     getMvStyle() {
-        return `%${this.symbolAffix++}`;
+        return `%${this.counters[0]++}`;
     }
     getMvStyleLetter() {
-        if (this.curlyCount > 90) {
-            let remaining = this.curlyCount++;
+        if (this.letters[0] > 90) {
+            let remaining = this.letters[0]++;
             let letters = "Z";
             while (remaining > 90) {
                 remaining -= 90;
                 if (remaining <= 90) {
-                    letters += String.fromCharCode(this.curlyCount++);
+                    letters += String.fromCharCode(remaining);
                 }
                 else {
                     letters += "Z";
@@ -311,20 +306,20 @@ class RedStringEscaper {
             return "%" + letters;
         }
         else {
-            return `%${String.fromCharCode(this.curlyCount++)}`;
+            return `%${String.fromCharCode(this.letters[0]++)}`;
         }
     }
     getWolfStyle() {
-        return `@${this.symbolAffix++}`;
+        return `@${this.counters[0]++}`;
     }
     getHexPlaceholder() {
-        return "0x" + (this.hexCounter++).toString(16);
+        return "0x" + (this.privateArea++).toString(16);
     }
     getCurly() {
-        return "{" + String.fromCharCode(this.curlyCount++) + "}";
+        return "{" + String.fromCharCode(this.letters[0]++) + "}";
     }
     getDoubleCurly() {
-        return "{{" + String.fromCharCode(this.curlyCount++) + "}}";
+        return "{{" + String.fromCharCode(this.letters[0]++) + "}}";
     }
     getClosedNines() {
         return "9" +
@@ -332,25 +327,25 @@ class RedStringEscaper {
             + "9";
     }
     getPrivateArea() {
-        return String.fromCodePoint(this.privateCounter++);
+        return String.fromCodePoint(this.privateArea++);
     }
     getHashtag() {
-        return `#${String.fromCharCode(this.hashtagOne++)}`;
+        return `#${String.fromCharCode(this.letters[0]++)}`;
     }
     getTripleHashtag() {
-        return `#${String.fromCharCode(this.hashtagOne++)}${String.fromCharCode(this.hashtagTwo++)}${String.fromCharCode(this.hashtagThree++)}`;
+        return `#${String.fromCharCode(this.letters[0]++)}${String.fromCharCode(this.letters[1]++)}${String.fromCharCode(this.letters[2]++)}`;
     }
     getTournament() {
-        return `#${this.symbolAffix++}`;
+        return `#${this.counters[0]++}`;
     }
     getPercentage() {
-        return `${this.symbolAffix++}%`;
+        return `${this.counters[0]++}%`;
     }
     getSugoiSpecial() {
-        return `@#${this.symbolAffix++}`;
+        return `@#${this.counters[0]++}`;
     }
     getSugoiSpecial2() {
-        return `@#${String.fromCharCode(this.hashtagOne++)}`;
+        return `@#${String.fromCharCode(this.letters[0]++)}`;
     }
     getOriginalText() {
         return this.text;
@@ -450,7 +445,16 @@ class RedStringEscaper {
         // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
         // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
         let found = true;
+        let foundCount = 0;
         while (found) {
+            if (foundCount++ > 20) {
+                ui.logError("[RedStringEscaper] Entered infinite loop while recovering symbols.");
+                ui.logError("Original Sentence: " + this.getOriginalText());
+                ui.logError("Current Sentence: " + this.currentText);
+                ui.logError("Symbols: " + JSON.stringify(this.storedSymbols));
+                console.error("[RedStringEscaper] Entered infinite loop while recovering symbols.", this.currentText, this);
+                break;
+            }
             //console.warn("Recover loop");
             found = false;
             for (let key in this.storedSymbols) {
@@ -458,6 +462,7 @@ class RedStringEscaper {
                     // User has escaped the placeholder itself...
                     continue;
                 }
+                // "To lower case" would suffice, but it'd also be about three times slower according to testing... let's just escape and keep using RegExp
                 // Some keys might have special regexp characters in them. We should be careful about that.
                 let idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi"));
                 while (idx != -1) {
@@ -465,7 +470,7 @@ class RedStringEscaper {
                     this.currentText = this.currentText.substring(0, idx) +
                         this.storedSymbols[key] +
                         this.currentText.substring(idx + key.length);
-                    idx = this.currentText.search(new RegExp(key, "gi"));
+                    idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi")); // Forgot this one
                 }
             }
         }
