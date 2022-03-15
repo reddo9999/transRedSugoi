@@ -512,7 +512,9 @@ class RedStringEscaper {
                     // User has escaped the placeholder itself...
                     continue;
                 }
-                let idx = this.currentText.search(new RegExp(key, "gi"));
+                // "To lower case" would suffice, but it'd also be about three times slower according to testing... let's just escape and keep using RegExp
+                // Some keys might have special regexp characters in them. We should be careful about that.
+                let idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi"));
                 while (idx != -1) {
                     found = true;
                     this.currentText =  this.currentText.substring(0, idx) +
