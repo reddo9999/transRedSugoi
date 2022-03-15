@@ -332,7 +332,21 @@ class RedStringEscaper {
     }
 
     public getMvStyleLetter () {
-        return `%${String.fromCharCode(this.curlyCount++)}`;
+        if (this.curlyCount > 90) {
+            let remaining = this.curlyCount++;
+            let letters = "Z";
+            while (remaining > 90) {
+                remaining -= 90;
+                if (remaining <= 90) {
+                    letters += String.fromCharCode(this.curlyCount++);
+                } else {
+                    letters += "Z";
+                }
+            }
+            return "%" + letters;
+        } else {
+            return `%${String.fromCharCode(this.curlyCount++)}`;
+        }
     }
 
     public getWolfStyle () {
