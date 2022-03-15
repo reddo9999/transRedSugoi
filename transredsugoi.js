@@ -296,7 +296,23 @@ class RedStringEscaper {
         return `%${this.symbolAffix++}`;
     }
     getMvStyleLetter() {
-        return `%${String.fromCharCode(this.curlyCount++)}`;
+        if (this.curlyCount > 90) {
+            let remaining = this.curlyCount++;
+            let letters = "Z";
+            while (remaining > 90) {
+                remaining -= 90;
+                if (remaining <= 90) {
+                    letters += String.fromCharCode(this.curlyCount++);
+                }
+                else {
+                    letters += "Z";
+                }
+            }
+            return "%" + letters;
+        }
+        else {
+            return `%${String.fromCharCode(this.curlyCount++)}`;
+        }
     }
     getWolfStyle() {
         return `@${this.symbolAffix++}`;
@@ -442,7 +458,8 @@ class RedStringEscaper {
                     // User has escaped the placeholder itself...
                     continue;
                 }
-                let idx = this.currentText.search(new RegExp(key, "gi"));
+                // Some keys might have special regexp characters in them. We should be careful about that.
+                let idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi"));
                 while (idx != -1) {
                     found = true;
                     this.currentText = this.currentText.substring(0, idx) +
