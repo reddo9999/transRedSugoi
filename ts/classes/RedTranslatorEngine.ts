@@ -1,5 +1,6 @@
 /// <reference path="RedStringEscaper.ts" />
 /// <reference path="RedPersistentCacheHandler.ts" />
+/// <reference path="RedPerformance.ts" />
 declare var ui : any;
 
 interface RedScriptCheckResponse {
@@ -263,7 +264,7 @@ abstract class RedTranslatorEngineWrapper {
     abstract doTranslate (toTranslate : Array<string>, options : TranslatorEngineOptions) : Promise<Array<string>>;
 
     public translate (rows : Array<string>, options : any) {
-        let batchStart = new Date().getTime();
+        let overallPerf = new RedPerformance();
         options = options||{};
         options.onAfterLoading = options.onAfterLoading||function() {};
         options.onError = options.onError||function() {};
@@ -286,6 +287,7 @@ abstract class RedTranslatorEngineWrapper {
 			'translation': <Array<string>> []
 		};
         
+        let curationPerf = new RedPerformance();
         // First step: curate every single line and keep track of it
         let rowHandlers : Array<RedStringRowHandler> = [];
         let toTranslateOr : Array<string> = [];
@@ -310,12 +312,18 @@ abstract class RedTranslatorEngineWrapper {
                 toTranslateIndex[idx].push(i);
             }
         }
+        
+        curationPerf.end();
 
         // Third step: send translatable lines to the translator handler
+        let translationPerf = new RedPerformance();
         let translation = this.doTranslate(toTranslate, options);
 
+        let recoveryPerf : RedPerformance;
         // After receiving...
         translation.then((translationsNoDupes) => {
+            translationPerf.end();
+            recoveryPerf = new RedPerformance();
             // Recreate translations with duplicates so our old indexes work
             let translations = new Array(toTranslateOr.length);
             for (let i = 0; i < translationsNoDupes.length; i++) {
@@ -363,20 +371,21 @@ abstract class RedTranslatorEngineWrapper {
             // Final step: set up result object
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
+            recoveryPerf.end();
 
-            setTimeout(() => {
-                options.onAfterLoading.call(this.translatorEngine, result);
-            }, 150);
+            options.onAfterLoading.call(this.translatorEngine, result);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
             this.error("[RedTranslatorEngine] Error: ", reason);
         }).finally(() => {
-            let batchEnd = new Date().getTime();
-            let seconds = Math.round((batchEnd - batchStart)/100)/10;
+            overallPerf.end();
+            let seconds = overallPerf.getSeconds();
 
 
             this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds)/10} characters per second!`);
             this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds)/10} rows per second).`);
+
+            this.log(`[RedTranslatorEngine] Performance Analysis - - - Curation time: ${curationPerf.getSeconds()}s; Time to translate: ${translationPerf.getSeconds()}s; Recovery time: ${recoveryPerf.getSeconds()}s`)
 
             let hits = this.getCacheHits();
             this.resetCacheHits();

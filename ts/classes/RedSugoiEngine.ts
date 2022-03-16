@@ -176,13 +176,17 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
 
                 // Update progress
                 let pre = document.createElement("pre");
-                pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
-                let servers = [...this.urls];
-                servers.sort((a, b) => {
-                    return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
-                });
-                for (let i = 0; i < servers.length; i++) {
-                    pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+                if (this.urls.length > 1) {
+                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
+                    let servers = [...this.urls];
+                    servers.sort((a, b) => {
+                        return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
+                    });
+                    for (let i = 0; i < servers.length; i++) {
+                        pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+                    }
+                } else {
+                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated!"));
                 }
                 
                 consoleWindow.appendChild(pre);
