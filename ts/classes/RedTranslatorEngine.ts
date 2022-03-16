@@ -8,13 +8,16 @@ interface RedScriptCheckResponse {
     newLine? : string;
 }
 
-const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
-const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
-const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
+
+const defaultSymbols = `◆◎★■☆〇□△●♂♀⚤⚢⚨⚣⚩⚧⸸✞☦✝✟♱☥♁✙⚰️⛧♡♥❤♦♣♠•◘○◙♂♀♪♫►◄▲▼↑←↑→↓↓→←↔※＊〽〓♪♫♬♩〇〒〶〠〄ⓍⓁⓎ`;
+const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*	*)`;
+const defaultPunctuation = `！？。・…‥：；.?!;:`;
 const openerRegExp = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
+const defaultLineStart = `((?:\\r?\\n|^) *　*[${defaultSymbols}${openerRegExp}>\\/\\\\]+)`;
 const closerRegExp = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
+const defaultLineEnd = `([${defaultSymbols}${closerRegExp}${defaultPunctuation}]+ *　*(?:$|\\r?\\n))`;
 const rmColorRegExp = `\\\\C\\[.+?\\]`;
-const mvScript = `\\\\*[V]+`;
+const mvScript = `\\\\*[NV]`;
 // RegExp:  not lookbehind: mvScript
 //          lookbehind: opener or rmColor
 //          match: anything that's not opener nor closer
@@ -25,7 +28,7 @@ const defaultIsolateRegexp =
     `(?<!` +
         `${mvScript}` + 
     `)` +
-    `[${openerRegExp}]([^${openerRegExp + closerRegExp}])+[${closerRegExp}]` +
+    `[${openerRegExp}$]([^${openerRegExp}${closerRegExp}])+[${closerRegExp}]` +
 `)|(` +
     `${rmColorRegExp}.+?${rmColorRegExp}` +
 `)`;
