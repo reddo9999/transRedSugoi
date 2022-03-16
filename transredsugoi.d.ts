@@ -231,10 +231,22 @@ declare class RedPiggybackEngine extends RedTranslatorEngineWrapper {
     resetForm(): void;
     constructor(thisAddon: any);
 }
+declare function t(text: string): string;
+declare class RedButtonManagerButton {
+    name: string;
+    icon: string;
+    title: string;
+    action: () => void | Promise<void>;
+    private element;
+    constructor(name: string, icon: string, title: string, action: () => void | Promise<void>);
+    setIcon(icon: string): void;
+    getButton(): HTMLButtonElement;
+}
 declare var thisAddon: any;
 declare let wrappers: (RedSugoiEngine | RedGoogleEngine)[];
 declare let piggy: RedPiggybackEngine;
 declare var trans: any;
+declare var engines: any;
 declare class RedStringRowHandler {
     private originalRow;
     private curatedLines;

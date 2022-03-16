@@ -2023,9 +2023,64 @@ class RedPiggybackEngine extends RedTranslatorEngineWrapper {
         this.getEngine().optionsForm.form.carryId.enum = getCarryTitleMap(false);
     }
 }
+class RedButtonManagerButton {
+    constructor(name, icon, title, action) {
+        this.name = name;
+        this.icon = icon;
+        this.title = title;
+        this.action = action;
+    }
+    setIcon(icon) {
+        this.icon = icon;
+        if (this.element != undefined) {
+            this.element.children[0].className = icon;
+        }
+    }
+    getButton() {
+        if (this.element != undefined) {
+            return this.element;
+        }
+        else {
+            let button = document.createElement("button");
+            button.classList.add("menu-button");
+            button.dataset.tranattr = "title";
+            button.title = t(this.title);
+            let icon = document.createElement("i");
+            icon.classList.add(this.icon);
+            button.appendChild(icon);
+            icon.style.color = "#E00";
+            button.addEventListener("click", this.action);
+            this.element = button;
+            return button;
+        }
+    }
+}
+/*
+class RedButtonManager {
+    private static buttons : Array<RedButtonManagerButton> = [];
+
+    public static addButton (name : string, icon : string, title : string, action : () => void | Promise<void>) {
+        this.buttons.push(new RedButtonManagerButton(name, icon, title, action));
+    }
+
+    public static getButtons () {
+        let buttons : Array<HTMLButtonElement> = [];
+        RedButtonManager.buttons.forEach((buttonInfo) => {
+            let button = document.createElement("button");
+            button.classList.add("menu-button");
+            button.dataset.tranattr = "title";
+            button.title = t(buttonInfo.title);
+            button.classList.add(buttonInfo.icon);
+
+            button.addEventListener("click", buttonInfo.action);
+        });
+        return buttons;
+    }
+} */ 
 /// <reference path="classes/RedSugoiEngine.ts" />
 /// <reference path="classes/RedGoogleEngine.ts" />
 /// <reference path="classes/RedPiggybackEngine.ts" />
+/// <reference path="classes/RedButtonManager.ts" />
 var thisAddon = this;
 let wrappers = [
     new RedSugoiEngine(thisAddon),
@@ -2040,11 +2095,41 @@ $(document).ready(() => {
     wrappers.forEach(wrapper => {
         wrapper.getEngine().init();
     });
-    /* piggy.getEngine().init();
-
-    setTimeout(() => {
-        piggy.resetForm();
-    }, 500); */
+    let checkedIcon = ["icon-minus-squared", "icon-ok-squared"];
+    function isCornerCutting() {
+        return trans.redsugoi.getOptions("splitEnds") === true && trans.redgoogles.getOptions("splitEnds") === true;
+    }
+    function getIcon() {
+        return isCornerCutting() ? checkedIcon[1] : checkedIcon[0];
+    }
+    let cornerButton = new RedButtonManagerButton("cutToggle", getIcon(), "Toggle Cut Corners", () => {
+        let currentState = isCornerCutting();
+        trans.redsugoi.update("splitEnds", !currentState);
+        trans.redgoogles.update("splitEnds", !currentState);
+        cornerButton.setIcon(getIcon());
+    });
+    let cacheIcon = ["icon-unlink", "icon-database"];
+    function isCache() {
+        return trans.redsugoi.getOptions("useCache") === true && trans.redgoogles.getOptions("useCache") === true;
+    }
+    function getCacheIcon() {
+        return isCache() ? cacheIcon[1] : cacheIcon[0];
+    }
+    let cacheButton = new RedButtonManagerButton("cacheToggle", getCacheIcon(), "Toggle Cache", () => {
+        let currentState = isCache();
+        trans.redsugoi.update("useCache", !currentState);
+        trans.redgoogles.update("useCache", !currentState);
+        cacheButton.setIcon(getCacheIcon());
+    });
+    let buttonContainer = document.body.getElementsByClassName("toolbar-content toolbar10 redToolbar")[0];
+    if (buttonContainer == undefined) {
+        let toolbarContainer = document.body.getElementsByClassName("toolbar mainToolbar")[0];
+        buttonContainer = document.createElement("div");
+        buttonContainer.className = "toolbar-content toolbar10 redToolbar";
+        toolbarContainer.appendChild(buttonContainer);
+    }
+    buttonContainer.appendChild(cornerButton.getButton());
+    buttonContainer.appendChild(cacheButton.getButton());
 });
 class RedStringRowHandler {
     constructor(row, wrapper) {

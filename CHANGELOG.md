@@ -1,3 +1,6 @@
+# Version 0.72
++ Buttons in the toolbar for easy toggling of Cut Corners / Cache.
+
 # Version 0.71
 + Better infinite loop protection
     + TODO: Infinite loops should be impossible, not prevented. Figure out how to prevent them. Maybe counting? Counting could help detect when the placeholders aren't all restored, either.
