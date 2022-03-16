@@ -141,13 +141,15 @@ interface RedScriptCheckResponse {
     quoteType?: string;
     newLine?: string;
 }
-declare const defaultLineStart = "((?:\\r?\\n|^) *\u3000*[\u25CE\u25B2\u25BC\u25BD\u25A0\u25A1\u25CF\u25CB\u2605\u2606\u2665\u2661\u266A\uFF3F\uFF0A\uFF0D\uFF1D\uFF0B\uFF03\uFF04\u2015\u203B\u3007\u3014\u3016\u3018\u301A\u301D\uFF62\u3008\u300A\u300C\u300E\u3010\uFF08\uFF3B\\[\\({\uFF1C<\uFF5B\uFF5F\"'>\\/\\\\]+)";
-declare const defaultLineEnd = "([\\]\\)}\u3015\u3017\u3019\u301B\u301E\u201D\uFF63\u3009\u300B\u300D\u300F\u3011\uFF09\uFF3D\uFF1E>\uFF5D\uFF60\u301F\u27E9\uFF01\uFF1F\u3002\u30FB\u2026\u2025\uFF1A\uFF1B\"'.?!;:]+ *\u3000*(?:$|\\r*\\n))";
-declare const defaultParagraphBreak = "( *\u3000*\\r?\\n(?:\\r?\\n)+ *\u3000*)";
+declare const defaultSymbols = "\u25C6\u25CE\u2605\u25A0\u2606\u3007\u25A1\u25B3\u25CF\u2642\u2640\u26A4\u26A2\u26A8\u26A3\u26A9\u26A7\u2E38\u271E\u2626\u271D\u271F\u2671\u2625\u2641\u2719\u26B0\uFE0F\u26E7\u2661\u2665\u2764\u2666\u2663\u2660\u2022\u25D8\u25CB\u25D9\u2642\u2640\u266A\u266B\u25BA\u25C4\u25B2\u25BC\u2191\u2190\u2191\u2192\u2193\u2193\u2192\u2190\u2194\u203B\uFF0A\u303D\u3013\u266A\u266B\u266C\u2669\u3007\u3012\u3036\u3020\u3004\u24CD\u24C1\u24CE";
+declare const defaultParagraphBreak = "( *\u3000*\\r?\\n(?:\\r?\\n)+ *\u3000*\t*)";
+declare const defaultPunctuation = "\uFF01\uFF1F\u3002\u30FB\u2026\u2025\uFF1A\uFF1B.?!;:";
 declare const openerRegExp = "\u3014\u3016\u3018\u301A\u301D\uFF62\u3008\u300A\u300C\u300E\u3010\uFF08\uFF3B\\[\\({\uFF1C<\uFF5B\uFF5F\"'";
+declare const defaultLineStart: string;
 declare const closerRegExp = "\\]\\)}\u3015\u3017\u3019\u301B\u301E\u201D\uFF63\u3009\u300B\u300D\u300F\u3011\uFF09\uFF3D\uFF1E>\uFF5D\uFF60\u301F\u27E9\"'";
+declare const defaultLineEnd: string;
 declare const rmColorRegExp = "\\\\C\\[.+?\\]";
-declare const mvScript = "\\\\*[V]+";
+declare const mvScript = "\\\\*[NV]";
 declare const defaultIsolateRegexp: string;
 declare const defaultSplitRegExp = "((?:\\\\?r?\\\\n)+)|(\\\\[.!])";
 /**

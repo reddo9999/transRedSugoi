@@ -1,3 +1,7 @@
+# Version 0.73
++ Better default Regular Expressions
++ Fix: Cut corners not detecting when escaped symbol also appers in the middle
+
 # Version 0.72
 + Buttons in the toolbar for easy toggling of Cut Corners / Cache.
 

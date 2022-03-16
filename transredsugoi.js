@@ -546,21 +546,20 @@ class RedStringEscaper {
         this.currentText = this.currentText.trim();
         let found = true;
         let loops = 0;
+        let blankCorners = "[ 　\\r\\n]*";
         while (found && this.splitEnds) {
             found = false;
             for (let tag in this.storedSymbols) {
-                let idx = text.indexOf(tag);
-                if (idx == 0) {
-                    this.preString += tag; // Instead of doing the work right away, let's leave this because we might have nested symbols.
-                    text = text.substring(tag.length); // replace was dangerous, so we do it old school
+                text = text.replace(new RegExp(`^${blankCorners}${tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}${blankCorners}`, "i"), (match) => {
                     found = true;
-                }
-                else if (idx != -1 && (idx + tag.length) == text.length) {
-                    // Everything we find after the first one will be coming before it, not after
-                    this.postString = this.storedSymbols[tag] + this.postString;
-                    text = text.substring(0, idx);
+                    this.preString += match;
+                    return "";
+                });
+                text = text.replace(new RegExp(`${blankCorners}${tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}${blankCorners}$`, "i"), (match) => {
                     found = true;
-                }
+                    this.postString = match + this.postString;
+                    return "";
+                });
             }
             // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
             if (loops++ > 30) {
@@ -779,13 +778,15 @@ class RedPersistentCacheHandler {
 }
 /// <reference path="RedStringEscaper.ts" />
 /// <reference path="RedPersistentCacheHandler.ts" />
-const defaultLineStart = `((?:\\r?\\n|^) *　*[◎▲▼▽■□●○★☆♥♡♪＿＊－＝＋＃＄―※〇〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'>\\/\\\\]+)`;
-const defaultLineEnd = `([\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩！？。・…‥：；"'.?!;:]+ *　*(?:$|\\r*\\n))`;
-const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*)`;
+const defaultSymbols = `◆◎★■☆〇□△●♂♀⚤⚢⚨⚣⚩⚧⸸✞☦✝✟♱☥♁✙⚰️⛧♡♥❤♦♣♠•◘○◙♂♀♪♫►◄▲▼↑←↑→↓↓→←↔※＊〽〓♪♫♬♩〇〒〶〠〄ⓍⓁⓎ`;
+const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*	*)`;
+const defaultPunctuation = `！？。・…‥：；.?!;:`;
 const openerRegExp = `〔〖〘〚〝｢〈《「『【（［\\[\\({＜<｛｟"'`;
+const defaultLineStart = `((?:\\r?\\n|^) *　*[${defaultSymbols}${openerRegExp}>\\/\\\\]+)`;
 const closerRegExp = `\\]\\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`;
+const defaultLineEnd = `([${defaultSymbols}${closerRegExp}${defaultPunctuation}]+ *　*(?:$|\\r?\\n))`;
 const rmColorRegExp = `\\\\C\\[.+?\\]`;
-const mvScript = `\\\\*[V]+`;
+const mvScript = `\\\\*[NV]`;
 // RegExp:  not lookbehind: mvScript
 //          lookbehind: opener or rmColor
 //          match: anything that's not opener nor closer
@@ -795,7 +796,7 @@ const defaultIsolateRegexp = `(` +
     `(?<!` +
     `${mvScript}` +
     `)` +
-    `[${openerRegExp}]([^${openerRegExp + closerRegExp}])+[${closerRegExp}]` +
+    `[${openerRegExp}$]([^${openerRegExp}${closerRegExp}])+[${closerRegExp}]` +
     `)|(` +
     `${rmColorRegExp}.+?${rmColorRegExp}` +
     `)`;
