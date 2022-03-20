@@ -60,7 +60,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         this.resetScores();
         console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
 
-        let translating = 0;
         let translations : Array<string> = [];
 
         // Set up progress
@@ -91,9 +90,9 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             progressTotal.nodeValue = "/" + toTranslate.length.toString();
             options.progress(Math.round(100 * translatedLines / toTranslate.length));
         };
-
         
-        let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
+        //let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
+        let maxJobLength = this.getEngine().getOptions().maxJobLength || 100;
         let threads = this.getEngine().getOptions().threads || 1;
         let completedThreads = 0;
         // I don't know why we didn't do this
@@ -105,6 +104,13 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
              onError : (error : Error) => void) 
              => void;
 
+        // Age-old issue: The implementation was not really thread safe. We're not really using real threads, but there was still a conflict if we wanted to do something better like count characters.
+        // Solution: "atomic"-ish operations through array pop.
+        let toTranslateArray : Array<RedTranslatableString> = [];
+        for (let i = 0; i < toTranslate.length; i++) {
+            toTranslateArray.push(new RedTranslatableString(i, toTranslate[i]));
+        }
+
         // Third step: perform translations
         let doTranslate = (onSuccess : (result : Array<string>) => void, onError : (error : Error) => void) => {
             if (!this.allowTranslation || this.paused) {
@@ -112,20 +118,36 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     doTranslate(onSuccess, onError);
                 });
             }
-            if (translating >= toTranslate.length) {
-                console.log("[RedSugoi] Thread has no more work to do.");
-                complete(onSuccess, onError);
-            } else {
-                console.log("[RedSugoi] Thread Starting Work.")
-                let myLines : Array<string> = [];
-                let myStart = translating;
-                translating = myStart + maximumPayload;
-                for (let i = myStart; i < toTranslate.length; i++) {
-                    myLines.push(toTranslate[i]);
-                    if (myLines.length >= maximumPayload) {
+
+            let currentLength = 0;
+            let myTranslatables : Array<RedTranslatableString> = [];
+            while (currentLength < maxJobLength) {
+                let translatable = toTranslateArray.pop();
+                if (typeof translatable == "undefined") {
+                    // Nothing more to translate
+                    break;
+                } else {
+                    if (currentLength == 0 || (currentLength + translatable.getLength()) <= maxJobLength) {
+                        myTranslatables.push(translatable);
+                        currentLength += translatable.getLength();
+                    } else {
+                        toTranslateArray.push(translatable); // return it for someone else
                         break;
                     }
                 }
+            }
+
+            if (currentLength == 0) {
+                console.log("[RedSugoi] Thread has no more work to do.");
+                complete(onSuccess, onError);
+            } else {
+                console.log("[RedSugoi] Thread Starting Work.");
+
+                let myLines : Array<string> = [];
+                for (let i = 0; i < myTranslatables.length; i++) {
+                    myLines.push(myTranslatables[i].getText());
+                }
+
                 let myServer = this.getUrl();
                 console.log("[RedSugoi] Fetching from " + myServer + ". Payload:" + myLines.length.toString());
                 fetch(myServer, {
@@ -142,7 +164,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                             throw new Error(`Received invalid response - length mismatch, check server stability.`);
                         }
                         for (let i = 0; i < result.length; i++) {
-                            translations[i + myStart] = result[i];
+                            let index = myTranslatables[i].getIndex();
+                            translations[index] = result[i];
                             this.setCache(myLines[i], result[i]);
                         }
                         translatedLines += myLines.length;
@@ -217,7 +240,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 lineDelimiter: "<br>",
                 mode: "rowByRow",
                 maxRequestLength : 400 * 10, // Assuming an average of 400 characters per second, we want batches to take no more than 10 seconds each
-                maxParallelJob : 20,
+                maxJobLength : 100,
+                /* maxParallelJob : 20, */
                 threads : 10,
                 escapeAlgorithm : RedPlaceholderType.poleposition,
             }
@@ -230,13 +254,20 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     "default":"http://localhost:14366/",
                     "required":true
                 },
-                "maxParallelJob": {
+                "maxJobLength": {
+                    "type": "number",
+                    "title": "Max Job Length",
+                    "description": "Defines the maximum amount of characters per request. The higher this number is, the faster the translations will be, but the more RAM/VRAM will be required. The best number is the highest you can go without errors.",
+                    "default":100,
+                    "required":true
+                },
+                /* "maxParallelJob": {
                     "type": "number",
                     "title": "Max Parallel job",
                     "description": "The higher this number is, the faster the translations will be, but the more RAM/VRAM will be required. The best number is the highest you can go without errors.",
                     "default":20,
                     "required":true
-                },
+                }, */
                 "maxRequestLength": {
                     "type": "number",
                     "title": "Batch Size",
@@ -310,11 +341,18 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                         }
                     ]
                 },
-                {
+                /* {
                     "key": "maxParallelJob",
                     "onChange": (evt : Event) => {
                       var value = <string> $(<HTMLInputElement> evt.target).val();
                       this.translatorEngine.update("maxParallelJob", parseInt(value));
+                    }
+                }, */
+                {
+                    "key": "maxJobLength",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("maxJobLength", parseInt(value));
                     }
                 },
                 {
