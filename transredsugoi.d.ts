@@ -135,6 +135,12 @@ declare class RedPersistentCacheHandler {
     saveCache(): void;
     getSize(cache: string): number;
 }
+declare class RedPerformance {
+    private perfStart;
+    private perfEnd;
+    end(): void;
+    getSeconds(): number;
+}
 declare var ui: any;
 interface RedScriptCheckResponse {
     isScript: boolean;
@@ -266,4 +272,13 @@ declare class RedStringRowHandler {
     insertTranslation(text: string, index: number): void;
     applyTranslation(): void;
     isDone(index: number): boolean;
+}
+declare class RedTranslatableString {
+    private index;
+    private text;
+    constructor(index: number, text: string);
+    setText(text: string): void;
+    getIndex(): number;
+    getText(): string;
+    getLength(): number;
 }

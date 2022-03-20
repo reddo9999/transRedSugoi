@@ -1,3 +1,10 @@
+# Version 0.74
++ Sugoi Engine now able to set specific request length. So instead of sending "35" translations per request, which might or might not blow up your RAM/VRAM depending on the size of each translation, it is now possible to set a consistent character length per request.
+    + For faster translations, you want this as high as your VRAM/RAM can take it.
+    + For translations that don't affect the system as much, lower numbers are fine.
+    + With this change, it should be possible to consistently maintain the fastest translation speed regardless of how "lucky" you are with the text order. Also more stable (since all translations are essentially the same size).
++ The default value is very conservative, please update to something that causes your GPU to cry.
+
 # Version 0.73
 + Better default Regular Expressions
 + Fix: Cut corners not detecting when escaped symbol also appers in the middle

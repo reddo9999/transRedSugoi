@@ -776,8 +776,22 @@ class RedPersistentCacheHandler {
         return cache.length * 2; // it was too slow, we will assume: HALF IS JAPANESE HALF IS ENGLISH SO 2 BYTES PER CHARACTER, probably still a bit pessimistic, which is good enough of an approximation
     }
 }
+class RedPerformance {
+    constructor() {
+        this.perfStart = Date.now();
+        this.perfEnd = 0;
+    }
+    end() {
+        this.perfEnd = Date.now();
+    }
+    getSeconds() {
+        let timeTaken = this.perfEnd - this.perfStart;
+        return (Math.round(timeTaken / 100) / 10);
+    }
+}
 /// <reference path="RedStringEscaper.ts" />
 /// <reference path="RedPersistentCacheHandler.ts" />
+/// <reference path="RedPerformance.ts" />
 const defaultSymbols = `◆◎★■☆〇□△●♂♀⚤⚢⚨⚣⚩⚧⸸✞☦✝✟♱☥♁✙⚰️⛧♡♥❤♦♣♠•◘○◙♂♀♪♫►◄▲▼↑←↑→↓↓→←↔※＊〽〓♪♫♬♩〇〒〶〠〄ⓍⓁⓎ`;
 const defaultParagraphBreak = `( *　*\\r?\\n(?:\\r?\\n)+ *　*	*)`;
 const defaultPunctuation = `！？。・…‥：；.?!;:`;
@@ -1242,7 +1256,7 @@ class RedTranslatorEngineWrapper {
             lines: curated };
     }
     translate(rows, options) {
-        let batchStart = new Date().getTime();
+        let overallPerf = new RedPerformance();
         options = options || {};
         options.onAfterLoading = options.onAfterLoading || function () { };
         options.onError = options.onError || function () { };
@@ -1261,6 +1275,7 @@ class RedTranslatorEngineWrapper {
             'source': rows,
             'translation': []
         };
+        let curationPerf = new RedPerformance();
         // First step: curate every single line and keep track of it
         let rowHandlers = [];
         let toTranslateOr = [];
@@ -1284,10 +1299,15 @@ class RedTranslatorEngineWrapper {
                 toTranslateIndex[idx].push(i);
             }
         }
+        curationPerf.end();
         // Third step: send translatable lines to the translator handler
+        let translationPerf = new RedPerformance();
         let translation = this.doTranslate(toTranslate, options);
+        let recoveryPerf;
         // After receiving...
         translation.then((translationsNoDupes) => {
+            translationPerf.end();
+            recoveryPerf = new RedPerformance();
             // Recreate translations with duplicates so our old indexes work
             let translations = new Array(toTranslateOr.length);
             for (let i = 0; i < translationsNoDupes.length; i++) {
@@ -1326,17 +1346,17 @@ class RedTranslatorEngineWrapper {
             // Final step: set up result object
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
-            setTimeout(() => {
-                options.onAfterLoading.call(this.translatorEngine, result);
-            }, 150);
+            recoveryPerf.end();
+            options.onAfterLoading.call(this.translatorEngine, result);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
             this.error("[RedTranslatorEngine] Error: ", reason);
         }).finally(() => {
-            let batchEnd = new Date().getTime();
-            let seconds = Math.round((batchEnd - batchStart) / 100) / 10;
+            overallPerf.end();
+            let seconds = overallPerf.getSeconds();
             this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds) / 10} characters per second!`);
             this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds) / 10} rows per second).`);
+            this.log(`[RedTranslatorEngine] Performance Analysis - - - Curation time: ${curationPerf.getSeconds()}s; Time to translate: ${translationPerf.getSeconds()}s; Recovery time: ${recoveryPerf.getSeconds()}s`);
             let hits = this.getCacheHits();
             this.resetCacheHits();
             if (hits > 0) {
@@ -1450,7 +1470,6 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
     doTranslate(toTranslate, options) {
         this.resetScores();
         console.log("[REDSUGOI] TRANSLATE:\n", toTranslate, options);
-        let translating = 0;
         let translations = [];
         // Set up progress
         let consoleWindow = $("#loadingOverlay .console")[0];
@@ -1477,7 +1496,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             progressTotal.nodeValue = "/" + toTranslate.length.toString();
             options.progress(Math.round(100 * translatedLines / toTranslate.length));
         };
-        let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
+        //let maximumPayload = this.getEngine().getOptions().maxParallelJob || 5;
+        let maxJobLength = this.getEngine().getOptions().maxJobLength || 100;
         let threads = this.getEngine().getOptions().threads || 1;
         let completedThreads = 0;
         // I don't know why we didn't do this
@@ -1485,6 +1505,12 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
         this.updateUrls();
         let totalThreads = this.getUrlCount() * threads;
         let complete;
+        // Age-old issue: The implementation was not really thread safe. We're not really using real threads, but there was still a conflict if we wanted to do something better like count characters.
+        // Solution: "atomic"-ish operations through array pop.
+        let toTranslateArray = [];
+        for (let i = 0; i < toTranslate.length; i++) {
+            toTranslateArray.push(new RedTranslatableString(i, toTranslate[i]));
+        }
         // Third step: perform translations
         let doTranslate = (onSuccess, onError) => {
             if (!this.allowTranslation || this.paused) {
@@ -1492,20 +1518,34 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     doTranslate(onSuccess, onError);
                 });
             }
-            if (translating >= toTranslate.length) {
+            let currentLength = 0;
+            let myTranslatables = [];
+            while (currentLength < maxJobLength) {
+                let translatable = toTranslateArray.pop();
+                if (typeof translatable == "undefined") {
+                    // Nothing more to translate
+                    break;
+                }
+                else {
+                    if (currentLength == 0 || (currentLength + translatable.getLength()) <= maxJobLength) {
+                        myTranslatables.push(translatable);
+                        currentLength += translatable.getLength();
+                    }
+                    else {
+                        toTranslateArray.push(translatable); // return it for someone else
+                        break;
+                    }
+                }
+            }
+            if (currentLength == 0) {
                 console.log("[RedSugoi] Thread has no more work to do.");
                 complete(onSuccess, onError);
             }
             else {
                 console.log("[RedSugoi] Thread Starting Work.");
                 let myLines = [];
-                let myStart = translating;
-                translating = myStart + maximumPayload;
-                for (let i = myStart; i < toTranslate.length; i++) {
-                    myLines.push(toTranslate[i]);
-                    if (myLines.length >= maximumPayload) {
-                        break;
-                    }
+                for (let i = 0; i < myTranslatables.length; i++) {
+                    myLines.push(myTranslatables[i].getText());
                 }
                 let myServer = this.getUrl();
                 console.log("[RedSugoi] Fetching from " + myServer + ". Payload:" + myLines.length.toString());
@@ -1523,7 +1563,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                             throw new Error(`Received invalid response - length mismatch, check server stability.`);
                         }
                         for (let i = 0; i < result.length; i++) {
-                            translations[i + myStart] = result[i];
+                            let index = myTranslatables[i].getIndex();
+                            translations[index] = result[i];
                             this.setCache(myLines[i], result[i]);
                         }
                         translatedLines += myLines.length;
@@ -1556,13 +1597,18 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 onSuccess(translations);
                 // Update progress
                 let pre = document.createElement("pre");
-                pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
-                let servers = [...this.urls];
-                servers.sort((a, b) => {
-                    return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
-                });
-                for (let i = 0; i < servers.length; i++) {
-                    pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+                if (this.urls.length > 1) {
+                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated! Best servers were:"));
+                    let servers = [...this.urls];
+                    servers.sort((a, b) => {
+                        return this.urlScore[this.urls.indexOf(b)] - this.urlScore[this.urls.indexOf(a)];
+                    });
+                    for (let i = 0; i < servers.length; i++) {
+                        pre.appendChild(document.createTextNode(`\n[RedSugoi] #${i + 1} - ${servers[i]} (${this.urlScore[this.urls.indexOf(servers[i])]} translations)`));
+                    }
+                }
+                else {
+                    pre.appendChild(document.createTextNode("[RedSugoi] Batch Translated!"));
                 }
                 consoleWindow.appendChild(pre);
             }
@@ -1588,7 +1634,8 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
             lineDelimiter: "<br>",
             mode: "rowByRow",
             maxRequestLength: 400 * 10,
-            maxParallelJob: 20,
+            maxJobLength: 100,
+            /* maxParallelJob : 20, */
             threads: 10,
             escapeAlgorithm: RedPlaceholderType.poleposition,
         }, {
@@ -1599,13 +1646,20 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                 "default": "http://localhost:14366/",
                 "required": true
             },
-            "maxParallelJob": {
+            "maxJobLength": {
+                "type": "number",
+                "title": "Max Job Length",
+                "description": "Defines the maximum amount of characters per request. The higher this number is, the faster the translations will be, but the more RAM/VRAM will be required. The best number is the highest you can go without errors.",
+                "default": 100,
+                "required": true
+            },
+            /* "maxParallelJob": {
                 "type": "number",
                 "title": "Max Parallel job",
                 "description": "The higher this number is, the faster the translations will be, but the more RAM/VRAM will be required. The best number is the highest you can go without errors.",
-                "default": 20,
-                "required": true
-            },
+                "default":20,
+                "required":true
+            }, */
             "maxRequestLength": {
                 "type": "number",
                 "title": "Batch Size",
@@ -1681,11 +1735,18 @@ class RedSugoiEngine extends RedTranslatorEngineWrapper {
                     }
                 ]
             },
-            {
+            /* {
                 "key": "maxParallelJob",
+                "onChange": (evt : Event) => {
+                  var value = <string> $(<HTMLInputElement> evt.target).val();
+                  this.translatorEngine.update("maxParallelJob", parseInt(value));
+                }
+            }, */
+            {
+                "key": "maxJobLength",
                 "onChange": (evt) => {
                     var value = $(evt.target).val();
-                    this.translatorEngine.update("maxParallelJob", parseInt(value));
+                    this.translatorEngine.update("maxJobLength", parseInt(value));
                 }
             },
             {
@@ -2217,5 +2278,23 @@ class RedStringRowHandler {
     }
     isDone(index) {
         return index >= this.translatableLines.length;
+    }
+}
+class RedTranslatableString {
+    constructor(index, text) {
+        this.text = text;
+        this.index = index;
+    }
+    setText(text) {
+        this.text = text;
+    }
+    getIndex() {
+        return this.index;
+    }
+    getText() {
+        return this.text;
+    }
+    getLength() {
+        return this.text.length;
     }
 }
