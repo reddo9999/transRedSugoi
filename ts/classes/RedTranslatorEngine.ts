@@ -382,16 +382,15 @@ abstract class RedTranslatorEngineWrapper {
             let seconds = overallPerf.getSeconds();
 
 
-            this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds)/10} characters per second!`);
-            this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds)/10} rows per second).`);
-
-            this.log(`[RedTranslatorEngine] Performance Analysis - - - Curation time: ${curationPerf.getSeconds()}s; Time to translate: ${translationPerf.getSeconds()}s; Recovery time: ${recoveryPerf.getSeconds()}s`)
+            //this.log(`[RedTranslatorEngine] Performance Analysis - - - Curation time: ${curationPerf.getSeconds()}s; Time to translate: ${translationPerf.getSeconds()}s; Recovery time: ${recoveryPerf.getSeconds()}s`)
 
             let hits = this.getCacheHits();
             this.resetCacheHits();
             if (hits > 0) {
                 this.log(`[RedTranslatorEngine] Skipped ${hits} translations through cache hits!`);
             }
+
+            this.log(`[RedTranslatorEngine] Batch took ${seconds} seconds (${Math.round(10 * result.sourceText.length / seconds)/10} characters per second). Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds)/10} rows per second).`)
 
             if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
                 ui.hideBusyOverlay();
