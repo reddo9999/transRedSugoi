@@ -287,7 +287,6 @@ abstract class RedTranslatorEngineWrapper {
 			'translation': <Array<string>> []
 		};
         
-        let curationPerf = new RedPerformance();
         // First step: curate every single line and keep track of it
         let rowHandlers : Array<RedStringRowHandler> = [];
         let toTranslateOr : Array<string> = [];
@@ -313,17 +312,12 @@ abstract class RedTranslatorEngineWrapper {
             }
         }
         
-        curationPerf.end();
 
         // Third step: send translatable lines to the translator handler
-        let translationPerf = new RedPerformance();
         let translation = this.doTranslate(toTranslate, options);
 
-        let recoveryPerf : RedPerformance;
         // After receiving...
         translation.then((translationsNoDupes) => {
-            translationPerf.end();
-            recoveryPerf = new RedPerformance();
             // Recreate translations with duplicates so our old indexes work
             let translations = new Array(toTranslateOr.length);
             for (let i = 0; i < translationsNoDupes.length; i++) {
@@ -371,7 +365,6 @@ abstract class RedTranslatorEngineWrapper {
             // Final step: set up result object
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
-            recoveryPerf.end();
 
             options.onAfterLoading.call(this.translatorEngine, result);
         }).catch((reason) => {
