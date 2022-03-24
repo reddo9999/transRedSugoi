@@ -37,11 +37,12 @@ const defaultIsolateRegexp =
 const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`;
 
 const defaultSplitEndsRegExp = 
-//`(%[A-Z]+$)` + `|` +`(^%[A-Z]+)` + `|` + 
-`(^[ 　\\r\\n]+)|([ 　\\r\\n]+$)` + `|` +
-`(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )` + `|` +
-`(^[${openerRegExp}${closerRegExp}${defaultSymbols}]+)` + `|` +
-`([${openerRegExp}${closerRegExp}${defaultSymbols}]+$)`
+//`(%[A-Z]+$)` + `|` +`(^%[A-Z]+)` + `|` + // %A, not worth cutting
+`(^[ 　\\r\\n]+)|([ 　\\r\\n]+$)` + `|` + // white space
+`(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )` + `|` + // Common plugin calls
+`( *　*(?:(?:if)|(?:en))\(.+?\) *　*$)` + `|` + // Common RPG Maker switch check for choices
+`(^[${openerRegExp}${closerRegExp}${defaultSymbols}]+)` + `|` + // Quotes at start
+`([${openerRegExp}${closerRegExp}${defaultSymbols}]+$)` // Quotes at end
 ;
     
 
