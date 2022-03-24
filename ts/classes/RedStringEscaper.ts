@@ -138,89 +138,7 @@ class RedStringEscaper {
     private wasExtracted = false;
     private splitArray : Array<RedStringEscaper | string> = [];
 
-    public storeSymbol (text : string) : string {
-        // Originally was using tags, hence the name. Then I tried parenthesis.
-        // I think the AI might get used to any tags we use and just start. ... killing them
-        // So far this seems to work the best
-        if (this.reverseSymbols[text] != undefined) {
-            // if we reuse the same symbol it might help the AI understand the sentence
-            return this.reverseSymbols[text];
-        } else {
-            let tag : string;
-            switch (this.type) {
-                case RedPlaceholderType.poleposition:
-                    tag = this.getPolePosition();
-                    break;
-                case RedPlaceholderType.hexPlaceholder:
-                    tag = this.getHexPlaceholder();
-                    break;
-                case RedPlaceholderType.noEscape:
-                    tag = text;
-                    break;
-                case RedPlaceholderType.ninesOfRandomness:
-                    tag = this.getClosedNines();
-                    break;
-                case RedPlaceholderType.tagPlaceholder:
-                    tag = this.getTag();
-                    break;
-                case RedPlaceholderType.fullTagPlaceholder:
-                    tag = this.getFullTag();
-                    break;
-                case RedPlaceholderType.closedTagPlaceholder:
-                    tag = this.getClosedTag();
-                    break;
-                case RedPlaceholderType.curlie:
-                    tag = this.getCurly();
-                    break;
-                case RedPlaceholderType.doubleCurlie:
-                    tag = this.getDoubleCurly();
-                    break;
-                case RedPlaceholderType.privateUse:
-                    tag = this.getPrivateArea();
-                    break;
-                case RedPlaceholderType.hashtag:
-                    tag = this.getHashtag();
-                    break;
-                case RedPlaceholderType.hashtagTriple:
-                    tag = this.getTripleHashtag();
-                    break;
-                case RedPlaceholderType.tournament:
-                    tag = this.getTournament();
-                    break;
-                case RedPlaceholderType.mvStyle:
-                    tag = this.getMvStyle();
-                    break;
-                case RedPlaceholderType.mvStyleLetter:
-                    tag = this.getMvStyleLetter();
-                    break;
-                case RedPlaceholderType.wolfStyle:
-                    tag = this.getWolfStyle();
-                    break;
-                case RedPlaceholderType.percentage:
-                    tag = this.getPercentage();
-                    break;
-                case RedPlaceholderType.sugoiTranslatorSpecial:
-                    tag = this.getSugoiSpecial();
-                    break;
-                case RedPlaceholderType.sugoiTranslatorSpecial2:
-                    tag = this.getSugoiSpecial2();
-                    break;
-                default:
-                    console.error("[RedStringEscaper] Invalid Placeholder Style");
-                    return text;
-            }
-            // In case the symbol was already predefined, we cheat and generate another
-            if (this.storedSymbols[tag.trim()] != undefined) {
-                return this.storeSymbol(text);
-            } else {
-                this.storedSymbols[tag.trim()] = text;
-                this.reverseSymbols[text] = tag.trim();
-                return tag;
-            }
-        }
-    }
-
-	constructor (text : string, options : 
+    constructor (text : string, options : 
                     {   type? : RedPlaceholderType,
                         splitEnds? : boolean, 
                         mergeSymbols? : boolean, 
@@ -435,61 +353,7 @@ class RedStringEscaper {
         // This needs to be done FIRST!!!!!!!!!!!!!!
         this.currentText = this.preString + this.currentText + this.postString;
 
-        // Attempt to correct breaking of symbols
-        switch (this.type) {
-            case RedPlaceholderType.poleposition:
-                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9]+)/gi, "");
-                break;
-            case RedPlaceholderType.tagPlaceholder:
-                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
-                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=>)/gi, "");
-                break;
-            case RedPlaceholderType.fullTagPlaceholder:
-                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
-                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=\/?>)/gi, "");
-                break;
-            case RedPlaceholderType.closedTagPlaceholder:
-                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
-                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=\/?>)/gi, "");
-                break;
-            case RedPlaceholderType.curlie:
-                this.currentText = this.currentText.replace(/(?<={) *(?=[0-9A-Z]+)/gi, "");
-                this.currentText = this.currentText.replace(/(?<={[0-9A-Z]+) *(?=})/gi, "");
-                break;
-            case RedPlaceholderType.doubleCurlie:
-                this.currentText = this.currentText.replace(/(?<={{) *(?=[0-9A-Z]+)/gi, "");
-                this.currentText = this.currentText.replace(/(?<={{[0-9A-Z]+) *(?=}})/gi, "");
-                break;
-            case RedPlaceholderType.hashtag:
-                this.currentText = this.currentText.replace(/(?<=#) *(?=[A-Z]+)/gi, "");
-                break;
-            case RedPlaceholderType.hashtagTriple:
-                this.currentText = this.currentText.replace(/(?<=#) *(?=[A-Z]+)/gi, "");
-                break;
-            case RedPlaceholderType.tournament:
-                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9]+)/gi, "");
-                break;
-            case RedPlaceholderType.mvStyle:
-                this.currentText = this.currentText.replace(/(?<=%) *(?=[0-9]+)/gi, "");
-                break;
-            case RedPlaceholderType.mvStyleLetter:
-                this.currentText = this.currentText.replace(/(?<=%) *(?=[A-Z]+)/gi, "");
-                break;
-            case RedPlaceholderType.wolfStyle:
-                this.currentText = this.currentText.replace(/(?<=@) *(?=[0-9A-Z]+)/gi, "");
-                break;
-            case RedPlaceholderType.percentage:
-                this.currentText = this.currentText.replace(/(?<=[0-9A-Z]+) *(?=%)/gi, "");
-                break;
-            case RedPlaceholderType.sugoiTranslatorSpecial:
-                this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
-                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
-                break;
-            case RedPlaceholderType.sugoiTranslatorSpecial2:
-                this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
-                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
-                break;
-        }
+        this.correctSymbolBreaking();
 
 
         for (let i = 0; i < this.extractedStrings.length; i++) {
@@ -694,6 +558,146 @@ class RedStringEscaper {
         } catch (e) {
             console.error("[TAGPLACEHOLDER] Error rendering function", e);
             return false;
+        }
+    }
+
+    public storeSymbol (text : string) : string {
+        // Originally was using tags, hence the name. Then I tried parenthesis.
+        // I think the AI might get used to any tags we use and just start. ... killing them
+        // So far this seems to work the best
+        if (this.reverseSymbols[text] != undefined) {
+            // if we reuse the same symbol it might help the AI understand the sentence
+            return this.reverseSymbols[text];
+        } else {
+            let tag : string;
+            switch (this.type) {
+                case RedPlaceholderType.poleposition:
+                    tag = this.getPolePosition();
+                    break;
+                case RedPlaceholderType.hexPlaceholder:
+                    tag = this.getHexPlaceholder();
+                    break;
+                case RedPlaceholderType.noEscape:
+                    tag = text;
+                    break;
+                case RedPlaceholderType.ninesOfRandomness:
+                    tag = this.getClosedNines();
+                    break;
+                case RedPlaceholderType.tagPlaceholder:
+                    tag = this.getTag();
+                    break;
+                case RedPlaceholderType.fullTagPlaceholder:
+                    tag = this.getFullTag();
+                    break;
+                case RedPlaceholderType.closedTagPlaceholder:
+                    tag = this.getClosedTag();
+                    break;
+                case RedPlaceholderType.curlie:
+                    tag = this.getCurly();
+                    break;
+                case RedPlaceholderType.doubleCurlie:
+                    tag = this.getDoubleCurly();
+                    break;
+                case RedPlaceholderType.privateUse:
+                    tag = this.getPrivateArea();
+                    break;
+                case RedPlaceholderType.hashtag:
+                    tag = this.getHashtag();
+                    break;
+                case RedPlaceholderType.hashtagTriple:
+                    tag = this.getTripleHashtag();
+                    break;
+                case RedPlaceholderType.tournament:
+                    tag = this.getTournament();
+                    break;
+                case RedPlaceholderType.mvStyle:
+                    tag = this.getMvStyle();
+                    break;
+                case RedPlaceholderType.mvStyleLetter:
+                    tag = this.getMvStyleLetter();
+                    break;
+                case RedPlaceholderType.wolfStyle:
+                    tag = this.getWolfStyle();
+                    break;
+                case RedPlaceholderType.percentage:
+                    tag = this.getPercentage();
+                    break;
+                case RedPlaceholderType.sugoiTranslatorSpecial:
+                    tag = this.getSugoiSpecial();
+                    break;
+                case RedPlaceholderType.sugoiTranslatorSpecial2:
+                    tag = this.getSugoiSpecial2();
+                    break;
+                default:
+                    console.error("[RedStringEscaper] Invalid Placeholder Style");
+                    return text;
+            }
+            // In case the symbol was already predefined, we cheat and generate another
+            if (this.storedSymbols[tag.trim()] != undefined) {
+                return this.storeSymbol(text);
+            } else {
+                this.storedSymbols[tag.trim()] = text;
+                this.reverseSymbols[text] = tag.trim();
+                return tag;
+            }
+        }
+    }
+
+    public correctSymbolBreaking () {
+        // Attempt to correct breaking of symbols
+        switch (this.type) {
+            case RedPlaceholderType.poleposition:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9]+)/gi, "");
+                break;
+            case RedPlaceholderType.tagPlaceholder:
+                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=>)/gi, "");
+                break;
+            case RedPlaceholderType.fullTagPlaceholder:
+                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=\/?>)/gi, "");
+                break;
+            case RedPlaceholderType.closedTagPlaceholder:
+                this.currentText = this.currentText.replace(/(?<=<) *(?=[A-Z0-9]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=<[A-Z0-9]+) *(?=\/?>)/gi, "");
+                break;
+            case RedPlaceholderType.curlie:
+                this.currentText = this.currentText.replace(/(?<={) *(?=[0-9A-Z]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<={[0-9A-Z]+) *(?=})/gi, "");
+                break;
+            case RedPlaceholderType.doubleCurlie:
+                this.currentText = this.currentText.replace(/(?<={{) *(?=[0-9A-Z]+)/gi, "");
+                this.currentText = this.currentText.replace(/(?<={{[0-9A-Z]+) *(?=}})/gi, "");
+                break;
+            case RedPlaceholderType.hashtag:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.hashtagTriple:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.tournament:
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9]+)/gi, "");
+                break;
+            case RedPlaceholderType.mvStyle:
+                this.currentText = this.currentText.replace(/(?<=%) *(?=[0-9]+)/gi, "");
+                break;
+            case RedPlaceholderType.mvStyleLetter:
+                this.currentText = this.currentText.replace(/(?<=%) *(?=[A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.wolfStyle:
+                this.currentText = this.currentText.replace(/(?<=@) *(?=[0-9A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.percentage:
+                this.currentText = this.currentText.replace(/(?<=[0-9A-Z]+) *(?=%)/gi, "");
+                break;
+            case RedPlaceholderType.sugoiTranslatorSpecial:
+                this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
+                break;
+            case RedPlaceholderType.sugoiTranslatorSpecial2:
+                this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
+                this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
+                break;
         }
     }
 }
