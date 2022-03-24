@@ -117,6 +117,7 @@ class RedStringEscaper {
     private text : string;
     private type : RedPlaceholderType = RedPlaceholderType.poleposition;
     private splitEnds : boolean = true;
+    private splitEndsRegEx : RegExp;
     private removeUnks : boolean = true;
     private mergeSymbols : boolean = true;
     private closedNinesLength : number = 7; // plus two boundaries
@@ -141,6 +142,7 @@ class RedStringEscaper {
     constructor (text : string, options : 
                     {   type : RedPlaceholderType,
                         splitEnds : boolean, 
+                        splitEndsRegEx : RegExp,
                         mergeSymbols : boolean, 
                         noUnks : boolean,
                         isolateSymbols : boolean,
@@ -153,6 +155,7 @@ class RedStringEscaper {
 		this.currentText = text;
         this.type = options.type || RedPlaceholderType.poleposition;
         this.splitEnds = options.splitEnds == true;
+        this.splitEndsRegEx = options.splitEndsRegEx;
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
@@ -276,36 +279,27 @@ class RedStringEscaper {
             }
         }
 
-        // Just for fun, if we have symbols at the very start or the very end, don't even send them to the translator!
-        // We end up missing some contextual clues that may help 
-        //      (e.g. "\c[2] is annoying" would at least give them the context of "[symbol] is annoying", which could improve translations)
-        //      without context information it'd probably translate to an end result of "[symbol] It is annoying" since it had no subject.
-        // Safety vs Quality?
-        // Results are VERY good when the symbols aren't actually part of the sentence, which escaped symbols at start or end most likely are.
-        // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
+        
         this.currentText = this.currentText.trim();
-        let found = true;
-        let loops = 0;
-        let blankCorners = "[ 　\\r\\n]*";
-        while (found && this.splitEnds) {
-            found = false;
-            for (let tag in this.storedSymbols) {
-                text = text.replace(new RegExp(`^${blankCorners}${tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}${blankCorners}`, "i"), (match) => {
+        if (this.splitEnds) {
+            let found = true;
+            let loops = 0;
+            while (found) {
+                found = false;
+                text = text.replaceAll(this.splitEndsRegEx, (match, index) => {
                     found = true;
-                    this.preString += match;
+                    if (index == 0) {
+                        this.preString += match;
+                    } else {
+                        this.postString = match + this.postString;
+                    }
                     return "";
                 });
-
-                text = text.replace(new RegExp(`${blankCorners}${tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}${blankCorners}$`, "i"), (match) => {
-                    found = true;
-                    this.postString = match + this.postString;
-                    return "";
-                });
-            }
-            // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
-            if (loops++ > 30) {
-                console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
-                break;
+                // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
+                if (loops++ > 100) {
+                    console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
+                    break;
+                }
             }
         }
 

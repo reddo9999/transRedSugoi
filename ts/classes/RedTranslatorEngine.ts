@@ -34,8 +34,14 @@ const defaultIsolateRegexp =
     `${rmColorRegExp}.+?${rmColorRegExp}` +
 `)`;
 
-const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`
-const defaultSplitEndsRegExp = `(^%[A-Z]+)|(%[A-Z]+$)`;
+const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`;
+
+const defaultSplitEndsRegExp = `(^%[A-Z]+)` + `|` + 
+`(^[ 　\\r\\n]+)|([ 　\\r\\n]+$)` + `|` +
+`(%[A-Z]+$)` + `|` +
+`(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )` + `|` +
+`^[${openerRegExp}${closerRegExp}${defaultSymbols}]+`
+;
     
 
 /**
@@ -233,6 +239,7 @@ abstract class RedTranslatorEngineWrapper {
         let isolateRegExp = this.getOption("isolateRegExp", defaultIsolateRegexp);
         let doSplit = this.getOption("doSplit", true);
         let splitRegExp = new RegExp(this.getOption("splitRegExp", defaultSplitRegExp), "gim");
+        let splitEndsRegExp = new RegExp(this.getOption("splitEndsRegExp", defaultSplitEndsRegExp), "gi");
 
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
@@ -247,6 +254,7 @@ abstract class RedTranslatorEngineWrapper {
             let escaped = new RedStringEscaper(line, {
                 type : escapingType,
                 splitEnds: splitEnds,
+                splitEndsRegEx : splitEndsRegExp, 
                 mergeSymbols: mergeSymbols,
                 noUnks : true,
                 isolateSymbols : isolateSymbols,
@@ -461,6 +469,7 @@ abstract class RedTranslatorEngineWrapper {
             isolateRegExp : defaultIsolateRegexp,
             doSplit : true,
             splitRegExp : defaultSplitRegExp,
+            splitEndsRegExp : defaultSplitEndsRegExp,
             optionsForm:{
               "schema": {
                 "splitEnds": {
@@ -469,6 +478,13 @@ abstract class RedTranslatorEngineWrapper {
                     "description": "Escaped symbols at the very corners of sentences will not be sent to the translator. This improves translation quality by a lot when these symbols have no meaning (e.g. escaped brackets, something outside the sentence). Recommended is ON for most messages, OFF for RPG Maker MV vocab.",
                     "default":true
                 },
+                "splitEndsRegExp": {
+                     "type": "string",
+                     "title": "Cutting Corners RegExp",
+                     "description": "Any matches of this regex will be not sent to the translator. This is meant exclusively for the start and end of the sentence - use agressive splitting for anything in the middle.",
+                     "default": defaultSplitEndsRegExp,
+                     "required":true
+                 },
                 "isolateSymbols": {
                     "type": "boolean",
                     "title": "Isolate Symbols",
@@ -557,6 +573,13 @@ abstract class RedTranslatorEngineWrapper {
                     "onChange": (evt : Event) => {
                       var value = $(<HTMLInputElement> evt.target).prop("checked");
                       this.translatorEngine.update("splitEnds", value);
+                    }
+                },
+                {
+                    "key": "slitEndsRegExp",
+                    "onChange": (evt : Event) => {
+                      var value = <string> $(<HTMLInputElement> evt.target).val();
+                      this.translatorEngine.update("slitEndsRegExp", value);
                     }
                 },
                 {
