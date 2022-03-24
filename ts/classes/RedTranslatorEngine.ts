@@ -35,6 +35,7 @@ const defaultIsolateRegexp =
 `)`;
 
 const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`
+const defaultSplitEndsRegExp = `(^%[A-Z]+)|(%[A-Z]+$)`;
     
 
 /**
@@ -213,28 +214,25 @@ abstract class RedTranslatorEngineWrapper {
         return {isScript : false}
     }
 
+    public getOption (id : string, defaultValue : any) {
+        let savedOption = this.getEngine().getOptions()[id];
+        if (typeof savedOption != typeof defaultValue) {
+            return defaultValue;
+        } else {
+            return savedOption;
+        }
+    }
+
     public curateRow (row : string) : {
         scriptCheck : RedScriptCheckResponse,
         lines : Array<RedStringEscaper> } {
-        let escapingType = this.getEngine().getOptions().escapeAlgorithm || RedPlaceholderType.poleposition;
-        let splitEnds = this.getEngine().getOptions().splitEnds;
-        splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
+        let escapingType = this.getOption("escapeAlgorithm", RedPlaceholderType.mvStyleLetter);
+        let splitEnds = this.getOption("splitEnds", true);
         let mergeSymbols = this.isMergingSymbols();
-
-        
-        let isolateSymbols = this.getEngine().getOptions().isolateSymbols;
-        isolateSymbols = isolateSymbols == undefined ? true : isolateSymbols === true; // set to true if undefined, check against true if not
-
-        let isolateRegExp = this.getEngine().getOptions().isolateRegExp;
-        isolateRegExp = isolateRegExp == undefined ? defaultIsolateRegexp : isolateRegExp;
-
-
-        let doSplit = this.getEngine().getOptions().doSplit;
-        doSplit = doSplit == undefined ? true : doSplit === true;
-
-        let splitRegExp = this.getEngine().getOptions().splitRegExp;
-        splitRegExp = splitRegExp == undefined ? defaultSplitRegExp : splitRegExp;
-        splitRegExp = new RegExp(splitRegExp, "gim");
+        let isolateSymbols = this.getOption("isolateSymbols", true);
+        let isolateRegExp = this.getOption("isolateRegExp", defaultIsolateRegexp);
+        let doSplit = this.getOption("doSplit", true);
+        let splitRegExp = new RegExp(this.getOption("splitRegExp", defaultSplitRegExp), "gim");
 
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);

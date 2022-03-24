@@ -139,12 +139,12 @@ class RedStringEscaper {
     private splitArray : Array<RedStringEscaper | string> = [];
 
     constructor (text : string, options : 
-                    {   type? : RedPlaceholderType,
-                        splitEnds? : boolean, 
-                        mergeSymbols? : boolean, 
-                        noUnks? : boolean,
-                        isolateSymbols? : boolean,
-                        isolateRegExp? : string,
+                    {   type : RedPlaceholderType,
+                        splitEnds : boolean, 
+                        mergeSymbols : boolean, 
+                        noUnks : boolean,
+                        isolateSymbols : boolean,
+                        isolateRegExp : string,
                         isExtracted? : boolean,
                         aggressivelySplit? : RegExp,
                     }
