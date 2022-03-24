@@ -375,10 +375,11 @@ class RedStringEscaper {
 
         if (found != toFind) {
             let start = "[RedStringEscaper] ";
+            let indent = " ".repeat(start.length);
             ui.logError(start + "Couldn't recover all escaped strings!");
-            ui.logError(" ".repeat(start.length) + "Original Sentence: " + this.getOriginalText());
-            ui.logError(" ".repeat(start.length) + "Current Sentence: " + this.currentText);
-            ui.logError(" ".repeat(start.length) + "Symbols: " + JSON.stringify(this.storedSymbols));
+            ui.logError(indent + "Original: " + this.getOriginalText());
+            ui.logError(indent + "Current:  " + this.currentText);
+            ui.logError(indent + "Symbols:  " + JSON.stringify(this.storedSymbols));
         }
 
         if (this.removeUnks) {
