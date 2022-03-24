@@ -125,6 +125,7 @@ class RedStringEscaper {
     private reverseSymbols : {[text : string] : string} = {};
     private currentText : string;
     private broken: boolean = false;
+    private symbolOrder : Array<string> = [];
 
 
     private preString : string = "";
@@ -280,21 +281,22 @@ class RedStringEscaper {
         }
 
         
-        this.currentText = this.currentText.trim();
         if (this.splitEnds) {
             let found = true;
             let loops = 0;
             while (found) {
                 found = false;
-                text = text.replaceAll(this.splitEndsRegEx, (match, index) => {
+                let match = text.matchAll(this.splitEndsRegEx).next();
+                if (match.value != undefined) {
                     found = true;
-                    if (index == 0) {
-                        this.preString += match;
+                    if (match.value.index == 0) {
+                        this.preString += match.value[0];
+                        text = text.substring(match.value[0].length);
                     } else {
-                        this.postString = match + this.postString;
+                        this.postString = match.value[0] + this.postString;
+                        text = text.substring(0, match.value.index);
                     }
-                    return "";
-                });
+                }
                 // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
                 if (loops++ > 100) {
                     console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
@@ -353,47 +355,35 @@ class RedStringEscaper {
             this.storedSymbols[this.extractedKeys[i]] = this.extractedStrings[i].recoverSymbols();
         }
 
-        // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
-        // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
-        let found = true;
-        let foundCount = 0;
-        while (found) {
-            if (foundCount++ > 20) {
-                ui.logError("[RedStringEscaper] Entered infinite loop while recovering symbols.");
-                ui.logError("Original Sentence: " + this.getOriginalText());
-                ui.logError("Current Sentence: " + this.currentText);
-                ui.logError("Symbols: " + JSON.stringify(this.storedSymbols));
-                console.error("[RedStringEscaper] Entered infinite loop while recovering symbols.", this.currentText, this);
-                break;
-            }
-            //console.warn("Recover loop");
-            found = false;
-            for (let key in this.storedSymbols) {
-                if (this.storedSymbols[key] == key) {
-                    // User has escaped the placeholder itself...
-                    continue;
-                }
-                // "To lower case" would suffice, but it'd also be about three times slower according to testing... let's just escape and keep using RegExp
-                // Some keys might have special regexp characters in them. We should be careful about that.
-                let idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi"));
-                while (idx != -1) {
-                    found = true;
-                    this.currentText =  this.currentText.substring(0, idx) +
+
+        let found = 0;
+        let toFind = this.symbolOrder.length;
+        for (let tag = this.symbolOrder.pop(); tag != undefined; tag = this.symbolOrder.pop()) {
+            let regExp = new RegExp(tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi");
+            let matches = [...this.currentText.matchAll(regExp)];
+            if (matches.length > 0) {
+                found++;
+                // This is supposed to be perfect. So we only replace the last match.
+                let match = matches[matches.length - 1];
+                let idx = match.index!;
+                let key = match[0];
+                this.currentText =  this.currentText.substring(0, idx) +
                                         this.storedSymbols[key] +
                                         this.currentText.substring(idx + key.length);
-                    idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi")); // Forgot this one
-                }
             }
         }
-        // Sugoi fails and adds <unk> where it doesn't understand something
-        // It turns people into pigs! Pigs!
-        // let's remove those
-        if (this.removeUnks) {
-            this.currentText = this.currentText.replaceAll(/<unk>\\?"?/gi, "");
+
+        if (found != toFind) {
+            let start = "[RedStringEscaper] ";
+            ui.logError(start + "Couldn't recover all escaped strings!");
+            ui.logError(" ".repeat(start.length) + "Original Sentence: " + this.getOriginalText());
+            ui.logError(" ".repeat(start.length) + "Current Sentence: " + this.currentText);
+            ui.logError(" ".repeat(start.length) + "Symbols: " + JSON.stringify(this.storedSymbols));
         }
-        
-        // DEBUG
-        // console.log(finalString, this.storedSymbols);
+
+        if (this.removeUnks) {
+            this.currentText = this.currentText.replaceAll(/<unk>\\? ?"?/gi, "");
+        }
 
         return this.currentText;
     }
@@ -632,6 +622,7 @@ class RedStringEscaper {
             } else {
                 this.storedSymbols[tag.trim()] = text;
                 this.reverseSymbols[text] = tag.trim();
+                this.symbolOrder.push(tag.trim());
                 return tag;
             }
         }

@@ -36,11 +36,12 @@ const defaultIsolateRegexp =
 
 const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`;
 
-const defaultSplitEndsRegExp = `(^%[A-Z]+)` + `|` + 
+const defaultSplitEndsRegExp = 
+//`(%[A-Z]+$)` + `|` +`(^%[A-Z]+)` + `|` + 
 `(^[ 　\\r\\n]+)|([ 　\\r\\n]+$)` + `|` +
-`(%[A-Z]+$)` + `|` +
 `(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )` + `|` +
-`^[${openerRegExp}${closerRegExp}${defaultSymbols}]+`
+`(^[${openerRegExp}${closerRegExp}${defaultSymbols}]+)` + `|` +
+`([${openerRegExp}${closerRegExp}${defaultSymbols}]+$)`
 ;
     
 
@@ -475,7 +476,7 @@ abstract class RedTranslatorEngineWrapper {
                 "splitEnds": {
                     "type": "boolean",
                     "title": "Split Ends",
-                    "description": "Escaped symbols at the very corners of sentences will not be sent to the translator. This improves translation quality by a lot when these symbols have no meaning (e.g. escaped brackets, something outside the sentence). Recommended is ON for most messages, OFF for RPG Maker MV vocab.",
+                    "description": "Anything that matches the Regular Expression below will be separated and not sent to the translator. This should be used to remove anything that is irrelevant to the final translation. By default, quotes, white space, and some common plugin commands will be separated so they are not translated. It is possible to recover old Cut Corners functionality (of removing any escaped symbol at the corners) by adding Regular Expressions that target your chosen placeholder style.",
                     "default":true
                 },
                 "splitEndsRegExp": {
@@ -576,10 +577,10 @@ abstract class RedTranslatorEngineWrapper {
                     }
                 },
                 {
-                    "key": "slitEndsRegExp",
+                    "key": "splitEndsRegExp",
                     "onChange": (evt : Event) => {
                       var value = <string> $(<HTMLInputElement> evt.target).val();
-                      this.translatorEngine.update("slitEndsRegExp", value);
+                      this.translatorEngine.update("splitEndsRegExp", value);
                     }
                 },
                 {
@@ -683,8 +684,10 @@ abstract class RedTranslatorEngineWrapper {
                                   optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
                                   optionWindow.find(`[name="isolateRegExp"]`).val(defaultIsolateRegexp);
                                   optionWindow.find(`[name="splitRegExp"]`).val(defaultSplitRegExp);
+                                  optionWindow.find(`[name="splitEndsRegExp"]`).val(defaultSplitEndsRegExp);
                                   engine.update("isolateRegExp", defaultIsolateRegexp);
                                   engine.update("splitRegExp", defaultSplitRegExp);
+                                  engine.update("splitEndsRegExp", defaultSplitEndsRegExp);
                                   engine.update("rowStart", defaultLineStart);
                                   engine.update("rowEnd", defaultLineEnd);
                               } catch (e) {
