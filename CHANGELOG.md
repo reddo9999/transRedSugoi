@@ -1,3 +1,12 @@
+# Version 0.75
++ Removes useless performance metrics from log.
+    + Important metrics are condensed into a single line.
++ The placeholder recoverer has been entirely rewritten. It now keeps track of what it is doing.
+    + If a sentence appears to fail recovery step, the user will be informed of it so that they can manually correct it, it desired.
+    + Infinite loops are no longer possible as the replacing is done based on what was escaped in the first place. This should also make that part of the code that took 0.1 seconds become 0.001 seconds or something idk.
++ Behavior of Cut Corners has been remade. It is now possible to cut corners of any kind. By default, it will cut quotes, white-space, etc, from sentences, which is just a big gain of speed/quality.
+    + It is possible to recover old Cut Corners Behavior through adding Regular Expressions for your escaped symbols, but imo that's no longer desirable nor needed.
+
 # Version 0.74
 + Sugoi Engine now able to set specific request length. So instead of sending "35" translations per request, which might or might not blow up your RAM/VRAM depending on the size of each translation, it is now possible to set a consistent character length per request.
     + For faster translations, you want this as high as your VRAM/RAM can take it.

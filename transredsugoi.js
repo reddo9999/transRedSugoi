@@ -117,6 +117,7 @@ class RedStringEscaper {
         this.storedSymbols = {};
         this.reverseSymbols = {};
         this.broken = false;
+        this.symbolOrder = [];
         this.preString = "";
         this.postString = "";
         this.counters = [1, 2, 3];
@@ -130,6 +131,7 @@ class RedStringEscaper {
         this.currentText = text;
         this.type = options.type || RedPlaceholderType.poleposition;
         this.splitEnds = options.splitEnds == true;
+        this.splitEndsRegEx = options.splitEndsRegEx;
         this.removeUnks = options.noUnks == true;
         this.mergeSymbols = options.mergeSymbols == true;
         this.wasExtracted = options.isExtracted == true;
@@ -174,89 +176,6 @@ class RedStringEscaper {
         }
         this.escape();
     }
-    storeSymbol(text) {
-        // Originally was using tags, hence the name. Then I tried parenthesis.
-        // I think the AI might get used to any tags we use and just start. ... killing them
-        // So far this seems to work the best
-        if (this.reverseSymbols[text] != undefined) {
-            // if we reuse the same symbol it might help the AI understand the sentence
-            return this.reverseSymbols[text];
-        }
-        else {
-            let tag;
-            switch (this.type) {
-                case RedPlaceholderType.poleposition:
-                    tag = this.getPolePosition();
-                    break;
-                case RedPlaceholderType.hexPlaceholder:
-                    tag = this.getHexPlaceholder();
-                    break;
-                case RedPlaceholderType.noEscape:
-                    tag = text;
-                    break;
-                case RedPlaceholderType.ninesOfRandomness:
-                    tag = this.getClosedNines();
-                    break;
-                case RedPlaceholderType.tagPlaceholder:
-                    tag = this.getTag();
-                    break;
-                case RedPlaceholderType.fullTagPlaceholder:
-                    tag = this.getFullTag();
-                    break;
-                case RedPlaceholderType.closedTagPlaceholder:
-                    tag = this.getClosedTag();
-                    break;
-                case RedPlaceholderType.curlie:
-                    tag = this.getCurly();
-                    break;
-                case RedPlaceholderType.doubleCurlie:
-                    tag = this.getDoubleCurly();
-                    break;
-                case RedPlaceholderType.privateUse:
-                    tag = this.getPrivateArea();
-                    break;
-                case RedPlaceholderType.hashtag:
-                    tag = this.getHashtag();
-                    break;
-                case RedPlaceholderType.hashtagTriple:
-                    tag = this.getTripleHashtag();
-                    break;
-                case RedPlaceholderType.tournament:
-                    tag = this.getTournament();
-                    break;
-                case RedPlaceholderType.mvStyle:
-                    tag = this.getMvStyle();
-                    break;
-                case RedPlaceholderType.mvStyleLetter:
-                    tag = this.getMvStyleLetter();
-                    break;
-                case RedPlaceholderType.wolfStyle:
-                    tag = this.getWolfStyle();
-                    break;
-                case RedPlaceholderType.percentage:
-                    tag = this.getPercentage();
-                    break;
-                case RedPlaceholderType.sugoiTranslatorSpecial:
-                    tag = this.getSugoiSpecial();
-                    break;
-                case RedPlaceholderType.sugoiTranslatorSpecial2:
-                    tag = this.getSugoiSpecial2();
-                    break;
-                default:
-                    console.error("[RedStringEscaper] Invalid Placeholder Style");
-                    return text;
-            }
-            // In case the symbol was already predefined, we cheat and generate another
-            if (this.storedSymbols[tag.trim()] != undefined) {
-                return this.storeSymbol(text);
-            }
-            else {
-                this.storedSymbols[tag.trim()] = text;
-                this.reverseSymbols[text] = tag.trim();
-                return tag;
-            }
-        }
-    }
     addSplitTranslatable(text, options) {
         let escaper = new RedStringEscaper(text, options);
         this.extractedStrings.push(escaper);
@@ -273,6 +192,155 @@ class RedStringEscaper {
     }
     break() {
         this.broken = true;
+    }
+    /**
+     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
+     * So I'll just make something that's hopefully similar enough to live through updates!
+     */
+    escape() {
+        // Are we escaping?
+        if (this.type == RedPlaceholderType.noEscape) {
+            return this.currentText;
+        }
+        let formulas = RedStringEscaper.getActiveFormulas();
+        let text = this.currentText;
+        // If there's already something there we might end up in a loop...
+        // Let's escape every existing symbol as is.
+        if (regExpExists[this.type] != undefined) {
+            text = text.replaceAll(regExpExists[this.type], (match) => {
+                if (this.storedSymbols[match] == undefined) {
+                    this.storedSymbols[match] = match;
+                    this.reverseSymbols[match] = match;
+                }
+                return match;
+            });
+        }
+        //console.log("Formulas : ", formulas);
+        for (var i = 0; i < formulas.length; i++) {
+            if (!Boolean(formulas[i]))
+                continue;
+            /**
+             * Function should return a string or Array of strings
+             */
+            if (typeof formulas[i] == 'function') {
+                //console.log(`formula ${i} is a function`);
+                var arrayStrings = formulas[i].call(this, text);
+                //console.log(`result`, arrayStrings);
+                if (typeof arrayStrings == 'string')
+                    arrayStrings = [arrayStrings];
+                if (Array.isArray(arrayStrings) == false)
+                    continue;
+                for (var x in arrayStrings) {
+                    text = text.replaceAll(arrayStrings[x], (match) => {
+                        // Is this used for anything?
+                        //var lastIndex = this.placeHolders.push(match)-1;
+                        return this.storeSymbol(match);
+                    });
+                }
+            }
+            else {
+                //console.log("replacing....");
+                text = text.replaceAll(formulas[i], (match) => {
+                    return this.storeSymbol(match);
+                });
+            }
+        }
+        if (this.splitEnds) {
+            let found = true;
+            let loops = 0;
+            while (found) {
+                found = false;
+                let match = text.matchAll(this.splitEndsRegEx).next();
+                if (match.value != undefined) {
+                    found = true;
+                    if (match.value.index == 0) {
+                        this.preString += match.value[0];
+                        text = text.substring(match.value[0].length);
+                    }
+                    else {
+                        this.postString = match.value[0] + this.postString;
+                        text = text.substring(0, match.value.index);
+                    }
+                }
+                // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
+                if (loops++ > 100) {
+                    console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
+                    break;
+                }
+            }
+        }
+        // Replace sequential occurrences of Symbols with a single symbol!
+        // TESTING THIS IS HELL ON EARTH SOMEONE PLEASE TEST THIS I DON'T HAVE GOOD SENTENCES TO TEST IT
+        // Theoretically, this should result in less mangling of symbols as the translator is fed less of them to begin with
+        if (this.mergeSymbols) {
+            if (regExpObj[this.type] != undefined) {
+                text = text.replaceAll(regExpObj[this.type], (match) => {
+                    return this.storeSymbol(match);
+                });
+            }
+        }
+        this.currentText = text;
+        //console.log("%cEscaped text", 'background: #222; color: #bada55');
+        //console.log(text);
+        return text;
+    }
+    recoverSymbols() {
+        if (this.broken) {
+            return "";
+        }
+        if (this.splitArray.length > 0) {
+            let text = "";
+            for (let i = 0; i < this.splitArray.length; i++) {
+                let split = this.splitArray[i];
+                if (typeof split == "string") {
+                    text += split;
+                }
+                else {
+                    // if any part of the chain is broken, break the entire thing
+                    if (split.broken) {
+                        return "";
+                    }
+                    text += split.recoverSymbols();
+                }
+            }
+            return text;
+        }
+        // DEBUG
+        //console.log(this.currentText, this.storedSymbols);
+        // This needs to be done FIRST!!!!!!!!!!!!!!
+        this.currentText = this.preString + this.currentText + this.postString;
+        this.correctSymbolBreaking();
+        for (let i = 0; i < this.extractedStrings.length; i++) {
+            this.storedSymbols[this.extractedKeys[i]] = this.extractedStrings[i].recoverSymbols();
+        }
+        let found = 0;
+        let toFind = this.symbolOrder.length;
+        for (let tag = this.symbolOrder.pop(); tag != undefined; tag = this.symbolOrder.pop()) {
+            let regExp = new RegExp(tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi");
+            let matches = [...this.currentText.matchAll(regExp)];
+            if (matches.length > 0) {
+                found++;
+                // This is supposed to be perfect. So we only replace the last match.
+                let match = matches[matches.length - 1];
+                let idx = match.index;
+                let key = match[0];
+                this.currentText = this.currentText.substring(0, idx) +
+                    this.storedSymbols[key] +
+                    this.currentText.substring(idx + key.length);
+            }
+        }
+        if (found != toFind) {
+            let start = "[RedStringEscaper] ";
+            let indent = " ".repeat(start.length);
+            ui.logError(start + "Couldn't recover all escaped strings!");
+            ui.logError(indent + "Original: " + this.getOriginalText());
+            ui.logError(indent + "Current:  " + this.currentText);
+            ui.logError(indent + "Symbols:  " + JSON.stringify(this.storedSymbols));
+        }
+        if (this.removeUnks) {
+            this.currentText = this.currentText.replaceAll(/<unk>\\? ?"?/gi, "");
+        }
+        return this.currentText;
     }
     getTag() {
         return `<${this.counters[0]++}${this.counters[1]++}>`;
@@ -359,31 +427,144 @@ class RedStringEscaper {
     setTranslatedText(text) {
         this.currentText = text;
     }
-    recoverSymbols() {
-        if (this.broken) {
-            return "";
+    static getActiveFormulas() {
+        sys.config.escaperPatterns = sys.config.escaperPatterns || [];
+        // Is our cache valid?
+        if (RedStringEscaper.cachedFormulaString == JSON.stringify(sys.config.escaperPatterns)) {
+            return RedStringEscaper.cachedFormulas;
         }
-        if (this.splitArray.length > 0) {
-            let text = "";
-            for (let i = 0; i < this.splitArray.length; i++) {
-                let split = this.splitArray[i];
-                if (typeof split == "string") {
-                    text += split;
+        // Update cache
+        let formulas = [];
+        for (var i in sys.config.escaperPatterns) {
+            //console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
+            if (typeof sys.config.escaperPatterns[i] !== "object")
+                continue;
+            if (!sys.config.escaperPatterns[i].value)
+                continue;
+            try {
+                var newReg;
+                //console.log(sys.config.escaperPatterns[i].value);
+                if (common.isRegExp(sys.config.escaperPatterns[i].value)) {
+                    //console.log("is regex");
+                    newReg = common.evalRegExpStr(sys.config.escaperPatterns[i].value);
+                }
+                else if (common.isStringFunction(sys.config.escaperPatterns[i].value)) {
+                    //console.log("pattern ", i, "is function");
+                    newReg = RedStringEscaper.renderFunction(sys.config.escaperPatterns[i].value);
                 }
                 else {
-                    // if any part of the chain is broken, break the entire thing
-                    if (split.broken) {
-                        return "";
-                    }
-                    text += split.recoverSymbols();
+                    //console.log("Is string");
+                    newReg = JSON.parse(sys.config.escaperPatterns[i].value);
+                }
+                if (newReg != undefined) {
+                    formulas.push(newReg);
                 }
             }
-            return text;
+            catch (e) {
+                console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", sys.config.escaperPatterns[i], e);
+            }
         }
-        // DEBUG
-        //console.log(this.currentText, this.storedSymbols);
-        // This needs to be done FIRST!!!!!!!!!!!!!!
-        this.currentText = this.preString + this.currentText + this.postString;
+        // Since sugoi only translates japanese, might as well remove anything else
+        //formulas.push(/(^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf])/g);
+        RedStringEscaper.cachedFormulaString = JSON.stringify(sys.config.escaperPatterns);
+        RedStringEscaper.cachedFormulas = formulas;
+        return formulas;
+    }
+    static renderFunction(string) {
+        try {
+            var func = eval("[" + string + "]");
+            return func[0];
+        }
+        catch (e) {
+            console.error("[TAGPLACEHOLDER] Error rendering function", e);
+            return false;
+        }
+    }
+    storeSymbol(text) {
+        // Originally was using tags, hence the name. Then I tried parenthesis.
+        // I think the AI might get used to any tags we use and just start. ... killing them
+        // So far this seems to work the best
+        if (this.reverseSymbols[text] != undefined) {
+            // if we reuse the same symbol it might help the AI understand the sentence
+            return this.reverseSymbols[text];
+        }
+        else {
+            let tag;
+            switch (this.type) {
+                case RedPlaceholderType.poleposition:
+                    tag = this.getPolePosition();
+                    break;
+                case RedPlaceholderType.hexPlaceholder:
+                    tag = this.getHexPlaceholder();
+                    break;
+                case RedPlaceholderType.noEscape:
+                    tag = text;
+                    break;
+                case RedPlaceholderType.ninesOfRandomness:
+                    tag = this.getClosedNines();
+                    break;
+                case RedPlaceholderType.tagPlaceholder:
+                    tag = this.getTag();
+                    break;
+                case RedPlaceholderType.fullTagPlaceholder:
+                    tag = this.getFullTag();
+                    break;
+                case RedPlaceholderType.closedTagPlaceholder:
+                    tag = this.getClosedTag();
+                    break;
+                case RedPlaceholderType.curlie:
+                    tag = this.getCurly();
+                    break;
+                case RedPlaceholderType.doubleCurlie:
+                    tag = this.getDoubleCurly();
+                    break;
+                case RedPlaceholderType.privateUse:
+                    tag = this.getPrivateArea();
+                    break;
+                case RedPlaceholderType.hashtag:
+                    tag = this.getHashtag();
+                    break;
+                case RedPlaceholderType.hashtagTriple:
+                    tag = this.getTripleHashtag();
+                    break;
+                case RedPlaceholderType.tournament:
+                    tag = this.getTournament();
+                    break;
+                case RedPlaceholderType.mvStyle:
+                    tag = this.getMvStyle();
+                    break;
+                case RedPlaceholderType.mvStyleLetter:
+                    tag = this.getMvStyleLetter();
+                    break;
+                case RedPlaceholderType.wolfStyle:
+                    tag = this.getWolfStyle();
+                    break;
+                case RedPlaceholderType.percentage:
+                    tag = this.getPercentage();
+                    break;
+                case RedPlaceholderType.sugoiTranslatorSpecial:
+                    tag = this.getSugoiSpecial();
+                    break;
+                case RedPlaceholderType.sugoiTranslatorSpecial2:
+                    tag = this.getSugoiSpecial2();
+                    break;
+                default:
+                    console.error("[RedStringEscaper] Invalid Placeholder Style");
+                    return text;
+            }
+            // In case the symbol was already predefined, we cheat and generate another
+            if (this.storedSymbols[tag.trim()] != undefined) {
+                return this.storeSymbol(text);
+            }
+            else {
+                this.storedSymbols[tag.trim()] = text;
+                this.reverseSymbols[text] = tag.trim();
+                this.symbolOrder.push(tag.trim());
+                return tag;
+            }
+        }
+    }
+    correctSymbolBreaking() {
         // Attempt to correct breaking of symbols
         switch (this.type) {
             case RedPlaceholderType.poleposition:
@@ -438,201 +619,6 @@ class RedStringEscaper {
                 this.currentText = this.currentText.replace(/(?<=@) *(?=#)/gi, "");
                 this.currentText = this.currentText.replace(/(?<=#) *(?=[0-9A-Z]+)/gi, "");
                 break;
-        }
-        for (let i = 0; i < this.extractedStrings.length; i++) {
-            this.storedSymbols[this.extractedKeys[i]] = this.extractedStrings[i].recoverSymbols();
-        }
-        // This is pretty fast to do, so we iterate until we're sure we got everything *just in case*
-        // Worst case scenario this will be a single unnecessary run through anyway, and this allows us to possibly end up with nested symbols
-        let found = true;
-        let foundCount = 0;
-        while (found) {
-            if (foundCount++ > 20) {
-                ui.logError("[RedStringEscaper] Entered infinite loop while recovering symbols.");
-                ui.logError("Original Sentence: " + this.getOriginalText());
-                ui.logError("Current Sentence: " + this.currentText);
-                ui.logError("Symbols: " + JSON.stringify(this.storedSymbols));
-                console.error("[RedStringEscaper] Entered infinite loop while recovering symbols.", this.currentText, this);
-                break;
-            }
-            //console.warn("Recover loop");
-            found = false;
-            for (let key in this.storedSymbols) {
-                if (this.storedSymbols[key] == key) {
-                    // User has escaped the placeholder itself...
-                    continue;
-                }
-                // "To lower case" would suffice, but it'd also be about three times slower according to testing... let's just escape and keep using RegExp
-                // Some keys might have special regexp characters in them. We should be careful about that.
-                let idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi"));
-                while (idx != -1) {
-                    found = true;
-                    this.currentText = this.currentText.substring(0, idx) +
-                        this.storedSymbols[key] +
-                        this.currentText.substring(idx + key.length);
-                    idx = this.currentText.search(new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), "gi")); // Forgot this one
-                }
-            }
-        }
-        // Sugoi fails and adds <unk> where it doesn't understand something
-        // It turns people into pigs! Pigs!
-        // let's remove those
-        if (this.removeUnks) {
-            this.currentText = this.currentText.replaceAll(/<unk>\\?"?/gi, "");
-        }
-        // DEBUG
-        // console.log(finalString, this.storedSymbols);
-        return this.currentText;
-    }
-    /**
-     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
-     * So I'll just make something that's hopefully similar enough to live through updates!
-     */
-    escape() {
-        // Are we escaping?
-        if (this.type == RedPlaceholderType.noEscape) {
-            return this.currentText;
-        }
-        let formulas = RedStringEscaper.getActiveFormulas();
-        let text = this.currentText;
-        // If there's already something there we might end up in a loop...
-        // Let's escape every existing symbol as is.
-        if (regExpExists[this.type] != undefined) {
-            text = text.replaceAll(regExpExists[this.type], (match) => {
-                if (this.storedSymbols[match] == undefined) {
-                    this.storedSymbols[match] = match;
-                    this.reverseSymbols[match] = match;
-                }
-                return match;
-            });
-        }
-        //console.log("Formulas : ", formulas);
-        for (var i = 0; i < formulas.length; i++) {
-            if (!Boolean(formulas[i]))
-                continue;
-            /**
-             * Function should return a string or Array of strings
-             */
-            if (typeof formulas[i] == 'function') {
-                //console.log(`formula ${i} is a function`);
-                var arrayStrings = formulas[i].call(this, text);
-                //console.log(`result`, arrayStrings);
-                if (typeof arrayStrings == 'string')
-                    arrayStrings = [arrayStrings];
-                if (Array.isArray(arrayStrings) == false)
-                    continue;
-                for (var x in arrayStrings) {
-                    text = text.replaceAll(arrayStrings[x], (match) => {
-                        // Is this used for anything?
-                        //var lastIndex = this.placeHolders.push(match)-1;
-                        return this.storeSymbol(match);
-                    });
-                }
-            }
-            else {
-                //console.log("replacing....");
-                text = text.replaceAll(formulas[i], (match) => {
-                    return this.storeSymbol(match);
-                });
-            }
-        }
-        // Just for fun, if we have symbols at the very start or the very end, don't even send them to the translator!
-        // We end up missing some contextual clues that may help 
-        //      (e.g. "\c[2] is annoying" would at least give them the context of "[symbol] is annoying", which could improve translations)
-        //      without context information it'd probably translate to an end result of "[symbol] It is annoying" since it had no subject.
-        // Safety vs Quality?
-        // Results are VERY good when the symbols aren't actually part of the sentence, which escaped symbols at start or end most likely are.
-        // replaceAll won't give us the exact position of what it's replacing and I don't like guessing, so instead I'll check manually.
-        this.currentText = this.currentText.trim();
-        let found = true;
-        let loops = 0;
-        let blankCorners = "[ 　\\r\\n]*";
-        while (found && this.splitEnds) {
-            found = false;
-            for (let tag in this.storedSymbols) {
-                text = text.replace(new RegExp(`^${blankCorners}${tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}${blankCorners}`, "i"), (match) => {
-                    found = true;
-                    this.preString += match;
-                    return "";
-                });
-                text = text.replace(new RegExp(`${blankCorners}${tag.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}${blankCorners}$`, "i"), (match) => {
-                    found = true;
-                    this.postString = match + this.postString;
-                    return "";
-                });
-            }
-            // Honestly if it happens this much we can be safe in knowing something in the text caused a loop.
-            if (loops++ > 30) {
-                console.warn("[RedStringEscaper] Got stuck in a loop.", text, this);
-                break;
-            }
-        }
-        // Replace sequential occurrences of Symbols with a single symbol!
-        // TESTING THIS IS HELL ON EARTH SOMEONE PLEASE TEST THIS I DON'T HAVE GOOD SENTENCES TO TEST IT
-        // Theoretically, this should result in less mangling of symbols as the translator is fed less of them to begin with
-        if (this.mergeSymbols) {
-            if (regExpObj[this.type] != undefined) {
-                text = text.replaceAll(regExpObj[this.type], (match) => {
-                    return this.storeSymbol(match);
-                });
-            }
-        }
-        this.currentText = text;
-        //console.log("%cEscaped text", 'background: #222; color: #bada55');
-        //console.log(text);
-        return text;
-    }
-    static getActiveFormulas() {
-        sys.config.escaperPatterns = sys.config.escaperPatterns || [];
-        // Is our cache valid?
-        if (RedStringEscaper.cachedFormulaString == JSON.stringify(sys.config.escaperPatterns)) {
-            return RedStringEscaper.cachedFormulas;
-        }
-        // Update cache
-        let formulas = [];
-        for (var i in sys.config.escaperPatterns) {
-            //console.log(`handling ${i}`, sys.config.escaperPatterns[i]);
-            if (typeof sys.config.escaperPatterns[i] !== "object")
-                continue;
-            if (!sys.config.escaperPatterns[i].value)
-                continue;
-            try {
-                var newReg;
-                //console.log(sys.config.escaperPatterns[i].value);
-                if (common.isRegExp(sys.config.escaperPatterns[i].value)) {
-                    //console.log("is regex");
-                    newReg = common.evalRegExpStr(sys.config.escaperPatterns[i].value);
-                }
-                else if (common.isStringFunction(sys.config.escaperPatterns[i].value)) {
-                    //console.log("pattern ", i, "is function");
-                    newReg = RedStringEscaper.renderFunction(sys.config.escaperPatterns[i].value);
-                }
-                else {
-                    //console.log("Is string");
-                    newReg = JSON.parse(sys.config.escaperPatterns[i].value);
-                }
-                if (newReg != undefined) {
-                    formulas.push(newReg);
-                }
-            }
-            catch (e) {
-                console.warn("[RedStringEscaper] Error Trying to render Escaper Pattern ", sys.config.escaperPatterns[i], e);
-            }
-        }
-        // Since sugoi only translates japanese, might as well remove anything else
-        //formulas.push(/(^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf])/g);
-        RedStringEscaper.cachedFormulaString = JSON.stringify(sys.config.escaperPatterns);
-        RedStringEscaper.cachedFormulas = formulas;
-        return formulas;
-    }
-    static renderFunction(string) {
-        try {
-            var func = eval("[" + string + "]");
-            return func[0];
-        }
-        catch (e) {
-            console.error("[TAGPLACEHOLDER] Error rendering function", e);
-            return false;
         }
     }
 }
@@ -815,6 +801,14 @@ const defaultIsolateRegexp = `(` +
     `${rmColorRegExp}.+?${rmColorRegExp}` +
     `)`;
 const defaultSplitRegExp = `((?:\\\\?r?\\\\n)+)|(\\\\[.!])`;
+const defaultSplitEndsRegExp = 
+//`(%[A-Z]+$)` + `|` +`(^%[A-Z]+)` + `|` + // %A, not worth cutting
+`(^[ 　\\r\\n]+)|([ 　\\r\\n]+$)` + `|` + // white space
+    `(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )` + `|` + // Common plugin calls
+    `( *　*(?:(?:if)|(?:en))\(.+?\) *　*$)` + `|` + // Common RPG Maker switch check for choices
+    `(^[${openerRegExp}${closerRegExp}${defaultSymbols}]+)` + `|` + // Quotes at start
+    `([${openerRegExp}${closerRegExp}${defaultSymbols}]+$)` // Quotes at end
+;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -843,13 +837,21 @@ class RedTranslatorEngineWrapper {
             isolateRegExp: defaultIsolateRegexp,
             doSplit: true,
             splitRegExp: defaultSplitRegExp,
+            splitEndsRegExp: defaultSplitEndsRegExp,
             optionsForm: {
                 "schema": {
                     "splitEnds": {
                         "type": "boolean",
                         "title": "Split Ends",
-                        "description": "Escaped symbols at the very corners of sentences will not be sent to the translator. This improves translation quality by a lot when these symbols have no meaning (e.g. escaped brackets, something outside the sentence). Recommended is ON for most messages, OFF for RPG Maker MV vocab.",
+                        "description": "Anything that matches the Regular Expression below will be separated and not sent to the translator. This should be used to remove anything that is irrelevant to the final translation. By default, quotes, white space, and some common plugin commands will be separated so they are not translated. It is possible to recover old Cut Corners functionality (of removing any escaped symbol at the corners) by adding Regular Expressions that target your chosen placeholder style.",
                         "default": true
+                    },
+                    "splitEndsRegExp": {
+                        "type": "string",
+                        "title": "Cutting Corners RegExp",
+                        "description": "Any matches of this regex will be not sent to the translator. This is meant exclusively for the start and end of the sentence - use agressive splitting for anything in the middle.",
+                        "default": defaultSplitEndsRegExp,
+                        "required": true
                     },
                     "isolateSymbols": {
                         "type": "boolean",
@@ -939,6 +941,13 @@ class RedTranslatorEngineWrapper {
                         "onChange": (evt) => {
                             var value = $(evt.target).prop("checked");
                             this.translatorEngine.update("splitEnds", value);
+                        }
+                    },
+                    {
+                        "key": "splitEndsRegExp",
+                        "onChange": (evt) => {
+                            var value = $(evt.target).val();
+                            this.translatorEngine.update("splitEndsRegExp", value);
                         }
                     },
                     {
@@ -1042,8 +1051,10 @@ class RedTranslatorEngineWrapper {
                                         optionWindow.find(`[name="rowEnd"]`).val(defaultLineEnd);
                                         optionWindow.find(`[name="isolateRegExp"]`).val(defaultIsolateRegexp);
                                         optionWindow.find(`[name="splitRegExp"]`).val(defaultSplitRegExp);
+                                        optionWindow.find(`[name="splitEndsRegExp"]`).val(defaultSplitEndsRegExp);
                                         engine.update("isolateRegExp", defaultIsolateRegexp);
                                         engine.update("splitRegExp", defaultSplitRegExp);
+                                        engine.update("splitEndsRegExp", defaultSplitEndsRegExp);
                                         engine.update("rowStart", defaultLineStart);
                                         engine.update("rowEnd", defaultLineEnd);
                                     }
@@ -1219,20 +1230,24 @@ class RedTranslatorEngineWrapper {
         }
         return { isScript: false };
     }
+    getOption(id, defaultValue) {
+        let savedOption = this.getEngine().getOptions()[id];
+        if (typeof savedOption != typeof defaultValue) {
+            return defaultValue;
+        }
+        else {
+            return savedOption;
+        }
+    }
     curateRow(row) {
-        let escapingType = this.getEngine().getOptions().escapeAlgorithm || RedPlaceholderType.poleposition;
-        let splitEnds = this.getEngine().getOptions().splitEnds;
-        splitEnds = splitEnds == undefined ? true : splitEnds === true; // set to true if undefined, check against true if not
+        let escapingType = this.getOption("escapeAlgorithm", RedPlaceholderType.mvStyleLetter);
+        let splitEnds = this.getOption("splitEnds", true);
         let mergeSymbols = this.isMergingSymbols();
-        let isolateSymbols = this.getEngine().getOptions().isolateSymbols;
-        isolateSymbols = isolateSymbols == undefined ? true : isolateSymbols === true; // set to true if undefined, check against true if not
-        let isolateRegExp = this.getEngine().getOptions().isolateRegExp;
-        isolateRegExp = isolateRegExp == undefined ? defaultIsolateRegexp : isolateRegExp;
-        let doSplit = this.getEngine().getOptions().doSplit;
-        doSplit = doSplit == undefined ? true : doSplit === true;
-        let splitRegExp = this.getEngine().getOptions().splitRegExp;
-        splitRegExp = splitRegExp == undefined ? defaultSplitRegExp : splitRegExp;
-        splitRegExp = new RegExp(splitRegExp, "gim");
+        let isolateSymbols = this.getOption("isolateSymbols", true);
+        let isolateRegExp = this.getOption("isolateRegExp", defaultIsolateRegexp);
+        let doSplit = this.getOption("doSplit", true);
+        let splitRegExp = new RegExp(this.getOption("splitRegExp", defaultSplitRegExp), "gim");
+        let splitEndsRegExp = new RegExp(this.getOption("splitEndsRegExp", defaultSplitEndsRegExp), "gi");
         let lines = this.breakRow(row);
         let scriptCheck = this.isScript(lines);
         if (scriptCheck.isScript) {
@@ -1244,6 +1259,7 @@ class RedTranslatorEngineWrapper {
             let escaped = new RedStringEscaper(line, {
                 type: escapingType,
                 splitEnds: splitEnds,
+                splitEndsRegEx: splitEndsRegExp,
                 mergeSymbols: mergeSymbols,
                 noUnks: true,
                 isolateSymbols: isolateSymbols,
@@ -1275,7 +1291,6 @@ class RedTranslatorEngineWrapper {
             'source': rows,
             'translation': []
         };
-        let curationPerf = new RedPerformance();
         // First step: curate every single line and keep track of it
         let rowHandlers = [];
         let toTranslateOr = [];
@@ -1299,15 +1314,10 @@ class RedTranslatorEngineWrapper {
                 toTranslateIndex[idx].push(i);
             }
         }
-        curationPerf.end();
         // Third step: send translatable lines to the translator handler
-        let translationPerf = new RedPerformance();
         let translation = this.doTranslate(toTranslate, options);
-        let recoveryPerf;
         // After receiving...
         translation.then((translationsNoDupes) => {
-            translationPerf.end();
-            recoveryPerf = new RedPerformance();
             // Recreate translations with duplicates so our old indexes work
             let translations = new Array(toTranslateOr.length);
             for (let i = 0; i < translationsNoDupes.length; i++) {
@@ -1346,7 +1356,6 @@ class RedTranslatorEngineWrapper {
             // Final step: set up result object
             result.translation = finalTranslations;
             result.translationText = finalTranslations.join("\n");
-            recoveryPerf.end();
             options.onAfterLoading.call(this.translatorEngine, result);
         }).catch((reason) => {
             console.error("[RedTranslatorEngine] Well shit.", reason);
@@ -1354,14 +1363,13 @@ class RedTranslatorEngineWrapper {
         }).finally(() => {
             overallPerf.end();
             let seconds = overallPerf.getSeconds();
-            this.log(`[RedTranslatorEngine] Batch took: ${seconds} seconds, which was about ${Math.round(10 * result.sourceText.length / seconds) / 10} characters per second!`);
-            this.log(`[RedTranslatorEngine] Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds) / 10} rows per second).`);
-            this.log(`[RedTranslatorEngine] Performance Analysis - - - Curation time: ${curationPerf.getSeconds()}s; Time to translate: ${translationPerf.getSeconds()}s; Recovery time: ${recoveryPerf.getSeconds()}s`);
+            //this.log(`[RedTranslatorEngine] Performance Analysis - - - Curation time: ${curationPerf.getSeconds()}s; Time to translate: ${translationPerf.getSeconds()}s; Recovery time: ${recoveryPerf.getSeconds()}s`)
             let hits = this.getCacheHits();
             this.resetCacheHits();
             if (hits > 0) {
                 this.log(`[RedTranslatorEngine] Skipped ${hits} translations through cache hits!`);
             }
+            this.log(`[RedTranslatorEngine] Batch took ${seconds} seconds (${Math.round(10 * result.sourceText.length / seconds) / 10} characters per second). Translated ${rows.length} rows (${Math.round(10 * rows.length / seconds) / 10} rows per second).`);
             if (document.getElementById("loadingOverlay").classList.contains("hidden")) {
                 ui.hideBusyOverlay();
             }

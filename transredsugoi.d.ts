@@ -52,6 +52,7 @@ declare class RedStringEscaper {
     private text;
     private type;
     private splitEnds;
+    private splitEndsRegEx;
     private removeUnks;
     private mergeSymbols;
     private closedNinesLength;
@@ -59,6 +60,7 @@ declare class RedStringEscaper {
     private reverseSymbols;
     private currentText;
     private broken;
+    private symbolOrder;
     private preString;
     private postString;
     private counters;
@@ -68,14 +70,14 @@ declare class RedStringEscaper {
     private extractedKeys;
     private wasExtracted;
     private splitArray;
-    storeSymbol(text: string): string;
     constructor(text: string, options: {
-        type?: RedPlaceholderType;
-        splitEnds?: boolean;
-        mergeSymbols?: boolean;
-        noUnks?: boolean;
-        isolateSymbols?: boolean;
-        isolateRegExp?: string;
+        type: RedPlaceholderType;
+        splitEnds: boolean;
+        splitEndsRegEx: RegExp;
+        mergeSymbols: boolean;
+        noUnks: boolean;
+        isolateSymbols: boolean;
+        isolateRegExp: string;
         isExtracted?: boolean;
         aggressivelySplit?: RegExp;
     });
@@ -84,6 +86,12 @@ declare class RedStringEscaper {
     isExtracted(): boolean;
     getExtractedStrings(): RedStringEscaper[];
     break(): void;
+    /**
+     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
+     * So I'll just make something that's hopefully similar enough to live through updates!
+     */
+    escape(): string;
+    recoverSymbols(): string;
     getTag(): string;
     getClosedTag(): string;
     getFullTag(): string;
@@ -105,16 +113,12 @@ declare class RedStringEscaper {
     getOriginalText(): string;
     getReplacedText(): string;
     setTranslatedText(text: string): void;
-    recoverSymbols(): string;
-    /**
-     * Ideally we'd make something that works just the same as the hex placeholder, but I'm currently too drunk to analyze it
-     * So I'll just make something that's hopefully similar enough to live through updates!
-     */
-    escape(): string;
     static cachedFormulaString: string;
     static cachedFormulas: Array<RegExp | Function>;
     static getActiveFormulas(): (Function | RegExp)[];
     static renderFunction(string: string): any;
+    storeSymbol(text: string): string;
+    correctSymbolBreaking(): void;
 }
 declare class RedPersistentCacheHandler {
     private fs;
@@ -158,6 +162,7 @@ declare const rmColorRegExp = "\\\\C\\[.+?\\]";
 declare const mvScript = "\\\\*[NV]";
 declare const defaultIsolateRegexp: string;
 declare const defaultSplitRegExp = "((?:\\\\?r?\\\\n)+)|(\\\\[.!])";
+declare const defaultSplitEndsRegExp: string;
 /**
  * Ideally this would just be a class extension but I don't want to play with EcmaScript 3
  */
@@ -188,6 +193,7 @@ declare abstract class RedTranslatorEngineWrapper {
     getRowEnd(): any;
     breakRow(text: string): Array<string>;
     isScript(brokenRow: Array<string>): RedScriptCheckResponse;
+    getOption(id: string, defaultValue: any): any;
     curateRow(row: string): {
         scriptCheck: RedScriptCheckResponse;
         lines: Array<RedStringEscaper>;
