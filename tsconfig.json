@@ -101,6 +101,6 @@
   "include": [
     "node_modules/@types/**/*.d.ts",
     "declarations/**/*.d.ts",
-    "ts/**/*.ts"
+    "src/**/*.ts"
   ]
 }

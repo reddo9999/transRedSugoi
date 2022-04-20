@@ -105,3 +105,7 @@ dist
 
 # VSCode
 .vscode/
+
+# Transpiled code
+transredsugoi.js
+transredsugoi.d.ts
