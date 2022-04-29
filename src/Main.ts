@@ -15,8 +15,8 @@ const { RedSugoiEngine } = require('@redengine/RedSugoiEngine');
 const { RedGoogleEngine } = require('@redengine/RedGoogleEngine');
 
 let wrappers = [
-    new RedSugoiEngine(TextProcessor, thisAddon),
-    new RedGoogleEngine(TextProcessor, thisAddon)
+	new RedSugoiEngine(TextProcessor, thisAddon),
+	new RedGoogleEngine(TextProcessor, thisAddon)
 ];
 
 wrappers.forEach((wrapper) => {

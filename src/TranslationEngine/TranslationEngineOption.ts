@@ -10,9 +10,9 @@ export class TranslationEngineOption<T> {
 		description: string;
 		default: T;
 		type: string;
-        formType? : string;
-        schemaOptions : {[id : string] : any};
-        formOptions : {[id : string] : any};
+		formType?: string;
+		schemaOptions: { [id: string]: any };
+		formOptions: { [id: string]: any };
 	};
 	private value: T | undefined;
 
@@ -24,16 +24,16 @@ export class TranslationEngineOption<T> {
 		category: string;
 		priority?: number;
 		default: T;
-        formType? : string;
-        schemaOptions? : {[id : string] : any};
-        formOptions? : {[id : string] : any};
+		formType?: string;
+		schemaOptions?: { [id: string]: any };
+		formOptions?: { [id: string]: any };
 	}) {
 		this.options = Object.assign(
 			{
 				priority: 0,
 				type: typeof options.default,
-                formOptions : {},
-                schemaOptions : {}
+				formOptions: {},
+				schemaOptions: {}
 			},
 			options
 		);
@@ -62,22 +62,22 @@ export class TranslationEngineOption<T> {
 	}
 
 	public getValue(): T {
-        if (this.getType() == "boolean") {
-            // @ts-expect-error
-            return (this.value === "1" || this.value === "true");
-        }
-        this.value = this.options.wrapper.getEngine().getOptions(this.options.id);
-        if (this.value === undefined) {
-            this.value = this.options.default;
-        }
-        return this.value;
+		if (this.getType() == 'boolean') {
+			// @ts-expect-error
+			return this.value === '1' || this.value === 'true';
+		}
+		this.value = this.options.wrapper.getEngine().getOptions(this.options.id);
+		if (this.value === undefined) {
+			this.value = this.options.default;
+		}
+		return this.value;
 	}
 
 	public setValue(value: T) {
 		if (typeof value == 'string') {
-            if (this.getType() == "boolean") {
-                value = <T> <any> (value === "1" || value === "true");
-            } else if (this.getType() == 'number') {
+			if (this.getType() == 'boolean') {
+				value = <T>(<any>(value === '1' || value === 'true'));
+			} else if (this.getType() == 'number') {
 				// @ts-expect-error - A lazy fix
 				value = Number(value);
 			} else if (this.getType() == 'object') {
@@ -89,26 +89,26 @@ export class TranslationEngineOption<T> {
 				}
 			}
 		}
-        this.options.wrapper.getEngine().update(this.options.id, value);
+		this.options.wrapper.getEngine().update(this.options.id, value);
 	}
 
 	public getType() {
 		return this.options.type;
 	}
 
-    public getDefault () : T {
-        return this.options.default;
-    }
+	public getDefault(): T {
+		return this.options.default;
+	}
 
-    public getFormType () {
-        return this.options.formType;
-    }
+	public getFormType() {
+		return this.options.formType;
+	}
 
-    public getFormOptions () {
-        return this.options.formOptions;
-    }
+	public getFormOptions() {
+		return this.options.formOptions;
+	}
 
-    public getSchemaOptions () {
-        return this.options.schemaOptions;
-    }
+	public getSchemaOptions() {
+		return this.options.schemaOptions;
+	}
 }
