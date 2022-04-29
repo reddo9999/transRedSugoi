@@ -1,3 +1,6 @@
+# Version 0.80
++ Remade from scratch to use https://www.npmjs.com/package/mtl-text-processor
+
 # Version 0.75
 + Removes useless performance metrics from log.
     + Important metrics are condensed into a single line.

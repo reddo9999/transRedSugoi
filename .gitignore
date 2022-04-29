@@ -109,3 +109,5 @@ dist
 # Transpiled code
 transredsugoi.js
 transredsugoi.d.ts
+lib/
+ts/

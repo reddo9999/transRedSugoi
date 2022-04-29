@@ -1,13 +1,13 @@
-declare interface TranslationEngineOptionSchema<Type> {
+declare type TranslationEngineOptionSchema<Type> = {
     type : typeof Type;
-    title : string;
-    description : string;
+    title? : string;
+    description? : string;
     default : Type;
     required? : boolean;
     enum? : any;
 }
 
-declare interface TranslationEngineOptionFormUpdater {
+declare type TranslationEngineOptionFormUpdater = {
     key? : string;
     title? : string;
     fieldHtmlClass? : string;
@@ -18,26 +18,28 @@ declare interface TranslationEngineOptionFormUpdater {
     items? : {[id : string] : any};
 }
 
-declare interface TranslationEngineOptionForm {
+declare type TranslationEngineOptionForm = {
     schema : {[id : string] : TranslationEngineOptionSchema};
     form : Array<TranslationEngineOptionFormUpdater>;
 }
 
-declare interface TranslatorEngineOptions {
+declare type TranslatorEngineOptions = {
     onAfterLoading : (result : any) => any | Promise<any>;
     onError : (reason : any) => any | Promise<any>;
     always : () => any | Promise<any>;
     progress : (perc : number) => void;
+    sl : string;
+    tl : string;
 }
 
-declare interface TranslatorEngineResults {
+declare type TranslatorEngineResults = {
     sourceText : string;
     translationText : string;
     source : Array<string>;
-    translation : Array<String>
+    translation : Array<string | undefined>;
 }
 
-declare interface TranslationEngineOptions {
+declare type TranslationEngineOptions = {
     id? : string;
     name? : string;
     author : string;
@@ -55,12 +57,17 @@ declare interface TranslationEngineOptions {
 declare class TranslatorEngine {
     constructor(options : any);
     update(id : string, value : any);
+    optionsForm : TranslationEngineOptionForm;
     init() : void;
+    on (
+        eventType : string, 
+        listener : (evt : Event, obj : {key : string, value : any}) => void
+    ) : void;
     escapeCharacter (sentence : string);
     escapeLineBreak (text : string);
     id : string;
     fixTranslationFormatting (text : string);
-    getOptions (...args : any[]) : {[id : string] : any};
+    getOptions (...args : any[]) : any;
     loadOptions () : void;
     mergeOptionsForm (optionsForm : TranslationEngineOptionForm) : void;
     // TODO: Find what options : any is
@@ -87,9 +94,36 @@ declare class TranslatorEngine {
     unescapeCharacter (sentence) : string;
 
     abort () : void;
+    abortTranslation () : void;
     pause () : void;
     resume () : void;
 
     targetUrl : string;
     targetUrls : Array<string>;
+
+    // Variables
+    [id : string] : any;
+}
+
+
+declare type Addon = {
+    package : {
+        name : string,
+        author : {
+            name : string
+        },
+        version : string,
+        description : string,
+    };
+    getPathRelativeToRoot : () => string;
+}
+
+declare var trans : {
+    [id : string] : TranslatorEngine;
+    getSl () : string;
+    getTl () : string;
+};
+
+declare var common : {
+    fetch : (...args : any) => any
 }
