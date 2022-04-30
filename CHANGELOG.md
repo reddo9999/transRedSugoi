@@ -1,4 +1,7 @@
-# Version 0.80
+# Version 1.0RC1
++ Fix boolean options
+
+# Version 1.0RC
 + Remade from scratch to use https://www.npmjs.com/package/mtl-text-processor
 
 # Version 0.75

@@ -259,9 +259,15 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 				key: option.getId(),
 				type: option.getFormType(),
 				onChange: (evt: any) => {
-					var value = $(evt.target).val();
-					option.setValue(value);
-					this.translatorEngine.update(option.getId(), option.getValue());
+                    if (option.getType() == "boolean") {
+                      let value = $(<HTMLInputElement> evt.target).prop("checked");
+                      option.setValue(value);
+                      this.translatorEngine.update(option.getId(), value);
+                    } else {
+                        let value = $(evt.target).val();
+                        option.setValue(value);
+                        this.translatorEngine.update(option.getId(), option.getValue());
+                    }
 				},
 				...option.getFormOptions()
 			});

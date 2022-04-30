@@ -2,7 +2,7 @@
     "name": "transredsugoi",
     "title": "RedSugoi",
     "description": "Red's Translation Engine Wrapper. Meant to be faster and more accurate when handling Sugoi Translator. Has multiple options for additional text processing. Speed and accuracy is the main goal.\nAs of 0.24 also supports Google translator! Check it out if you enjoy this text processor!\nAddon Github: https://github.com/reddo9999/transRedSugoi\n\nSugoi Japanese Translator is an offline Japanese-English translator that uses CNN deep learning trained with many visual novels and modern Japanese literary works. \nVisit the creator's project on github here: https://github.com/leminhyen2/Sugoi-Japanese-Translator \nInstallation guide here: https://www.youtube.com/watch?v=r8xFzVbmo7k",
-    "version": "1.0RC",
+    "version": "1.0RC1",
     "icon": "icon.ico",
     "author": {
         "name": "Reddo"
@@ -28,7 +28,7 @@
     "scripts": {
         "build": "rmdir /s /q lib 2>null && tsc && npm run pack",
         "format": "prettier --write \"src/**/*.ts\"",
-        "pack": "npm-pack-zip --add-version --static-date-modified --destination \"dist/\""
+        "pack": "npm-pack-zip --add-version --destination \"dist/\""
     },
     "main": "lib/Main.js",
     "bundledDependencies": [
