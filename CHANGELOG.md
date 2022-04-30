@@ -1,7 +1,8 @@
-# Version 1.1RC
+# Version 1.1RC1
 + Fix: padding placeholders was not being done
 + Update mtl-text-processor to 0.6.0
     + Now we are able to recover placeholders with magic!
++ Fix: Form type for the magic. I should update more slowly.
 
 # Version 1.0RC2
 + Now boolean options also read correctly
