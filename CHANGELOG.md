@@ -1,3 +1,8 @@
+# Version 1.1RC
++ Fix: padding placeholders was not being done
++ Update mtl-text-processor to 0.6.0
+    + Now we are able to recover placeholders with magic!
+
 # Version 1.0RC2
 + Now boolean options also read correctly
 + Cache also doesn't save undefineds
