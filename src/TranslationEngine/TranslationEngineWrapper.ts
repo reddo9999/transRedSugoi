@@ -472,7 +472,12 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		].join('\n'),
 		formType: 'select',
 		schemaOptions: {
-			enum: Object.values(PlaceholderRecoveryType)
+			enum: [
+                PlaceholderRecoveryType.ADD_AT_END,
+                PlaceholderRecoveryType.ADD_AT_START,
+                PlaceholderRecoveryType.GUESS,
+                PlaceholderRecoveryType.PERFECT_ONLY
+            ]
 		},
 		formOptions: {
 			titleMap: {
