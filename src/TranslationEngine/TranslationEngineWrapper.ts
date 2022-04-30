@@ -125,8 +125,10 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 						innerIndex++;
 					}
 					if (this.optionUseCache.getValue()) {
-						let cacheKey = getCacheKey(toTranslate[outerIndex]);
-						this.cache.addCache(cacheKey, translatedLines[outerIndex]);
+                        if (translatedLines[outerIndex] !== undefined) {
+                            let cacheKey = getCacheKey(toTranslate[outerIndex]);
+                            this.cache.addCache(cacheKey, translatedLines[outerIndex]);
+                        }
 					}
 					translations[innerIndex++] = translatedLines[outerIndex++];
 				}
@@ -168,12 +170,11 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 						Math.round((10 * rows.length) / batchPerformance.getSeconds()) / 10
 					} rows per second.`
 				);
-				options.always();
-
                 if (this.optionCachePersistent.getValue()) {
                     this.log("[RedTranslatorEngine] Saving translation cache to file.");
                     this.cache.saveCache();
                 }
+				options.always();
 			});
 	}
 
