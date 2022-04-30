@@ -3,11 +3,7 @@ import {
 	TextProcessorPattern,
 	PlaceholderType,
 	TextProcessorOrderType,
-	symbolsSpaces,
-	defaultPunctuation,
-	closerRegExp,
-	defaultSymbols,
-	openerRegExp
+    PlaceholderRecoveryType
 } from '@redsugoi/mtl-text-processor';
 
 import { PlaceholderTypeNames } from './_Constants';
@@ -374,6 +370,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 
 	public processorInit() {
 		this.processor.setOptions({
+            placeholderRecoveryType : this.optionPlaceholderRecoveryType.getValue(),
+            protectedPatternsPad : this.optionPadPlaceholder.getValue(),
 			aggressiveSplittingPatterns: this.getPatterns(
 				this.optionSplittingPatterns.getValue()
 			),
@@ -440,7 +438,6 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 	 *
 	 *
 	 */
-
 	public optionPlaceholderType = new TranslationEngineOption<PlaceholderType>({
 		wrapper: this,
 		id: 'placeholderType',
@@ -458,6 +455,32 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		},
 		formOptions: {
 			titleMap: { ...PlaceholderTypeNames }
+		}
+	});
+
+    
+
+	public optionPlaceholderRecoveryType = new TranslationEngineOption<PlaceholderRecoveryType>({
+		wrapper: this,
+		id: 'placeholderRecoveryType',
+		default: PlaceholderRecoveryType.GUESS,
+		category: TranslationEngineOptionCategories.OPTIONS,
+		priority: -1.5,
+		name: 'Placeholder Recovery type',
+		description: [
+			'Uses magic to recover placeholders that the translator destroyed. If desired, can also just insert missing placeholders at Start, at the End, or at the garbage, but Magic is best.'
+		].join('\n'),
+		formType: 'select',
+		schemaOptions: {
+			enum: Object.values(PlaceholderRecoveryType)
+		},
+		formOptions: {
+			titleMap: {
+                [PlaceholderRecoveryType.ADD_AT_END] : "Insert unrecoverable placeholder at end",
+                [PlaceholderRecoveryType.ADD_AT_START] : "Insert unrecoverable placeholder at the start",
+                [PlaceholderRecoveryType.PERFECT_ONLY] : "Throw away unrecoverable placeholders",
+                [PlaceholderRecoveryType.GUESS] : "Use magic to decide where to put unrecoverable placeholders",
+            }
 		}
 	});
 
