@@ -1,5 +1,9 @@
 # Version 1.0RC2
 + Now boolean options also read correctly
++ Cache also doesn't save undefineds
+    + Cache actually saves!
+        + And even saves to an actual folder that exists!
++ Cache now saves to the addon folder instead of T++'s data folder.
 
 # Version 1.0RC1
 + Fix boolean options
