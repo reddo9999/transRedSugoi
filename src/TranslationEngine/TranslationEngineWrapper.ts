@@ -126,7 +126,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 					}
 					if (this.optionUseCache.getValue()) {
 						let cacheKey = getCacheKey(toTranslate[outerIndex]);
-						this.setCache(cacheKey, translatedLines[outerIndex]);
+						this.cache.addCache(cacheKey, translatedLines[outerIndex]);
 					}
 					translations[innerIndex++] = translatedLines[outerIndex++];
 				}
@@ -169,6 +169,11 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 					} rows per second.`
 				);
 				options.always();
+
+                if (this.optionCachePersistent.getValue()) {
+                    this.log("[RedTranslatorEngine] Saving translation cache to file.");
+                    this.cache.saveCache();
+                }
 			});
 	}
 
@@ -387,10 +392,6 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			lineBreakReplacement: '\n',
 			protectCornersPatterns: this.getPatterns(this.optionSplitEndsPatterns.getValue())
 		});
-	}
-
-	public setCache(original: string, translated: string) {
-		this.cache.addCache(original, translated);
 	}
 
 	public log(...texts: Array<string>) {

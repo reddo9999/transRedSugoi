@@ -62,10 +62,6 @@ export class TranslationEngineOption<T> {
 	}
 
 	public getValue(): T {
-		if (this.getType() == 'boolean') {
-			// @ts-expect-error
-			return this.value === '1' || this.value === 'true';
-		}
 		this.value = this.options.wrapper.getEngine().getOptions(this.options.id);
 		if (this.value === undefined) {
 			this.value = this.options.default;

@@ -1,3 +1,6 @@
+# Version 1.0RC2
++ Now boolean options also read correctly
+
 # Version 1.0RC1
 + Fix boolean options
 

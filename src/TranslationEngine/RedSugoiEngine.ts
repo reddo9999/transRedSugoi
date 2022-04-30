@@ -22,6 +22,9 @@ export class RedSugoiEngine extends TranslationEngineWrapper {
 			description: thisAddon.package.description,
 			mode: 'rowByRow'
 		});
+
+        //@ts-expect-error
+        window.cacheTest = this.cache;
 	}
 
 	protected urlUsage: number[] = [];
