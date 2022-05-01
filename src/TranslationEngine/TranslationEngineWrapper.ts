@@ -3,7 +3,7 @@ import {
 	TextProcessorPattern,
 	PlaceholderType,
 	TextProcessorOrderType,
-    PlaceholderRecoveryType
+	PlaceholderRecoveryType
 } from '@redsugoi/mtl-text-processor';
 
 import { isolationGroupsRegExp, PlaceholderTypeNames } from './_Constants';
@@ -121,10 +121,10 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 						innerIndex++;
 					}
 					if (this.optionUseCache.getValue()) {
-                        if (translatedLines[outerIndex] !== undefined) {
-                            let cacheKey = getCacheKey(toTranslate[outerIndex]);
-                            this.cache.addCache(cacheKey, translatedLines[outerIndex]);
-                        }
+						if (translatedLines[outerIndex] !== undefined) {
+							let cacheKey = getCacheKey(toTranslate[outerIndex]);
+							this.cache.addCache(cacheKey, translatedLines[outerIndex]);
+						}
 					}
 					translations[innerIndex++] = translatedLines[outerIndex++];
 				}
@@ -166,10 +166,10 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 						Math.round((10 * rows.length) / batchPerformance.getSeconds()) / 10
 					} rows per second.`
 				);
-                if (this.optionCachePersistent.getValue()) {
-                    this.log("[RedTranslatorEngine] Saving translation cache to file.");
-                    this.cache.saveCache();
-                }
+				if (this.optionCachePersistent.getValue()) {
+					this.log('[RedTranslatorEngine] Saving translation cache to file.');
+					this.cache.saveCache();
+				}
 				options.always();
 			});
 	}
@@ -261,15 +261,15 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 				key: option.getId(),
 				type: option.getFormType(),
 				onChange: (evt: any) => {
-                    if (option.getType() == "boolean") {
-                      let value = $(<HTMLInputElement> evt.target).prop("checked");
-                      option.setValue(value);
-                      this.translatorEngine.update(option.getId(), value);
-                    } else {
-                        let value = $(evt.target).val();
-                        option.setValue(value);
-                        this.translatorEngine.update(option.getId(), option.getValue());
-                    }
+					if (option.getType() == 'boolean') {
+						let value = $(<HTMLInputElement>evt.target).prop('checked');
+						option.setValue(value);
+						this.translatorEngine.update(option.getId(), value);
+					} else {
+						let value = $(evt.target).val();
+						option.setValue(value);
+						this.translatorEngine.update(option.getId(), option.getValue());
+					}
 				},
 				...option.getFormOptions()
 			});
@@ -370,8 +370,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 
 	public processorInit() {
 		this.processor.setOptions({
-            placeholderRecoveryType : this.optionPlaceholderRecoveryType.getValue(),
-            protectedPatternsPad : this.optionPadPlaceholder.getValue(),
+			placeholderRecoveryType: this.optionPlaceholderRecoveryType.getValue(),
+			protectedPatternsPad: this.optionPadPlaceholder.getValue(),
 			aggressiveSplittingPatterns: this.getPatterns(
 				this.optionSplittingPatterns.getValue()
 			),
@@ -458,36 +458,37 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		}
 	});
 
-    
-
-	public optionPlaceholderRecoveryType = new TranslationEngineOption<PlaceholderRecoveryType>({
-		wrapper: this,
-		id: 'placeholderRecoveryType',
-		default: PlaceholderRecoveryType.GUESS,
-		category: TranslationEngineOptionCategories.OPTIONS,
-		priority: -1.5,
-		name: 'Placeholder Recovery type',
-		description: [
-			'Uses magic to recover placeholders that the translator destroyed. If desired, can also just insert missing placeholders at Start, at the End, or at the garbage, but Magic is best.'
-		].join('\n'),
-		formType: 'select',
-		schemaOptions: {
-			enum: [
-                PlaceholderRecoveryType.ADD_AT_END,
-                PlaceholderRecoveryType.ADD_AT_START,
-                PlaceholderRecoveryType.GUESS,
-                PlaceholderRecoveryType.PERFECT_ONLY
-            ]
-		},
-		formOptions: {
-			titleMap: {
-                [PlaceholderRecoveryType.ADD_AT_END] : "Insert unrecoverable placeholder at end",
-                [PlaceholderRecoveryType.ADD_AT_START] : "Insert unrecoverable placeholder at the start",
-                [PlaceholderRecoveryType.PERFECT_ONLY] : "Throw away unrecoverable placeholders",
-                [PlaceholderRecoveryType.GUESS] : "Use magic to decide where to put unrecoverable placeholders",
-            }
-		}
-	});
+	public optionPlaceholderRecoveryType =
+		new TranslationEngineOption<PlaceholderRecoveryType>({
+			wrapper: this,
+			id: 'placeholderRecoveryType',
+			default: PlaceholderRecoveryType.GUESS,
+			category: TranslationEngineOptionCategories.OPTIONS,
+			priority: -1.5,
+			name: 'Placeholder Recovery type',
+			description: [
+				'Uses magic to recover placeholders that the translator destroyed. If desired, can also just insert missing placeholders at Start, at the End, or at the garbage, but Magic is best.'
+			].join('\n'),
+			formType: 'select',
+			schemaOptions: {
+				enum: [
+					PlaceholderRecoveryType.ADD_AT_END,
+					PlaceholderRecoveryType.ADD_AT_START,
+					PlaceholderRecoveryType.GUESS,
+					PlaceholderRecoveryType.PERFECT_ONLY
+				]
+			},
+			formOptions: {
+				titleMap: {
+					[PlaceholderRecoveryType.ADD_AT_END]: 'Insert unrecoverable placeholder at end',
+					[PlaceholderRecoveryType.ADD_AT_START]:
+						'Insert unrecoverable placeholder at the start',
+					[PlaceholderRecoveryType.PERFECT_ONLY]: 'Throw away unrecoverable placeholders',
+					[PlaceholderRecoveryType.GUESS]:
+						'Use magic to decide where to put unrecoverable placeholders'
+				}
+			}
+		});
 
 	public optionProcessingOrder = new TranslationEngineOption<string>({
 		wrapper: this,
@@ -617,10 +618,9 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 	public optionProtectedPatterns = new TranslationEngineOption<string>({
 		wrapper: this,
 		id: 'protectedPatterns',
-		default: [
-			'// Value reference',
-			/[\\]*[_\-a-z]+\[.+?\]/gi.toString() + ','
-		].join('\n'),
+		default: ['// Value reference', /[\\]*[_\-a-z]+\[.+?\]/gi.toString() + ','].join(
+			'\n'
+		),
 		description:
 			'Protected Patterns will replace every match with a placeholder. The placeholder will be replaced by the original value after translation.\n' +
 			PatternExplanation +
@@ -688,18 +688,18 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		wrapper: this,
 		id: 'isolatePatterns',
 		default: [
-            "// Names",
-            /\\nw?[<\[].+?[\]>]/gi.toString() + ',',
-            "// Isolate SG Quest Scripts", 
-            /<SG.+?>/gi.toString() + ',',
+			'// Names',
+			/\\nw?[<\[].+?[\]>]/gi.toString() + ',',
+			'// Isolate SG Quest Scripts',
+			/<SG.+?>/gi.toString() + ',',
 			'// Isolate colored text',
 			/\\C\[.+?\].+?\\C\[.+?\]/gi.toString() + ',',
 			'// Isolate SG Quest Scripts',
 			/<SG.+?>/gi.toString() + ',',
-            "// Carefully isolate quotes, except the ones that look like script",
-            /((?<![A-Z])((\[[^\[]+\])|(\([^\(]+\))))/gi.toString() + ',',
-            "// Isolates matching quoted text",
-            ...isolationGroupsRegExp
+			'// Carefully isolate quotes, except the ones that look like script',
+			/((?<![A-Z])((\[[^\[]+\])|(\([^\(]+\))))/gi.toString() + ',',
+			'// Isolates matching quoted text',
+			...isolationGroupsRegExp
 		].join('\n'),
 		description:
 			'This finds text inside brackets and translates it separatedly.\n' +
@@ -720,25 +720,25 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		wrapper: this,
 		id: 'splitEndsPatterns',
 		default: [
-            "// Comment?",
-            /\/\/.+?$/g.toString() + ',',
-            "// Untranslatable SG Quests",
-            /^<SG((手動)|(カテゴリ)|(ピクチャ))[\s\S]*?>/gi.toString() + ',',
-            /^<Category:.+?>/gi.toString() + ',',
-            "// Translatable SG Quest",
-            /^<SG.+?:/gi.toString() + ',',
-            "// Script",
-            /^.+?subject=/g.toString() + ',',
-            "// Names",
-            /^\\n</g.toString() + ',',
-            /\\nw\[/gi.toString() + ',',
+			'// Comment?',
+			/\/\/.+?$/g.toString() + ',',
+			'// Untranslatable SG Quests',
+			/^<SG((手動)|(カテゴリ)|(ピクチャ))[\s\S]*?>/gi.toString() + ',',
+			/^<Category:.+?>/gi.toString() + ',',
+			'// Translatable SG Quest',
+			/^<SG.+?:/gi.toString() + ',',
+			'// Script',
+			/^.+?subject=/g.toString() + ',',
+			'// Names',
+			/^\\n</g.toString() + ',',
+			/\\nw\[/gi.toString() + ',',
 			'// Colors at corners',
 			/(^\\C\[.+?\])|\\C\[.+?\]$/gi.toString() + ',',
 			'// Common script calls',
 			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )/g.toString() + ',',
-            "// Game Specific",
-            /\s*\\\^\s*$/g.toString() + ',',
-            /^\\>\s*(\s*\\C\[\d+?\]\s*)*/gi.toString() + ',',
+			'// Game Specific',
+			/\s*\\\^\s*$/g.toString() + ',',
+			/^\\>\s*(\s*\\C\[\d+?\]\s*)*/gi.toString() + ',',
 			'// Conditional choice RPG Maker at the end',
 			/\s*((if)|(en))\(.+?\)\s*$/gi.toString() + ',',
 			'// Conditional choice RPG Maker at the start',

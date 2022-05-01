@@ -43,7 +43,7 @@ export class CacheHandler {
 	}
 
 	public getFilename(bak?: boolean): string {
-        // Dirname is now THIS FILE'S folder!!!!
+		// Dirname is now THIS FILE'S folder!!!!
 		return `${__dirname}/../../Cache${this.wrapper.getId()}.json${
 			bak === true ? '.bak' : ''
 		}`;

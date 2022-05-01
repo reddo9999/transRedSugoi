@@ -56,44 +56,43 @@ export enum PlaceholderTypeNames {
 	sugoiTranslatorSpecial2 = "ivdos' Special with Letters (e.g. @#A, @#B)"
 }
 
-
-    // ´`
-    // `´
+// ´`
+// `´
 const isolationGroups = [
-    ["（", "（）"],
-    ["〔", "〕"],
-    ["〖", "〗"],
-    ["〘", "〙"],
-    ["〚", "〛"],
-    ["｢", "｣"],
-    ["「", "」"],
-    ["〈", "〉"],
-    ["『", "』"],
-    ["【", "】"],
-    ["［", "］"],
-    ["《", "》"],
-    ["{", "}"],
-    ["〝", "〞"],
-    ["〞", "〝"],
-    ["＜", "＞"],
-    ["<", ">"],
-    ["｛", "｝"],
-    ["｟", "｠"],
-    ["〝", "〟"],
-    ["〟", "〟"],
-    ["'", "'"],
-    ["“", "”"],
-    ["⟨", "⟩"],
-    ["〈", "〉"], 
-    ["`", "`"],
-    ["´", "´"],
-    ["\"", "\""],
+	['（', '（）'],
+	['〔', '〕'],
+	['〖', '〗'],
+	['〘', '〙'],
+	['〚', '〛'],
+	['｢', '｣'],
+	['「', '」'],
+	['〈', '〉'],
+	['『', '』'],
+	['【', '】'],
+	['［', '］'],
+	['《', '》'],
+	['{', '}'],
+	['〝', '〞'],
+	['〞', '〝'],
+	['＜', '＞'],
+	['<', '>'],
+	['｛', '｝'],
+	['｟', '｠'],
+	['〝', '〟'],
+	['〟', '〟'],
+	["'", "'"],
+	['“', '”'],
+	['⟨', '⟩'],
+	['〈', '〉'],
+	['`', '`'],
+	['´', '´'],
+	['"', '"']
 ];
 
-export let isolationGroupsRegExp : string[] = [];
+export let isolationGroupsRegExp: string[] = [];
 
-isolationGroups.forEach(group => {
-    isolationGroupsRegExp.push(
-        new RegExp(`${group[0]}[^${group[0]}${group[1]}]+?${group[1]}`, 'g').toString() + ","
-    );
+isolationGroups.forEach((group) => {
+	isolationGroupsRegExp.push(
+		new RegExp(`${group[0]}[^${group[0]}${group[1]}]+?${group[1]}`, 'g').toString() + ','
+	);
 });

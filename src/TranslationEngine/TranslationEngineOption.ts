@@ -72,7 +72,7 @@ export class TranslationEngineOption<T> {
 	public setValue(value: T) {
 		if (typeof value == 'string') {
 			if (this.getType() == 'boolean') {
-				value = <T>(<any>(value === '1' || value === 'true' || (<any> value) === true));
+				value = <T>(<any>(value === '1' || value === 'true' || <any>value === true));
 			} else if (this.getType() == 'number') {
 				// @ts-expect-error - A lazy fix
 				value = Number(value);
