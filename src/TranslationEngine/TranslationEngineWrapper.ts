@@ -467,7 +467,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			priority: -1.5,
 			name: 'Placeholder Recovery type',
 			description: [
-				'Uses magic to recover placeholders that the translator destroyed. If desired, can also just insert missing placeholders at Start, at the End, or at the garbage, but Magic is best.'
+				'Defines how to proceed when the placeholder can\'t be found for recovery.',
+                "\"Guess\" means placing it at the space nearest to the position on the original string, and is the recommended setting. With any option except Throw Away, Placeholders will not be lost in translation. The upside is that you won't be losing text, the downside is that a sentence which lost its placeholders will be corrupted in some way - but that's hardly a real downside, given that it's even more corrupted without the placeholder recovery process."
 			].join('\n'),
 			formType: 'select',
 			schemaOptions: {
@@ -485,7 +486,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 						'Insert unrecoverable placeholder at the start',
 					[PlaceholderRecoveryType.PERFECT_ONLY]: 'Throw away unrecoverable placeholders',
 					[PlaceholderRecoveryType.GUESS]:
-						'Use magic to decide where to put unrecoverable placeholders'
+						'Guess'
 				}
 			}
 		});
