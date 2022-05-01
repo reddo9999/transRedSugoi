@@ -6,7 +6,7 @@ import {
     PlaceholderRecoveryType
 } from '@redsugoi/mtl-text-processor';
 
-import { PlaceholderTypeNames } from './_Constants';
+import { isolationGroupsRegExp, PlaceholderTypeNames } from './_Constants';
 import { TranslationEngineOption } from './TranslationEngineOption';
 import { CacheHandler, TranslationEngineWrapperCache } from './CacheHandler';
 import { RedPerformance } from './RedPerformance';
@@ -684,7 +684,6 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			height: '100px'
 		}
 	});
-
 	public optionIsolatePatterns = new TranslationEngineOption<string>({
 		wrapper: this,
 		id: 'isolatePatterns',
@@ -697,9 +696,10 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			/\\C\[.+?\].+?\\C\[.+?\]/gi.toString() + ',',
 			'// Isolate SG Quest Scripts',
 			/<SG.+?>/gi.toString() + ',',
-			'// Avoids script openers, isolate quotes elsewhere',
-			/((?<![A-Z])[〔〖〘〚〝｢〈《「『【（［\[\({＜<｛｟"'´`$]([^〔〖〘〚〝｢〈《「『【（［\[\({＜<｛｟"'´`\]\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`´])+[\]\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`´])/gi.toString() +
-				','
+            "// Carefully isolate quotes, except the ones that look like script",
+            /((?<![A-Z])((\[[^\[]+\])|(\([^\(]+\))))/gi.toString() + ',',
+            "// Isolates matching quoted text",
+            ...isolationGroupsRegExp
 		].join('\n'),
 		description:
 			'This finds text inside brackets and translates it separatedly.\n' +
@@ -721,7 +721,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		id: 'splitEndsPatterns',
 		default: [
             "// Comment?",
-            /\/\/.+?$/gm.toString() + ',',
+            /\/\/.+?$/g.toString() + ',',
             "// Untranslatable SG Quests",
             /^<SG((手動)|(カテゴリ)|(ピクチャ))[\s\S]*?>/gi.toString() + ',',
             /^<Category:.+?>/gi.toString() + ',',
