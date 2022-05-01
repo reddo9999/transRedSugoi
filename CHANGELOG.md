@@ -1,3 +1,6 @@
+# Version 1.1RC2
++ Improved defaults for options
+
 # Version 1.1RC1
 + Fix: padding placeholders was not being done
 + Update mtl-text-processor to 0.6.0
