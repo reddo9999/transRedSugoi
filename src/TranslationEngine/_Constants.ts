@@ -55,3 +55,45 @@ export enum PlaceholderTypeNames {
 	sugoiTranslatorSpecial = "ivdos' Special (e.g. @#1, @#2)",
 	sugoiTranslatorSpecial2 = "ivdos' Special with Letters (e.g. @#A, @#B)"
 }
+
+
+    // ´`
+    // `´
+const isolationGroups = [
+    ["（", "（）"],
+    ["〔", "〕"],
+    ["〖", "〗"],
+    ["〘", "〙"],
+    ["〚", "〛"],
+    ["｢", "｣"],
+    ["「", "」"],
+    ["〈", "〉"],
+    ["『", "』"],
+    ["【", "】"],
+    ["［", "］"],
+    ["《", "》"],
+    ["{", "}"],
+    ["〝", "〞"],
+    ["〞", "〝"],
+    ["＜", "＞"],
+    ["<", ">"],
+    ["｛", "｝"],
+    ["｟", "｠"],
+    ["〝", "〟"],
+    ["〟", "〟"],
+    ["'", "'"],
+    ["“", "”"],
+    ["⟨", "⟩"],
+    ["〈", "〉"], 
+    ["`", "`"],
+    ["´", "´"],
+    ["\"", "\""],
+];
+
+export let isolationGroupsRegExp : string[] = [];
+
+isolationGroups.forEach(group => {
+    isolationGroupsRegExp.push(
+        new RegExp(`${group[0]}[^${group[0]}${group[1]}]+?${group[1]}`, 'g').toString() + ","
+    );
+});
