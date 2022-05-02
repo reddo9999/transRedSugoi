@@ -619,9 +619,10 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 	public optionProtectedPatterns = new TranslationEngineOption<string>({
 		wrapper: this,
 		id: 'protectedPatterns',
-		default: ['// Value reference', /[\\]*[_\-a-z]+\[.+?\]/gi.toString() + ','].join(
-			'\n'
-		),
+		default: [
+            '// Value reference', 
+            /[\\]*[_\-a-z]+(\[[^\[\]]*+(?:(?1)[^\[\]]*)*+\])/gi.toString() + ',',
+        ].join('\n'),
 		description:
 			'Protected Patterns will replace every match with a placeholder. The placeholder will be replaced by the original value after translation.\n' +
 			PatternExplanation +
@@ -685,21 +686,23 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			height: '100px'
 		}
 	});
+    // (OPEN[^OPENCLOSE]*+(?:(?1)[^OPENCLOSE]*)*+CLOSE) -> Nested brackets
 	public optionIsolatePatterns = new TranslationEngineOption<string>({
 		wrapper: this,
 		id: 'isolatePatterns',
 		default: [
 			'// Names',
-			/\\nw?[<\[].+?[\]>]/gi.toString() + ',',
+			/\\nw?(\[[^\[\]]*+(?:(?1)[^\[\]]*)*+\])/gi.toString() + ',',
+			/\\nw?(<[^<>]*+(?:(?1)[^<>]*)*+>)/gi.toString() + ',',
+			'// Isolate colored text in wolf/rm',
+			/\\C|F(\[[^\[\]]*+(?:(?1)[^\[\]]*)*+\]).+?\\C|F(\[[^\[\]]*+(?:(?1)[^\[\]]*)*+\])/gi.toString() + ',',
 			'// Isolate SG Quest Scripts',
-			/<SG.+?>/gi.toString() + ',',
-			'// Isolate colored text',
-			/\\C\[.+?\].+?\\C\[.+?\]/gi.toString() + ',',
-			'// Isolate SG Quest Scripts',
-			/<SG.+?>/gi.toString() + ',',
+			/<SG[\s\S]+?>/gi.toString() + ',',
 			'// Carefully isolate quotes, except the ones that look like script',
-			/((?<![A-Z])((\[[^\[]+\])|(\([^\(]+\))))/gi.toString() + ',',
-			'// Isolates matching quoted text',
+            /(?<![A-Z])\([^)(]*+(?:(?R)[^)(]*)*+\)/gi.toString() + ',',
+            /(?<![A-Z])\[[^\[\]]*+(?:(?R)[^\[\]]*)*+\]/gi.toString() + ',',
+            /(?<![A-Z])\{[^}{]*+(?:(?R)[^}{]*)*+\}/gi.toString() + ',',
+			'// Isolates matching quoted text, these are never used in scripts',
 			...isolationGroupsRegExp
 		].join('\n'),
 		description:
@@ -734,7 +737,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			/^\\n</g.toString() + ',',
 			/\\nw\[/gi.toString() + ',',
 			'// Colors at corners',
-			/(^\\C\[.+?\])|\\C\[.+?\]$/gi.toString() + ',',
+			/(^\\C|F\[.+?\])|\\C|F\[.+?\]$/gi.toString() + ',',
 			'// Common script calls',
 			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )|(^text_indicator :)|(^.+?subject=)/g.toString() + ',',
 			'// Game Specific',
