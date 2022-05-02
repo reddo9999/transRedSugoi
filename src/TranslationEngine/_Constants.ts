@@ -59,7 +59,7 @@ export enum PlaceholderTypeNames {
 // ´`
 // `´
 const isolationGroups = [
-	['（', '（）'],
+	['（', '）'],
 	['〔', '〕'],
 	['〖', '〗'],
 	['〘', '〙'],
