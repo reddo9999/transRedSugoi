@@ -622,7 +622,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		default: [
             "// For reference, we are trying to remove most things through isolation + cutting corners, so the patterns are mostly for what gets through",
             '// Value reference', 
-            /[\\]*[_\-a-z]+(\[[^\[\]]*(?:(?1)[^\[\]]*)*\])/gi.toString() + ',',
+            /[\\]*[_\-a-z]+\[[^\[\]]+?\]/gi.toString() + ',',
             "// RPG Maker conditional choice",
             /(\s*((if)|(en))\(.+?\)\s*)/gi.toString() + ",",
         ].join('\n'),
@@ -689,23 +689,21 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			height: '100px'
 		}
 	});
-    // (OPEN[^OPENCLOSE]*+(?:(?1)[^OPENCLOSE]*)*+CLOSE) -> Nested brackets
 	public optionIsolatePatterns = new TranslationEngineOption<string>({
 		wrapper: this,
 		id: 'isolatePatterns',
 		default: [
 			'// Names',
-			/\\nw?(\[[^\[\]]*(?:(?1)[^\[\]]*)*\])/gi.toString() + ',',
-			/\\nw?(<[^<>]*(?:(?1)[^<>]*)*>)/gi.toString() + ',',
-			'// Isolate colored text in wolf/rm',
-			/\\(?:C|F)(\[[^\[\]]*(?:(?1)[^\[\]]*)*\]).+?\\(?:C|F)(\[[^\[\]]*(?:(?2)[^\[\]]*)*\])/gi.toString() + ',',
+			/\\nw?[<\[].+?[\]>]/gi.toString() + ',',
 			'// Isolate SG Quest Scripts',
-			/<SG[\s\S]+?>/gi.toString() + ',',
+			/<SG.+?>/gi.toString() + ',',
+			'// Isolate colored text',
+			/\\C\[.+?\].+?\\C\[.+?\]/gi.toString() + ',',
+			'// Isolate SG Quest Scripts',
+			/<SG.+?>/gi.toString() + ',',
 			'// Carefully isolate quotes, except the ones that look like script',
-            /(?<![A-Z])\([^)(]*(?:(?R)[^)(]*)*\)/gi.toString() + ',',
-            /(?<![A-Z])\[[^\[\]]*(?:(?R)[^\[\]]*)*\]/gi.toString() + ',',
-            /(?<![A-Z])\{[^}{]*(?:(?R)[^}{]*)*\}/gi.toString() + ',',
-			'// Isolates matching quoted text, these are never used in scripts',
+			/((?<![A-Z])((\[[^\[]+\])|(\([^\(]+\))))/gi.toString() + ',',
+			'// Isolates matching quoted text',
 			...isolationGroupsRegExp
 		].join('\n'),
 		description:
@@ -727,8 +725,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		wrapper: this,
 		id: 'splitEndsPatterns',
 		default: [
-            "// Pure english, uncomment for sources that don't use english characters/numbers",
-            "//" + /^[\x21-\x7E\*\s]+$/g.toString() + ',',
+            "// Pure english, uncomment for sources that don't use english characters",
+            "//" + /^[\x21-\x7E\* ]+$/g.toString() + ',',
 			'// Comment?',
 			/\/\/.+?$/g.toString() + ',',
 			'// Untranslatable SG Quests',
@@ -740,15 +738,17 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			/^\\n</g.toString() + ',',
 			/\\nw\[/gi.toString() + ',',
 			'// Colors at corners',
-			/(?:^(\\(?:C|F)(\[[^\[\]]*(?:(?2)[^\[\]]*)*\])))|(?:(?1)$)/gi.toString() + ',',
+			/(^\\C\[.+?\])|\\C\[.+?\]$/gi.toString() + ',',
 			'// Common script calls',
 			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )|(^text_indicator :)|(^.+?subject=)/g.toString() + ',',
 			'// Game Specific',
 			/\s*\\\^\s*$/g.toString() + ',',
 			/^\\>\s*(\s*\\C\[\d+?\]\s*)*/gi.toString() + ',',
-			'// Conditional choice RPG Maker at corners',
-			/(^(\s*((if)|(en))\(.+?\)\s*))|((?2)$)/gi.toString() + ',',
-			'// Brackets at corners',
+			'// Conditional choice RPG Maker at the end',
+			/\s*((if)|(en))\(.+?\)\s*$/gi.toString() + ',',
+			'// Conditional choice RPG Maker at the start',
+			/^\s*((if)|(en))\(.+?\)\s*/gi.toString() + ',',
+			'// Brackets at start',
 			/^\s*[〔〖〘〚〝｢〈《「『【（［\[\({＜<｛｟"'´`]+/g.toString() + ',',
 			'// Brackets at end',
 			/[\]\)}〕〗〙〛〞”｣〉》」』】）］＞>｝｠〟⟩"'`´]+\s*$/g.toString() + ',',

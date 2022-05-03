@@ -59,7 +59,7 @@ export enum PlaceholderTypeNames {
 // ´`
 // `´
 const isolationGroups = [
-	['（', '）'],
+	['（', '（）'],
 	['〔', '〕'],
 	['〖', '〗'],
 	['〘', '〙'],
@@ -93,6 +93,6 @@ export let isolationGroupsRegExp: string[] = [];
 
 isolationGroups.forEach((group) => {
 	isolationGroupsRegExp.push(
-		new RegExp(`${group[0]}[^${group[1]}${group[0]}]*(?:(?R)[^${group[1]}${group[0]}]*)*${group[1]}`, 'g').toString() + ','
+		new RegExp(`${group[0]}[^${group[0]}${group[1]}]+?${group[1]}`, 'g').toString() + ','
 	);
 });
