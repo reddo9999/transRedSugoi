@@ -1,3 +1,7 @@
+# Version 1.2RC
++ Removed joke at Placeholder Recovery option
++ Improved default patterns
+
 # Version 1.1RC2
 + Improved defaults for options
 
