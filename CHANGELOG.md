@@ -1,3 +1,7 @@
+# Version 1.2RC1
++ Updated mtl-text-processor to 0.7.0
+    + This version brought nested isolation
+
 # Version 1.2RC
 + Removed joke at Placeholder Recovery option
 + Improved default patterns
