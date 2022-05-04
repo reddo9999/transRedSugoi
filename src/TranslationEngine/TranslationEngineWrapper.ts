@@ -467,8 +467,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			priority: -1.5,
 			name: 'Placeholder Recovery type',
 			description: [
-				'Defines how to proceed when the placeholder can\'t be found for recovery.',
-                "\"Guess\" means placing it at the space nearest to the position on the original string, and is the recommended setting. With any option except Throw Away, Placeholders will not be lost in translation. The upside is that you won't be losing text, the downside is that a sentence which lost its placeholders will be corrupted in some way - but that's hardly a real downside, given that it's even more corrupted without the placeholder recovery process."
+				"Defines how to proceed when the placeholder can't be found for recovery.",
+				"\"Guess\" means placing it at the space nearest to the position on the original string, and is the recommended setting. With any option except Throw Away, Placeholders will not be lost in translation. The upside is that you won't be losing text, the downside is that a sentence which lost its placeholders will be corrupted in some way - but that's hardly a real downside, given that it's even more corrupted without the placeholder recovery process."
 			].join('\n'),
 			formType: 'select',
 			schemaOptions: {
@@ -485,8 +485,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 					[PlaceholderRecoveryType.ADD_AT_START]:
 						'Insert unrecoverable placeholder at the start',
 					[PlaceholderRecoveryType.PERFECT_ONLY]: 'Throw away unrecoverable placeholders',
-					[PlaceholderRecoveryType.GUESS]:
-						'Guess'
+					[PlaceholderRecoveryType.GUESS]: 'Guess'
 				}
 			}
 		});
@@ -620,12 +619,12 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		wrapper: this,
 		id: 'protectedPatterns',
 		default: [
-            "// For reference, we are trying to remove most things through isolation + cutting corners, so the patterns are mostly for what gets through",
-            '// Value reference', 
-            /[\\]*[_\-a-z]+\[[^\[\]]+?\]/gi.toString() + ',',
-            "// RPG Maker conditional choice",
-            /(\s*((if)|(en))\(.+?\)\s*)/gi.toString() + ",",
-        ].join('\n'),
+			'// For reference, we are trying to remove most things through isolation + cutting corners, so the patterns are mostly for what gets through',
+			'// Value reference',
+			/[\\]*[_\-a-z]+\[[^\[\]]+?\]/gi.toString() + ',',
+			'// RPG Maker conditional choice',
+			/(\s*((if)|(en))\(.+?\)\s*)/gi.toString() + ','
+		].join('\n'),
 		description:
 			'Protected Patterns will replace every match with a placeholder. The placeholder will be replaced by the original value after translation.\n' +
 			PatternExplanation +
@@ -725,8 +724,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		wrapper: this,
 		id: 'splitEndsPatterns',
 		default: [
-            "// Pure english, uncomment for sources that don't use english characters",
-            "//" + /^[\x21-\x7E\* ]+$/g.toString() + ',',
+			"// Pure english, uncomment for sources that don't use english characters",
+			'//' + /^[\x21-\x7E\* ]+$/g.toString() + ',',
 			'// Comment?',
 			/\/\/.+?$/g.toString() + ',',
 			'// Untranslatable SG Quests',
@@ -740,7 +739,8 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			'// Colors at corners',
 			/(^\\C\[.+?\])|\\C\[.+?\]$/gi.toString() + ',',
 			'// Common script calls',
-			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )|(^text_indicator :)|(^.+?subject=)/g.toString() + ',',
+			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )|(^text_indicator :)|(^.+?subject=)/g.toString() +
+				',',
 			'// Game Specific',
 			/\s*\\\^\s*$/g.toString() + ',',
 			/^\\>\s*(\s*\\C\[\d+?\]\s*)*/gi.toString() + ',',
