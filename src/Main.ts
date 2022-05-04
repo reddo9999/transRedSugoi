@@ -13,6 +13,7 @@ const { TextProcessor } = require('@redsugoi/mtl-text-processor');
 const { TranslationEngineWrapper } = require('@redengine/TranslationEngineWrapper');
 const { RedSugoiEngine } = require('@redengine/RedSugoiEngine');
 const { RedGoogleEngine } = require('@redengine/RedGoogleEngine');
+const { PiggybackEngine } = require('@redengine/PiggybackEngine');
 
 let wrappers = [
 	new RedSugoiEngine(TextProcessor, thisAddon),
@@ -27,4 +28,10 @@ $(document).ready(() => {
 	wrappers.forEach((wrapper) => {
 		wrapper.init();
 	});
+
+    setTimeout(() => {
+        let piggy = new PiggybackEngine(TextProcessor, thisAddon);
+        trans[piggy.getEngine().id] = piggy.getEngine();
+        piggy.init();
+    }, 1500);
 });
