@@ -1,3 +1,8 @@
+# Version 1.3RC
++ Adding loading indicator when translating rows
++ Added Piggyback Engine
+    + The Piggyback Engine applies the Text Processor to any translator available in Translator++. You can choose which translator to use from the Options panel.
+
 # Version 1.2RC1
 + Updated mtl-text-processor to 0.7.0
     + This version brought nested isolation
