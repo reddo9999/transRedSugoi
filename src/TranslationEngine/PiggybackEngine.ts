@@ -220,6 +220,8 @@ export class PiggybackEngine extends TranslationEngineWrapper {
                     }
                     
                     engine.translate(batch, <TranslatorEngineOptions> {
+                        sl : options.sl,
+                        tl : options.tl,
                         onAfterLoading : (result) => {
                             if (result.translation.length != batch.length) {
 								updateErrorCount(batch.length);
