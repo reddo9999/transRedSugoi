@@ -39,6 +39,10 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		rows: Array<string>,
 		translationOptions: Partial<TranslatorEngineOptions>
 	) {
+        if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
+            ui.showBusyOverlay();
+        }
+
 		let batchPerformance = new RedPerformance();
 		let savedSL: string, savedTL: string;
 		try {
@@ -154,6 +158,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 				options.onError(reason);
 			})
 			.finally(() => {
+                ui.hideBusyOverlay();
 				let start = '[RedTranslator] ';
 				let pad = ' '.repeat(start.length);
 				this.log(`${start}Batch took: ${batchPerformance.end().getSeconds()} seconds.`);

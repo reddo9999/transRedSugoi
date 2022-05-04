@@ -127,3 +127,5 @@ declare var trans : {
 declare var common : {
     fetch : (...args : any) => any
 }
+
+declare var ui : any;
