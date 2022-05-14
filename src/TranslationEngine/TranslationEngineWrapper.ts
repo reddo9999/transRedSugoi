@@ -39,9 +39,13 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 		rows: Array<string>,
 		translationOptions: Partial<TranslatorEngineOptions>
 	) {
-        if ((<HTMLElement> document.getElementById("loadingOverlay")).classList.contains("hidden")) {
-            ui.showBusyOverlay();
-        }
+		if (
+			(<HTMLElement>document.getElementById('loadingOverlay')).classList.contains(
+				'hidden'
+			)
+		) {
+			ui.showBusyOverlay();
+		}
 
 		let batchPerformance = new RedPerformance();
 		let savedSL: string, savedTL: string;
@@ -158,7 +162,7 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 				options.onError(reason);
 			})
 			.finally(() => {
-                ui.hideBusyOverlay();
+				ui.hideBusyOverlay();
 				let start = '[RedTranslator] ';
 				let pad = ' '.repeat(start.length);
 				this.log(`${start}Batch took: ${batchPerformance.end().getSeconds()} seconds.`);
@@ -289,11 +293,11 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 
 			this.translatorEngine[option.getId()] = option.getValue();
 
-            if (option.getChildForm().length > 0) {
-                option.getChildForm().forEach(childForm => {
-                    options.form.push(childForm);
-                });
-            }
+			if (option.getChildForm().length > 0) {
+				option.getChildForm().forEach((childForm) => {
+					options.form.push(childForm);
+				});
+			}
 		});
 
 		options.form.push({
@@ -752,9 +756,9 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			'// Common script calls',
 			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )|(^text_indicator :)|(^.+?subject=)/g.toString() +
 				',',
-            "// First we grab the arguments portion of a info: call, then we grab the info itself, leaving only the text",
-            /^info:.+?\K(,\d+)+$/gi.toString() + ',',
-            /^info:/gi.toString() + ',',
+			'// First we grab the arguments portion of a info: call, then we grab the info itself, leaving only the text',
+			/^info:.+?\K(,\d+)+$/gi.toString() + ',',
+			/^info:/gi.toString() + ',',
 			'// Game Specific',
 			/\s*\\\^\s*$/g.toString() + ',',
 			/^\\>\s*(\s*\\C\[\d+?\]\s*)*/gi.toString() + ',',

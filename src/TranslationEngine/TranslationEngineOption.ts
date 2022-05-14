@@ -13,7 +13,7 @@ export class TranslationEngineOption<T> {
 		formType?: string;
 		schemaOptions: { [id: string]: any };
 		formOptions: { [id: string]: any };
-        childForm : { [id: string]: any }[];
+		childForm: { [id: string]: any }[];
 	};
 	private value: T | undefined;
 
@@ -28,7 +28,7 @@ export class TranslationEngineOption<T> {
 		formType?: string;
 		schemaOptions?: { [id: string]: any };
 		formOptions?: { [id: string]: any };
-        childForm? : { [id: string]: any }[];
+		childForm?: { [id: string]: any }[];
 	}) {
 		this.options = Object.assign(
 			{
@@ -36,7 +36,7 @@ export class TranslationEngineOption<T> {
 				type: typeof options.default,
 				formOptions: {},
 				schemaOptions: {},
-                childForm : [],
+				childForm: []
 			},
 			options
 		);
@@ -111,7 +111,7 @@ export class TranslationEngineOption<T> {
 		return this.options.schemaOptions;
 	}
 
-    public getChildForm () {
-        return this.options.childForm;
-    }
+	public getChildForm() {
+		return this.options.childForm;
+	}
 }

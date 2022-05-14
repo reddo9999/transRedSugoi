@@ -1,3 +1,11 @@
+# Version 1.4
++ Considered a stable release now.
++ Improve default patterns:
+    + allow for info: scripts
+    + Allow for backslash around isolation patterns.
++ Add back default Sugoi management buttons
++ This should be the final release of this addon. Further updates will focus on bugs and default pattern improvements.
+
 # Version 1.3RC
 + Adding loading indicator when translating rows
 + Added Piggyback Engine

@@ -228,8 +228,8 @@ export class RedSugoiEngine extends TranslationEngineWrapper {
 			default: ['http://localhost:14366/'].join('\n'),
 			description:
 				"URLs for the Sugoi Translator servers. Place one per line. There will be an attempt to balance the load between servers such that every server has the same amount of active requests open, so it's also important to pick a good request count number to match your servers (usually two times the number of servers is good enough).\n" +
-                "*VERY IMPORTANT:* Red Sugoi only works with Sugoi Translator Servers which have been patched to accept Arrays (text in groups rather than single texts). If you haven't done so yet, it is necessary to use the T++ Sugoi Server Manager to patch your Sugoi - the button is available below, but the original Sugoi addon is necessary to use it.\n" +
-                "Also important: always double check that your server addresses are correct. If setting up with the Sugoi Server Manager, you can use their button to set values at the default Sugoi addon, and we have a second button here to copy those values.",
+				"*VERY IMPORTANT:* Red Sugoi only works with Sugoi Translator Servers which have been patched to accept Arrays (text in groups rather than single texts). If you haven't done so yet, it is necessary to use the T++ Sugoi Server Manager to patch your Sugoi - the button is available below, but the original Sugoi addon is necessary to use it.\n" +
+				'Also important: always double check that your server addresses are correct. If setting up with the Sugoi Server Manager, you can use their button to set values at the default Sugoi addon, and we have a second button here to copy those values.',
 			name: 'Sugoi Translator URLs',
 			category: TranslationEngineOptionCategories.LIMITS,
 			priority: -10,
@@ -237,41 +237,45 @@ export class RedSugoiEngine extends TranslationEngineWrapper {
 			formOptions: {
 				height: '50px'
 			},
-            childForm : [
-                {
-                    "type": "actions",
-                    "title" : "Local Server Manager",
-                    "fieldHtmlClass": "actionButtonSet",
-                    "items": [
-                        {
-                            "type": "button",
-                            "title": "Open Sugoi Server Manager",
-                            "onClick" : function() {
-                                try {
-                                    trans.sugoitrans.openServerManager()
-                                } catch (e) {
-                                    alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                                }
-                            }
-                        },
-                        {
-                            "type": "button",
-                            "title": "Copy Sugoi Addon Server URLs",
-                            "onClick" : (evt : any) => {
-                                try {
-                                    (<any> window).clicked = evt;
-                                    var optionWindow = $((evt.target).parentNode.parentNode);
-                                    let engine = <any> this.getEngine();
-                                    optionWindow.find(`[name="urls"]`).val(trans.sugoitrans.targetUrl);
-                                    engine.update("urls", trans.sugoitrans.targetUrl);
-                                } catch (e) {
-                                    alert("This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one.");
-                                }
-                            }
-                        }
-                    ]
-                }
-            ]
+			childForm: [
+				{
+					type: 'actions',
+					title: 'Local Server Manager',
+					fieldHtmlClass: 'actionButtonSet',
+					items: [
+						{
+							type: 'button',
+							title: 'Open Sugoi Server Manager',
+							onClick: function () {
+								try {
+									trans.sugoitrans.openServerManager();
+								} catch (e) {
+									alert(
+										"This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one."
+									);
+								}
+							}
+						},
+						{
+							type: 'button',
+							title: 'Copy Sugoi Addon Server URLs',
+							onClick: (evt: any) => {
+								try {
+									(<any>window).clicked = evt;
+									var optionWindow = $(evt.target.parentNode.parentNode);
+									let engine = <any>this.getEngine();
+									optionWindow.find(`[name="urls"]`).val(trans.sugoitrans.targetUrl);
+									engine.update('urls', trans.sugoitrans.targetUrl);
+								} catch (e) {
+									alert(
+										"This requires an up-to-date Sugoi Translator addon by Dreamsavior, it's just a shortcut. Sorry, little one."
+									);
+								}
+							}
+						}
+					]
+				}
+			]
 		});
 
 	public optionRemoveBreaks: TranslationEngineOption<boolean> =

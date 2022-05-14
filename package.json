@@ -2,7 +2,7 @@
     "name": "transredsugoi",
     "title": "RedSugoi",
     "description": "Red's Translation Engine Wrapper. Uses a Text Processor to change text before sending to translators, improving quality and speed. Has specific addons to target Google and Sugoi Translator, but is also able to call upon any T++ translator available.\nAddon Github: https://github.com/reddo9999/transRedSugoi\n\nSugoi Japanese Translator is an offline Japanese-English translator that uses CNN deep learning trained with many visual novels and modern Japanese literary works. \nVisit the creator's project on github here: https://github.com/leminhyen2/Sugoi-Japanese-Translator \nInstallation guide here: https://www.youtube.com/watch?v=r8xFzVbmo7k",
-    "version": "1.3RC",
+    "version": "1.4",
     "icon": "icon.ico",
     "author": {
         "name": "Reddo"

@@ -29,9 +29,9 @@ $(document).ready(() => {
 		wrapper.init();
 	});
 
-    setTimeout(() => {
-        let piggy = new PiggybackEngine(TextProcessor, thisAddon);
-        trans[piggy.getEngine().id] = piggy.getEngine();
-        piggy.init();
-    }, 1500);
+	setTimeout(() => {
+		let piggy = new PiggybackEngine(TextProcessor, thisAddon);
+		trans[piggy.getEngine().id] = piggy.getEngine();
+		piggy.init();
+	}, 1500);
 });

@@ -123,8 +123,7 @@ export class PiggybackEngine extends TranslationEngineWrapper {
 				zu: 'Zulu'
 			},
 			batchDelay: 1,
-			description:
-				'Attempts to apply Text Processor to any translator you might have.',
+			description: 'Attempts to apply Text Processor to any translator you might have.',
 			mode: 'rowByRow'
 		});
 	}
@@ -141,9 +140,10 @@ export class PiggybackEngine extends TranslationEngineWrapper {
 		let translatingIndex = 0;
 		let completeThreads = 0;
 
-        let engine : TranslatorEngine = trans[this.optionTranslator.getValue()];
-		let maximumBatchSize = engine.maxRequestLength === undefined ? 500 : engine.maxRequestLength;
-        let innerDelay = engine.batchDelay;
+		let engine: TranslatorEngine = trans[this.optionTranslator.getValue()];
+		let maximumBatchSize =
+			engine.maxRequestLength === undefined ? 500 : engine.maxRequestLength;
+		let innerDelay = engine.batchDelay;
 
 		let complete = () => {
 			returnTranslations(translations);
@@ -213,17 +213,17 @@ export class PiggybackEngine extends TranslationEngineWrapper {
 				let sendToTranslator = () => {
 					statusProgress.nodeValue = 'Sending to translator!';
 
-                    let always = () => {
-                        always = () => {};
-                        this.lastRequest = Date.now();
-                        startThread();
-                    }
-                    
-                    engine.translate(batch, <TranslatorEngineOptions> {
-                        sl : options.sl,
-                        tl : options.tl,
-                        onAfterLoading : (result) => {
-                            if (result.translation.length != batch.length) {
+					let always = () => {
+						always = () => {};
+						this.lastRequest = Date.now();
+						startThread();
+					};
+
+					engine.translate(batch, <TranslatorEngineOptions>{
+						sl: options.sl,
+						tl: options.tl,
+						onAfterLoading: (result) => {
+							if (result.translation.length != batch.length) {
 								updateErrorCount(batch.length);
 								this.error(
 									`[RedPiggy] A batch broke due to mismatch. We sent ${batch.length} sentences and got ${result.translation.length} back. Skipping them. You can find more details in the dev console (F12).`
@@ -238,17 +238,15 @@ export class PiggybackEngine extends TranslationEngineWrapper {
 								}
 								updateTranslatedCount(batch.length);
 							}
-                            always();
-                        },
-                        onError : (reason) => {
-                            statusProgress.nodeValue = 'DOH!';
-							this.error(
-								'[Red Piggy] Error on fetch: ' + reason + '. Skipping batch.'
-							);
-                        },
-                        always : always
-                    });
-                };
+							always();
+						},
+						onError: (reason) => {
+							statusProgress.nodeValue = 'DOH!';
+							this.error('[Red Piggy] Error on fetch: ' + reason + '. Skipping batch.');
+						},
+						always: always
+					});
+				};
 
 				let now = Date.now();
 				if (now - this.lastRequest > innerDelay) {
@@ -256,10 +254,7 @@ export class PiggybackEngine extends TranslationEngineWrapper {
 					sendToTranslator();
 				} else {
 					statusProgress.nodeValue = 'Waiting inner delay...';
-					setTimeout(
-						sendToTranslator,
-						innerDelay - (now - this.lastRequest)
-					);
+					setTimeout(sendToTranslator, innerDelay - (now - this.lastRequest));
 				}
 			}
 		};
@@ -293,31 +288,38 @@ export class PiggybackEngine extends TranslationEngineWrapper {
 		this.pauseQueue = [];
 	}
 
-	public optionTranslator: TranslationEngineOption<string> = new TranslationEngineOption<string>(
-		{
+	public optionTranslator: TranslationEngineOption<string> =
+		new TranslationEngineOption<string>({
 			wrapper: this,
 			id: 'chosenTranslator',
 			default: 'deepl',
-			description: "Which translator is used",
+			description: 'Which translator is used',
 			name: 'Target Translator',
 			category: TranslationEngineOptionCategories.OPTIONS,
 			priority: -1000,
-            formType: 'select',
-            schemaOptions: {
-                enum: Object.values(trans.translator).filter(a => { return a.indexOf("red") != 0; }).sort()
-            },
-            formOptions: {
-                titleMap: { 
-                    ...(() => {
-                        let names : {[id : string] : string} = {};
-                        let ids = Object.values(trans.translator).filter(a => { return a.indexOf("red") != 0; }).sort();
-                        ids.forEach(id => {
-                            names[id] = trans[id].name;
-                        });
-                        return names;
-                    })()
-                }
-            }
-		}
-	);
+			formType: 'select',
+			schemaOptions: {
+				enum: Object.values(trans.translator)
+					.filter((a) => {
+						return a.indexOf('red') != 0;
+					})
+					.sort()
+			},
+			formOptions: {
+				titleMap: {
+					...(() => {
+						let names: { [id: string]: string } = {};
+						let ids = Object.values(trans.translator)
+							.filter((a) => {
+								return a.indexOf('red') != 0;
+							})
+							.sort();
+						ids.forEach((id) => {
+							names[id] = trans[id].name;
+						});
+						return names;
+					})()
+				}
+			}
+		});
 }

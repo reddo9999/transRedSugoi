@@ -72,17 +72,17 @@ export class CacheHandler {
 						}
 						this.cache[arr[i][0]] = [arr[i][1], aggregateHits];
 					}
-                    this.loaded = true;
+					this.loaded = true;
 				} else if (typeof arr == 'object') {
 					// old version, code adapt
 					for (let key in arr) {
 						this.cache[key] = [arr[key], 1];
 					}
-                    this.loaded = true;
+					this.loaded = true;
 				}
 				this.changed = false;
 			} catch (e) {
-                this.loaded = false;
+				this.loaded = false;
 				this.cache = {};
 				console.error(
 					'[RedPersistentCacheHandler] Load error for cache ' +
