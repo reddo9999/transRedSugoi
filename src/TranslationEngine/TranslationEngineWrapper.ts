@@ -746,6 +746,9 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			'// Common script calls',
 			/(^D_TEXT )|(^DW_[A-Z]+ )|(^addLog )|(^ShowInfo )|(^text_indicator :)|(^.+?subject=)/g.toString() +
 				',',
+            "// First we grab the arguments portion of a info: call, then we grab the info itself, leaving only the text",
+            /^info:.+?\K(,\d+)+$/gi.toString() + ',',
+            /^info:/gi.toString() + ',',
 			'// Game Specific',
 			/\s*\\\^\s*$/g.toString() + ',',
 			/^\\>\s*(\s*\\C\[\d+?\]\s*)*/gi.toString() + ',',
