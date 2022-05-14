@@ -288,6 +288,12 @@ export abstract class TranslationEngineWrapper implements TranslationEngineWrapp
 			};
 
 			this.translatorEngine[option.getId()] = option.getValue();
+
+            if (option.getChildForm().length > 0) {
+                option.getChildForm().forEach(childForm => {
+                    options.form.push(childForm);
+                });
+            }
 		});
 
 		options.form.push({
